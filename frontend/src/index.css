@@ -88,8 +88,120 @@
   animation: smoke-rise 2.8s ease-out forwards;
 }
 
+/*
+ * Motion system. Read src/components/motion/README.md before adding animation.
+ * Tokens + keyframes live here; use the primitives in src/components/motion/ instead of
+ * hand-rolling. Animate transform/opacity only: metallic text uses background-clip, so
+ * never animate color on it.
+ */
+@theme {
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-fade-up: fade-up var(--duration-slow) var(--ease-out-soft) both;
+  --animate-pop-in: pop-in var(--duration-base) var(--ease-spring) both;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-glow: glow 2.4s ease-in-out infinite;
+  --animate-bump: bump var(--duration-base) var(--ease-spring);
+  --animate-wiggle: wiggle 360ms ease-in-out;
+  --animate-flash: flash 1.4s ease-out;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+  @keyframes glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 12px 2px color-mix(in oklab, var(--primary) 55%, transparent);
+    }
+  }
+  @keyframes bump {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.25);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(5px);
+    }
+    60% {
+      transform: translateX(-3px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
+  @keyframes flash {
+    0% {
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+    100% {
+      box-shadow: 0 0 0 2px transparent;
+    }
+  }
+}
+
+/* Staggered entrance: set --i (via <Stagger>); the delay is capped so long lists don't lag. */
+@utility stagger {
+  --stagger-step: 45ms;
+  --stagger-max: 10;
+  animation-delay: calc(min(var(--i, 0), var(--stagger-max)) * var(--stagger-step));
+}
+
+/* The single reduced-motion switch: new animation needs no per-component handling. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-smoke {
-    animation-duration: 0.01s;
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

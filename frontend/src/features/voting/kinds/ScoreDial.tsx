@@ -92,7 +92,7 @@ export function ScoreDial({ value, onChange, disabled }: ScoreDialProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative w-full max-w-sm">
+      <div className="relative w-full max-w-sm animate-pop-in">
         <svg
           ref={svg}
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}

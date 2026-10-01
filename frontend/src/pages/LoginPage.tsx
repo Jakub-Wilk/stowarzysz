@@ -1,6 +1,7 @@
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 
+import { Stagger } from '@/components/motion/Stagger'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
@@ -76,7 +77,11 @@ function PasswordForm({
           <ArrowRight />
         </Button>
       </div>
-      <span role="alert" className="min-h-5 text-sm text-destructive">
+      <span
+        key={login.isError ? login.submittedAt : 0}
+        role="alert"
+        className={cn('min-h-5 text-sm text-destructive', login.isError && 'animate-wiggle')}
+      >
         {login.isError ? loginErrorMessage(login.error) : ''}
       </span>
       <Button type="button" variant="ghost" onClick={onBack}>
@@ -105,24 +110,23 @@ function UserList({ onSelect }: { onSelect: (user: LoginUser) => void }) {
   }
 
   return (
-    <ul className="flex w-[calc(100%+1.5rem)] max-w-sm flex-col gap-2">
+    <Stagger as="ul" className="flex w-[calc(100%+1.5rem)] max-w-sm flex-col gap-2">
       {users.map((user) => (
-        <li key={user.username}>
-          <button
-            type="button"
-            onClick={() => onSelect(user)}
-            className={cn(
-              'flex w-full items-center gap-4 rounded-lg border border-transparent p-3 text-left transition-colors',
-              'hover:border-border hover:bg-card focus-visible:border-ring focus-visible:bg-card focus-visible:outline-none',
-            )}
-          >
-            <UserAvatar username={user.username} src={user.avatar_url} size="md" />
-            <span className="text-metal text-lg font-medium">{user.username}</span>
-            <ChevronRight className="ml-auto size-5" aria-hidden />
-          </button>
-        </li>
+        <button
+          key={user.username}
+          type="button"
+          onClick={() => onSelect(user)}
+          className={cn(
+            'flex w-full items-center gap-4 rounded-lg border border-transparent p-3 text-left transition-colors',
+            'hover:border-border hover:bg-card focus-visible:border-ring focus-visible:bg-card focus-visible:outline-none',
+          )}
+        >
+          <UserAvatar username={user.username} src={user.avatar_url} size="md" />
+          <span className="text-metal text-lg font-medium">{user.username}</span>
+          <ChevronRight className="ml-auto size-5" aria-hidden />
+        </button>
       ))}
-    </ul>
+    </Stagger>
   )
 }
 

@@ -2,7 +2,9 @@ import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
+import { Stagger } from '@/components/motion/Stagger'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { dayGroup } from '@/features/voting/dates'
 import { useClosedPolls, useOpenPolls } from '@/features/voting/hooks'
 import { PollRow } from '@/features/voting/PollRow'
@@ -24,7 +26,14 @@ function Heading({ children }: { children: string }) {
 
 function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) => void }) {
   return (
-    <div role="radiogroup" aria-label="Show" className="flex rounded-lg border p-0.5">
+    <div role="radiogroup" aria-label="Show" className="relative flex rounded-lg border p-0.5">
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-md bg-primary transition-transform duration-(--duration-base) ease-(--ease-spring)',
+          mine && 'translate-x-full',
+        )}
+      />
       {[
         { label: 'All', value: false },
         { label: 'Mine', value: true },
@@ -36,8 +45,8 @@ function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) =>
           aria-checked={mine === value}
           onClick={() => onChange(value)}
           className={cn(
-            'min-h-11 rounded-md px-4 text-base transition-colors',
-            mine === value ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+            'relative min-h-11 flex-1 rounded-md px-4 text-base transition-colors',
+            mine === value ? 'text-primary-foreground' : 'hover:bg-accent/60',
           )}
         >
           {label}
@@ -97,6 +106,14 @@ export function VotingPage() {
         </div>
       )}
 
+      {open.isPending && closed.isPending && (
+        <div className="mt-8 flex flex-col gap-3" role="status" aria-label="Loading votes">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+      )}
+
       {nothing && (
         <p className="mt-10 text-center text-base text-muted-foreground">
           No votes yet. Call the first one!
@@ -106,26 +123,22 @@ export function VotingPage() {
       {open.data && open.data.length > 0 && (
         <section>
           <Heading>Active</Heading>
-          <ul className="flex flex-col gap-3">
+          <Stagger as="ul" className="flex flex-col gap-3">
             {open.data.map((poll) => (
-              <li key={poll.id}>
-                <PollRow poll={poll} />
-              </li>
+              <PollRow key={poll.id} poll={poll} />
             ))}
-          </ul>
+          </Stagger>
         </section>
       )}
 
       {groupByDay(history).map(([label, polls]) => (
         <section key={label}>
           <Heading>{label}</Heading>
-          <ul className="flex flex-col gap-3">
+          <Stagger as="ul" className="flex flex-col gap-3">
             {polls.map((poll) => (
-              <li key={poll.id}>
-                <PollRow poll={poll} />
-              </li>
+              <PollRow key={poll.id} poll={poll} />
             ))}
-          </ul>
+          </Stagger>
         </section>
       ))}
 

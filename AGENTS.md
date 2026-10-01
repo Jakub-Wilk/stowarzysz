@@ -61,6 +61,7 @@ All checks at once: `uv run --project backend pre-commit run --all-files`.
 - **Data fetching:** TanStack Query for all server state. No fetching in `useEffect`. Routing is React Router (`src/App.tsx`).
 - **Auth/SSE:** send `Authorization: Bearer <access token>` on API calls. Native `EventSource` can't set headers, so use a fetch-based SSE client for `/api/events/`.
 - **PWA:** configured in `vite.config.ts` (vite-plugin-pwa). The icons in `public/` are placeholders. Dev proxies `/api` to `localhost:8000`, so use relative `/api/...` URLs.
+- **Motion:** use the shared system in `src/components/motion/` (read its `README.md`): tokens and `animate-*` utilities in `src/index.css`, `Stagger` / `Reveal` / `PageTransition` / `Skeleton` / `useCountUp` / `useFlashOnChange`. Animate transform/opacity only, take colors from theme tokens, and don't add a second animation approach. Reduced motion is handled globally in `index.css`.
 - Format with oxfmt and lint with oxlint (config in `frontend/.oxfmtrc.json` and `.oxlintrc.json`). Don't add ESLint or Prettier.
 
 ## Gotchas

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
 
 import { BackLink } from '@/components/layout/BackLink'
+import { useCountUp } from '@/components/motion/useCountUp'
 import { Button } from '@/components/ui/button'
 import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
@@ -25,16 +26,26 @@ import { cn } from '@/lib/utils'
 
 function Progress({ poll }: { poll: PollDetail }) {
   const pct = poll.participant_count ? (poll.voted_count / poll.participant_count) * 100 : 0
+  // Start empty so the bar fills in on mount, then follows live updates.
+  const [shown, setShown] = useState(0)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setShown(pct))
+    return () => cancelAnimationFrame(frame)
+  }, [pct])
+  const voted = useCountUp(poll.voted_count, 500)
   return (
     <section className="flex flex-col gap-3" aria-label="Progress">
       <div className="flex items-center justify-between text-base">
         <span>
-          {poll.voted_count} of {poll.participant_count} voted
+          {voted} of {poll.participant_count} voted
         </span>
         <span className="text-sm text-muted-foreground">Votes are hidden until the end</span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
-        <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+        <div
+          className="h-full bg-primary transition-[width] duration-700 ease-(--ease-out-soft)"
+          style={{ width: `${shown}%` }}
+        />
       </div>
       <ul className="flex flex-wrap gap-3">
         {poll.participants.map(({ user, has_voted }) => (
@@ -45,7 +56,7 @@ function Progress({ poll }: { poll: PollDetail }) {
           >
             <UserAvatar username={user.username} src={user.avatar_url} size="md" />
             {has_voted && (
-              <span className="absolute -top-1 -right-1 rounded-full bg-positive p-0.5 text-background">
+              <span className="absolute -top-1 -right-1 animate-pop-in rounded-full bg-positive p-0.5 text-background">
                 <Check className="size-4 stroke-3!" aria-hidden />
               </span>
             )}
@@ -174,7 +185,7 @@ function ClosedVote({ poll }: { poll: PollDetail }) {
               spawn(emoji) // instant for you; everyone else gets it over the live stream
               react.mutate(emoji)
             }}
-            className="flex aspect-square w-full items-center justify-center rounded-full border bg-card text-4xl transition-transform hover:scale-110 active:scale-95"
+            className="flex aspect-square w-full items-center justify-center rounded-full border bg-card text-4xl transition-transform duration-(--duration-fast) ease-(--ease-spring) hover:-translate-y-1 hover:scale-110 active:scale-90"
           >
             {emoji}
           </button>
