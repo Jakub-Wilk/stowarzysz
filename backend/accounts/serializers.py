@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from accounts.models import ActivationToken, hash_token
 
@@ -16,16 +17,61 @@ def display_name(user: Any) -> str:
     return user.get_full_name() or user.get_username()
 
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class ManagedUserSerializer(serializers.ModelSerializer):
+    """Full account view for superusers. New accounts get no password; they activate via a link."""
+
+    has_password = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name")
-        read_only_fields = ("id",)
+        fields = (
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "is_active",
+            "is_superuser",
+            "has_password",
+        )
+        read_only_fields = ("id", "has_password")
+
+    def get_has_password(self, obj: Any) -> bool:
+        return obj.has_usable_password()
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        # Guard against an admin locking themselves out. Since the requester is always an active
+        # superuser, any *other* target leaves at least one active superuser behind.
+        request = self.context.get("request")
+        if self.instance is not None and request is not None and self.instance == request.user:
+            if attrs.get("is_active") is False:
+                raise serializers.ValidationError({"is_active": "You can't deactivate yourself."})
+            if attrs.get("is_superuser") is False:
+                raise serializers.ValidationError(
+                    {"is_superuser": "You can't remove your own superuser status."}
+                )
+        return attrs
+
+    def _sync_staff(self, attrs: dict[str, Any]) -> None:
+        # Superusers need is_staff for the Django admin site; keep the two in step.
+        if "is_superuser" in attrs:
+            attrs["is_staff"] = attrs["is_superuser"]
 
     def create(self, validated_data: dict[str, Any]) -> Any:
+        self._sync_staff(validated_data)
         user = User(**validated_data)
         user.set_unusable_password()
         user.save()
+        return user
+
+    def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
+        self._sync_staff(validated_data)
+        was_active = instance.is_active
+        user = super().update(instance, validated_data)
+        if was_active and not user.is_active:
+            # Deactivation also ends existing sessions (refresh tokens).
+            for token in OutstandingToken._default_manager.filter(user=user):
+                BlacklistedToken._default_manager.get_or_create(token=token)
         return user
 
 
@@ -34,7 +80,7 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "display_name")
+        fields = ("id", "username", "email", "display_name", "is_superuser")
         read_only_fields = fields
 
     def get_display_name(self, obj: Any) -> str:

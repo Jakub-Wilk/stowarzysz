@@ -66,7 +66,9 @@
  * that background into text-shaped fill.
  */
 @supports (background-clip: text) {
-  [data-theme='default'] :is(h1, h2, h3, h4, h5, h6, p, label, li, legend, dt, dd, small) {
+  /* `.text-metal` opts in other text (e.g. spans inside cards). Not for <li>: a card background
+     on a child would cover the clipped gradient and leave the text invisible. */
+  [data-theme='default'] :is(h1, h2, h3, h4, h5, h6, p, label, legend, dt, dd, small, .text-metal) {
     color: transparent;
     background-image: var(--metal);
     background-clip: text;

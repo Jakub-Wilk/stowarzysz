@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
 import type { LoginUser } from '@/lib/api-types'
 import { useLogin, useLoginUsers } from '@/features/auth/hooks'
+import { Brand } from '@/features/auth/Brand'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { cn } from '@/lib/utils'
 
@@ -116,23 +117,12 @@ function UserList({ onSelect }: { onSelect: (user: LoginUser) => void }) {
             )}
           >
             <UserAvatar name={user.display_name} size="lg" className="size-12" />
-            <span className="text-lg font-medium">{user.display_name}</span>
+            <span className="text-metal text-lg font-medium">{user.display_name}</span>
             <ChevronRight className="ml-auto size-5" aria-hidden />
           </button>
         </li>
       ))}
     </ul>
-  )
-}
-
-function Brand({ tagline }: { tagline: string }) {
-  return (
-    <div className="flex flex-col items-center gap-3 text-center md:items-end md:text-right">
-      <h1 className="font-logo text-4xl font-bold tracking-wider uppercase md:text-5xl">
-        stowarzysz
-      </h1>
-      <p className="text-base">{tagline}</p>
-    </div>
   )
 }
 

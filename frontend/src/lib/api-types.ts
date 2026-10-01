@@ -10,6 +10,7 @@ export interface Me {
   username: string
   email: string
   display_name: string
+  is_superuser: boolean
 }
 
 /** Public, minimal account info for the login screen. */
@@ -32,20 +33,20 @@ export interface ActivationCompletePayload {
   password: string
 }
 
-export interface CreateUserPayload {
-  username: string
-  email?: string
-  first_name?: string
-  last_name?: string
-}
-
-export interface CreatedUser {
+/** Account as seen by a superuser in the management UI. */
+export interface ManagedUser {
   id: number
   username: string
-  email: string
   first_name: string
   last_name: string
+  email: string
+  is_active: boolean
+  is_superuser: boolean
+  /** False until the user has set a password via an activation link. */
+  has_password: boolean
 }
+
+export type ManagedUserPayload = Omit<ManagedUser, 'id' | 'has_password'>
 
 export interface ActivationLink {
   token: string

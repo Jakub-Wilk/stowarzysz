@@ -3,8 +3,8 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
-from rest_framework import serializers, status
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework import generics, serializers, status
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -12,15 +12,16 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import ActivationToken, User
+from accounts.permissions import IsSuperuser
 from accounts.serializers import (
     INVALID_TOKEN_MESSAGE,
     ActivationCompleteSerializer,
     ActivationLinkSerializer,
     ActivationValidateSerializer,
     LoginUserSerializer,
+    ManagedUserSerializer,
     MeSerializer,
     TokenPairSerializer,
-    UserCreateSerializer,
 )
 
 
@@ -51,23 +52,31 @@ class LoginUserListView(APIView):
         return Response(LoginUserSerializer(users, many=True).data)
 
 
-class UserCreateView(APIView):
-    """Admin creates a user with no usable password; they activate via a personal link."""
+class UserListCreateView(generics.ListCreateAPIView):
+    """Superuser lists accounts or creates one with no usable password (activated via a link)."""
 
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsSuperuser,)
+    serializer_class = ManagedUserSerializer
+    queryset = User.objects.order_by("username")
 
-    @extend_schema(request=UserCreateSerializer, responses={201: UserCreateSerializer})
-    def post(self, request: Request) -> Response:
-        serializer = UserCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsSuperuser,)
+    serializer_class = ManagedUserSerializer
+    queryset = User.objects.all()
+    lookup_url_kwarg = "user_id"
+    http_method_names = ("get", "patch", "delete", "head", "options")
+
+    def perform_destroy(self, instance: User) -> None:
+        if instance == self.request.user:
+            raise serializers.ValidationError("You can't delete yourself.")
+        instance.delete()
 
 
 class ActivationLinkView(APIView):
     """Issue a one-time activation link; any earlier unused link for the user stops working."""
 
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsSuperuser,)
 
     @extend_schema(request=None, responses={201: ActivationLinkSerializer})
     def post(self, request: Request, user_id: int) -> Response:

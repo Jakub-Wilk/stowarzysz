@@ -73,14 +73,18 @@ export function useLogout() {
   })
 }
 
-export function useValidateActivation() {
-  return useMutation({
-    mutationFn: (token: string) =>
+/** Checks an activation link without consuming it (POST so the token stays out of URLs and logs). */
+export function useValidateActivation(token: string) {
+  return useQuery({
+    queryKey: ['activation', token],
+    queryFn: () =>
       apiFetch<ActivationValidateResult>('/api/auth/activation/validate/', {
         method: 'POST',
         json: { token },
         auth: false,
       }),
+    retry: false,
+    staleTime: Infinity,
   })
 }
 

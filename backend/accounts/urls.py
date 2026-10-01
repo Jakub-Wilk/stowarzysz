@@ -11,11 +11,13 @@ from accounts.views import (
     ActivationValidateView,
     LoginUserListView,
     MeView,
-    UserCreateView,
+    UserDetailView,
+    UserListCreateView,
 )
 
 urlpatterns = [
-    path("users/", UserCreateView.as_view(), name="user_create"),
+    path("users/", UserListCreateView.as_view(), name="user_list_create"),
+    path("users/<int:user_id>/", UserDetailView.as_view(), name="user_detail"),
     path(
         "users/<int:user_id>/activation-link/",
         ActivationLinkView.as_view(),

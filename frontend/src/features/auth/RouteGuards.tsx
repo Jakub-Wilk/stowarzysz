@@ -24,3 +24,9 @@ export function RequireAuth() {
 export function PublicOnly() {
   return useHasSession() ? <Navigate to="/" replace /> : <Outlet />
 }
+
+/** Child routes are for superusers only; use inside RequireAuth (needs the loaded profile). */
+export function RequireSuperuser() {
+  const { data: me } = useMe()
+  return me?.is_superuser ? <Outlet /> : <Navigate to="/" replace />
+}
