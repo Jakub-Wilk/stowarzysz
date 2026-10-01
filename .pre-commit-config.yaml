@@ -1,0 +1,54 @@
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      # Backend (Astral tooling via uv)
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project backend ruff check --fix --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --project backend ruff format --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/
+      - id: ty
+        name: ty check
+        entry: uv run --project backend ty check backend
+        language: system
+        types: [python]
+        files: ^backend/
+        pass_filenames: false
+
+      # Frontend (pnpm)
+      - id: oxlint
+        name: oxlint
+        entry: bash -c 'cd frontend && pnpm exec oxlint --fix --no-error-on-unmatched-pattern "${@#frontend/}"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        exclude: ^frontend/src/components/ui/
+      - id: oxfmt
+        name: oxfmt
+        entry: bash -c 'cd frontend && pnpm exec oxfmt --no-error-on-unmatched-pattern "${@#frontend/}"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|html|md)$
+        exclude: ^frontend/pnpm-lock\.yaml$
+      - id: tsc
+        name: tsc
+        entry: pnpm --dir frontend run typecheck
+        language: system
+        files: ^frontend/
+        pass_filenames: false
