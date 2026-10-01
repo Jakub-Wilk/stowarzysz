@@ -78,7 +78,7 @@ function SwitchField({
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <span id={labelId} className="text-sm font-medium">
+        <span id={labelId} className="text-metal text-sm font-medium">
           {label}
         </span>
         <span className="text-sm text-muted-foreground">{hint}</span>

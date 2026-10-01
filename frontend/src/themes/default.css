@@ -61,18 +61,53 @@
 }
 
 /*
- * Metallic text: clip the gradient to the glyphs. Applied to text elements only, never to
- * elements that carry their own background (buttons, avatar), since clipping would turn
- * that background into text-shaped fill.
+ * Metallic text: clip the gradient to the glyphs.
+ *
+ * Two background layers keep this safe for elements that own a background (outline/ghost
+ * buttons, inputs): layer 1 is the gradient clipped to the text, layer 2 is empty and uses a
+ * normal clip, and `background-color` follows the *last* layer's clip, so it still paints in full.
+ *
+ * Not applied to <li>/<a> wrappers (a card background on a child would cover the gradient and
+ * leave the text invisible), to primary buttons (they get a metallic fill below), or to
+ * destructive buttons (those stay red). `.text-metal` opts in other text, e.g. spans in cards.
  */
 @supports (background-clip: text) {
-  /* `.text-metal` opts in other text (e.g. spans inside cards). Not for <li>: a card background
-     on a child would cover the clipped gradient and leave the text invisible. */
-  [data-theme='default'] :is(h1, h2, h3, h4, h5, h6, p, label, legend, dt, dd, small, .text-metal) {
+  [data-theme='default']
+    :is(
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      label,
+      legend,
+      dt,
+      dd,
+      small,
+      input,
+      .text-metal,
+      [data-slot='button']:not(.bg-primary, .text-destructive)
+    ) {
     color: transparent;
-    background-image: var(--metal);
-    background-clip: text;
+    background-image: var(--metal), none;
+    background-clip: text, border-box;
   }
+
+  /* Text colour is transparent, so the caret needs its own. */
+  [data-theme='default'] :is(input, textarea) {
+    caret-color: var(--foreground);
+  }
+}
+
+/* Golden buttons get the metallic fill; dark text stays flat for contrast. */
+[data-theme='default'] .bg-primary {
+  background-image: var(--metal);
+}
+
+[data-theme='default'] [data-slot='button'].bg-primary:hover:not(:disabled) {
+  filter: brightness(1.12);
 }
 
 /* Icons: stroke with the same gradient, defined once in <MetalDefs /> (SVG can't use CSS gradients). */

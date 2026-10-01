@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 // The shadcn Avatar's own `size` variants win over className, so sizes are defined here instead.
 const sizes = {
   sm: 'size-6 text-xs',
-  default: 'size-8 text-sm',
+  default: 'size-11 text-base',
   md: 'size-12 text-base',
   lg: 'size-16 text-xl',
   xl: 'size-24 text-3xl',
