@@ -4,9 +4,11 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { ManageLayout } from '@/components/layout/ManageLayout'
 import { SubPageLayout } from '@/components/layout/SubPageLayout'
 import { tabs } from '@/components/layout/tabs'
+import { useHasSession } from '@/features/auth/hooks'
 import { PublicOnly, RequireAuth, RequireSuperuser } from '@/features/auth/RouteGuards'
 import { RealtimeShell } from '@/features/voting/realtime'
 import { ActivatePage } from '@/pages/ActivatePage'
+import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ManageIndexPage } from '@/pages/manage/ManageIndexPage'
 import { SantaManagePage } from '@/pages/manage/SantaManagePage'
@@ -16,11 +18,17 @@ import { VoteDetailPage } from '@/pages/VoteDetailPage'
 import { VoteNewPage } from '@/pages/VoteNewPage'
 import { MetalDefs } from '@/themes/MetalDefs'
 
+/** Signed-in users go straight to the app; everyone else sees the landing page. */
+function Home() {
+  return useHasSession() ? <Navigate to={tabs[0].path} replace /> : <LandingPage />
+}
+
 export default function App() {
   return (
     <>
       <MetalDefs />
       <Routes>
+        <Route index element={<Home />} />
         <Route element={<PublicOnly />}>
           <Route path="login" element={<LoginPage />} />
         </Route>
@@ -28,7 +36,6 @@ export default function App() {
         <Route path="activate/:token" element={<ActivatePage />} />
         <Route element={<RequireAuth />}>
           <Route element={<RealtimeShell />}>
-            <Route index element={<Navigate to={tabs[0].path} replace />} />
             <Route element={<AppLayout />}>
               {tabs.map((t) => (
                 <Route key={t.path} path={t.path} element={null} />
