@@ -6,6 +6,7 @@ import type {
   ActivationCompletePayload,
   ActivationValidateResult,
   LoginPayload,
+  LoginUser,
   Me,
   TokenPair,
 } from '@/lib/api-types'
@@ -30,6 +31,15 @@ export function useMe() {
     queryKey: meQueryKey,
     queryFn: () => apiFetch<Me>('/api/auth/me/'),
     enabled,
+    staleTime: 60_000,
+  })
+}
+
+/** Accounts shown on the login screen (public endpoint). */
+export function useLoginUsers() {
+  return useQuery({
+    queryKey: ['login-users'],
+    queryFn: () => apiFetch<LoginUser[]>('/api/auth/login-users/', { auth: false }),
     staleTime: 60_000,
   })
 }

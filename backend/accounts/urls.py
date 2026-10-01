@@ -9,6 +9,7 @@ from accounts.views import (
     ActivationCompleteView,
     ActivationLinkView,
     ActivationValidateView,
+    LoginUserListView,
     MeView,
     UserCreateView,
 )
@@ -22,6 +23,7 @@ urlpatterns = [
     ),
     path("activation/validate/", ActivationValidateView.as_view(), name="activation_validate"),
     path("activation/complete/", ActivationCompleteView.as_view(), name="activation_complete"),
+    path("login-users/", LoginUserListView.as_view(), name="login_users"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("token/blacklist/", TokenBlacklistView.as_view(), name="token_blacklist"),

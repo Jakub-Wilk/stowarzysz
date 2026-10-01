@@ -4,7 +4,6 @@ import { AppHeader } from '@/components/layout/AppHeader'
 import { BottomTabs } from '@/components/layout/BottomTabs'
 import { SwipePager } from '@/components/layout/SwipePager'
 import { tabs } from '@/components/layout/tabs'
-import { MetalDefs } from '@/themes/MetalDefs'
 
 export function AppLayout() {
   const { pathname } = useLocation()
@@ -16,7 +15,6 @@ export function AppLayout() {
 
   return (
     <div className="mx-auto flex min-h-svh max-w-2xl flex-col overflow-x-clip">
-      <MetalDefs />
       <AppHeader />
       <main className="flex flex-1 flex-col">
         <SwipePager index={index} onIndexChange={(i) => navigate(tabs[i].path)}>

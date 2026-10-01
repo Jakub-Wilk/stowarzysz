@@ -17,15 +17,38 @@ from accounts.serializers import (
     ActivationCompleteSerializer,
     ActivationLinkSerializer,
     ActivationValidateSerializer,
+    LoginUserSerializer,
+    MeSerializer,
     TokenPairSerializer,
     UserCreateSerializer,
 )
 
 
 class MeView(APIView):
+    @extend_schema(responses={200: MeSerializer})
     def get(self, request: Request) -> Response:
-        user = request.user
-        return Response({"id": user.pk, "username": user.get_username(), "email": user.email})
+        return Response(MeSerializer(request.user).data)
+
+
+class LoginUserListView(APIView):
+    """Public by design: the app has a small, closed set of users and the login screen lists them.
+
+    Only activated, active accounts are shown, and only username and display name.
+    """
+
+    authentication_classes = ()
+    permission_classes = (AllowAny,)
+    throttle_classes = (ScopedRateThrottle,)
+    throttle_scope = "login_users"
+
+    @extend_schema(responses={200: LoginUserSerializer(many=True)})
+    def get(self, request: Request) -> Response:
+        users = [
+            user
+            for user in User.objects.filter(is_active=True).order_by("first_name", "username")
+            if user.has_usable_password()
+        ]
+        return Response(LoginUserSerializer(users, many=True).data)
 
 
 class UserCreateView(APIView):

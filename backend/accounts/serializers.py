@@ -12,6 +12,10 @@ User = get_user_model()
 INVALID_TOKEN_MESSAGE = "This activation link is invalid or has expired."
 
 
+def display_name(user: Any) -> str:
+    return user.get_full_name() or user.get_username()
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -23,6 +27,32 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user.set_unusable_password()
         user.save()
         return user
+
+
+class MeSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email", "display_name")
+        read_only_fields = fields
+
+    def get_display_name(self, obj: Any) -> str:
+        return display_name(obj)
+
+
+class LoginUserSerializer(serializers.ModelSerializer):
+    """What the unauthenticated login screen may know about each account."""
+
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("username", "display_name")
+        read_only_fields = fields
+
+    def get_display_name(self, obj: Any) -> str:
+        return display_name(obj)
 
 
 class ActivationLinkSerializer(serializers.Serializer):

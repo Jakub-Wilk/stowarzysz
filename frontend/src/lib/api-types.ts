@@ -9,6 +9,13 @@ export interface Me {
   id: number
   username: string
   email: string
+  display_name: string
+}
+
+/** Public, minimal account info for the login screen. */
+export interface LoginUser {
+  username: string
+  display_name: string
 }
 
 export interface LoginPayload {

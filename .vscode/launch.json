@@ -6,10 +6,11 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/backend/manage.py",
-      "args": ["runserver", "8000", "--noreload"],
+      "args": ["runserver", "8000"],
       "cwd": "${workspaceFolder}/backend",
       "python": "${workspaceFolder}/backend/.venv/bin/python",
       "envFile": "${workspaceFolder}/backend/.env",
+      "django": true,
       "justMyCode": true
     },
     {

@@ -77,3 +77,8 @@
 [data-theme='default'] .lucide {
   stroke: url(#metal);
 }
+
+/* ...except on a metallic fill (primary buttons), where a gold icon would vanish. */
+[data-theme='default'] .bg-primary .lucide {
+  stroke: currentColor;
+}

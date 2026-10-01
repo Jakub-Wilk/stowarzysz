@@ -42,7 +42,7 @@ uv run pytest                            # needs the Postgres container running
 ```
 
 - **API:** DRF, JSON only, `IsAuthenticated` by default. OpenAPI schema at `/api/schema/`, Swagger UI at `/api/docs/`.
-- **JWT:** `POST /api/auth/token/` (username + password) returns `access` (15 min) and `refresh` (7 days, rotated and blacklisted on use). Refresh at `/api/auth/token/refresh/`, log out via `/api/auth/token/blacklist/`. Send `Authorization: Bearer <access>`.
+- **JWT:** `POST /api/auth/token/` (username + password) returns `access` (15 min) and `refresh` (1 year, sliding: rotated and blacklisted on use). Refresh at `/api/auth/token/refresh/`, log out via `/api/auth/token/blacklist/`. Send `Authorization: Bearer <access>`.
 - **Users:** custom `accounts.User` model from the start; extend it there.
 - **ASGI only:** there is no `wsgi.py`. `daphne` is first in `INSTALLED_APPS`, so `runserver` is an async ASGI server with autoreload.
 - **SSE:** `GET /api/events/` streams events for the caller's own `user-<id>` channel. Send with `core.events.notify_user(user_id, "event-type", data)`.
