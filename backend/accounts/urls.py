@@ -11,6 +11,7 @@ from accounts.views import (
     ActivationValidateView,
     LoginUserListView,
     MeView,
+    UserAvatarView,
     UserDetailView,
     UserListCreateView,
 )
@@ -25,6 +26,7 @@ urlpatterns = [
     ),
     path("activation/validate/", ActivationValidateView.as_view(), name="activation_validate"),
     path("activation/complete/", ActivationCompleteView.as_view(), name="activation_complete"),
+    path("users/<int:user_id>/avatar/", UserAvatarView.as_view(), name="user_avatar"),
     path("login-users/", LoginUserListView.as_view(), name="login_users"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

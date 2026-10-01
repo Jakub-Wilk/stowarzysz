@@ -17,7 +17,7 @@ def _clear_throttle_cache() -> None:
 
 @pytest.fixture
 def pending_user(admin_client: APIClient) -> User:
-    resp = admin_client.post("/api/auth/users/", {"username": "bob", "email": "bob@example.com"})
+    resp = admin_client.post("/api/auth/users/", {"username": "bob"})
     assert resp.status_code == 201
     return User.objects.get(pk=resp.json()["id"])
 

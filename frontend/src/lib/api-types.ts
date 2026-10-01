@@ -8,15 +8,15 @@ export interface TokenPair {
 export interface Me {
   id: number
   username: string
-  email: string
-  display_name: string
   is_superuser: boolean
+  /** Site-relative URL of the profile picture, if one is set. */
+  avatar_url: string | null
 }
 
 /** Public, minimal account info for the login screen. */
 export interface LoginUser {
   username: string
-  display_name: string
+  avatar_url: string | null
 }
 
 export interface LoginPayload {
@@ -37,16 +37,14 @@ export interface ActivationCompletePayload {
 export interface ManagedUser {
   id: number
   username: string
-  first_name: string
-  last_name: string
-  email: string
   is_active: boolean
   is_superuser: boolean
   /** False until the user has set a password via an activation link. */
   has_password: boolean
+  avatar_url: string | null
 }
 
-export type ManagedUserPayload = Omit<ManagedUser, 'id' | 'has_password'>
+export type ManagedUserPayload = Omit<ManagedUser, 'id' | 'has_password' | 'avatar_url'>
 
 export interface ActivationLink {
   token: string

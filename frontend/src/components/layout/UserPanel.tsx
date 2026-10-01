@@ -15,18 +15,14 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger
-        aria-label={`Account: ${me.display_name}`}
+        aria-label={`Account: ${me.username}`}
         className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <UserAvatar name={me.display_name} />
+        <UserAvatar username={me.username} src={me.avatar_url} />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 items-center gap-3 p-4 text-center">
-        <UserAvatar name={me.display_name} size="lg" className="size-16 text-xl" />
-        <div className="flex flex-col">
-          <span className="text-base font-semibold">{me.display_name}</span>
-          <span className="text-sm text-muted-foreground">@{me.username}</span>
-          {me.email && <span className="text-sm text-muted-foreground">{me.email}</span>}
-        </div>
+        <UserAvatar username={me.username} src={me.avatar_url} size="lg" />
+        <span className="text-base font-semibold">{me.username}</span>
         <Button
           variant="outline"
           className="w-full"

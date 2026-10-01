@@ -1,29 +1,34 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2)
-  return letters.toUpperCase() || '?'
-}
+// The shadcn Avatar's own `size` variants win over className, so sizes are defined here instead.
+const sizes = {
+  sm: 'size-6 text-xs',
+  default: 'size-8 text-sm',
+  md: 'size-12 text-base',
+  lg: 'size-16 text-xl',
+  xl: 'size-24 text-3xl',
+} as const
 
 interface UserAvatarProps {
-  name: string
-  size?: 'default' | 'sm' | 'lg'
-  className?: string
+  username: string
+  /** Profile picture URL; initials on the theme's metallic fill are shown without one. */
+  src?: string | null
+  size?: keyof typeof sizes
 }
 
-/** Initials on the theme's metallic fill; swap in an image here once users have pictures. */
-export function UserAvatar({ name, size, className }: UserAvatarProps) {
+export function UserAvatar({ username, src, size = 'default' }: UserAvatarProps) {
   return (
-    <Avatar size={size} className={className}>
+    <Avatar className={sizes[size]}>
+      {src && <AvatarImage src={src} alt="" />}
       <AvatarFallback
         className={cn(
           'bg-primary bg-(image:--metal) font-medium text-primary-foreground',
-          size === 'lg' && 'text-base',
+          sizes[size],
+          'size-full',
         )}
       >
-        {initialsOf(name)}
+        {username.slice(0, 2).toUpperCase() || '?'}
       </AvatarFallback>
     </Avatar>
   )

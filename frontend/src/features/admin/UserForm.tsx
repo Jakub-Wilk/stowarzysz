@@ -6,33 +6,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ActivationLinkDialog } from '@/features/admin/ActivationLinkDialog'
+import { AvatarField } from '@/features/admin/AvatarField'
+import type { PendingPicture } from '@/features/admin/avatar'
 import { DeleteUserDialog } from '@/features/admin/DeleteUserDialog'
 import {
   useCreateUser,
   useDeleteUser,
   useIssueActivationLink,
   useUpdateUser,
+  useUploadAvatar,
 } from '@/features/admin/hooks'
 import { useMe } from '@/features/auth/hooks'
 import { formErrors } from '@/lib/api-errors'
 import type { ActivationLink, ManagedUser, ManagedUserPayload } from '@/lib/api-types'
 
-const EMPTY: ManagedUserPayload = {
-  username: '',
-  first_name: '',
-  last_name: '',
-  email: '',
-  is_active: true,
-  is_superuser: false,
-}
+const EMPTY: ManagedUserPayload = { username: '', is_active: true, is_superuser: false }
 
 function payloadOf(user: ManagedUser): ManagedUserPayload {
-  const { username, first_name, last_name, email, is_active, is_superuser } = user
-  return { username, first_name, last_name, email, is_active, is_superuser }
-}
-
-function nameOf(user: Pick<ManagedUser, 'username' | 'first_name' | 'last_name'>): string {
-  return `${user.first_name} ${user.last_name}`.trim() || user.username
+  const { username, is_active, is_superuser } = user
+  return { username, is_active, is_superuser }
 }
 
 function TextField({
@@ -41,7 +33,6 @@ function TextField({
   value,
   onChange,
   error,
-  type = 'text',
   required,
 }: {
   id: string
@@ -49,7 +40,6 @@ function TextField({
   value: string
   onChange: (value: string) => void
   error?: string
-  type?: string
   required?: boolean
 }) {
   return (
@@ -57,7 +47,6 @@ function TextField({
       <Label htmlFor={id}>{label}</Label>
       <Input
         id={id}
-        type={type}
         value={value}
         required={required}
         aria-invalid={error !== undefined}
@@ -108,6 +97,8 @@ interface LinkDialogState {
   link: ActivationLink
   /** Where to go once the dialog is closed (after creating a user). */
   nextPath?: string
+  /** Extra message shown with the link, e.g. a partial failure while creating. */
+  note?: string
 }
 
 /** Create (no `user`) or edit an account, plus link issuing and deletion when editing. */
@@ -118,15 +109,18 @@ export function UserForm({ user }: { user?: ManagedUser }) {
   const update = useUpdateUser()
   const remove = useDeleteUser()
   const issueLink = useIssueActivationLink()
+  const uploadAvatar = useUploadAvatar()
 
   const initial = user ? payloadOf(user) : EMPTY
   const [form, setForm] = useState<ManagedUserPayload>(initial)
   const [linkDialog, setLinkDialog] = useState<LinkDialogState | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [pending, setPending] = useState<PendingPicture | null>(null)
 
   const isSelf = user !== undefined && user.id === me?.id
   const dirty = JSON.stringify(form) !== JSON.stringify(initial)
-  const saving = create.isPending || update.isPending
+  const saving =
+    create.isPending || update.isPending || uploadAvatar.isPending || issueLink.isPending
   const errors = formErrors(user ? update.error : create.error)
   const set = <K extends keyof ManagedUserPayload>(key: K, value: ManagedUserPayload[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
@@ -142,10 +136,20 @@ export function UserForm({ user }: { user?: ManagedUser }) {
       onSuccess: (created) => {
         const editPath = `/manage/users/${created.id}`
         // New accounts have no password: hand the admin the activation link right away.
-        issueLink.mutate(created.id, {
-          onSuccess: (link) => setLinkDialog({ link, nextPath: editPath }),
-          onError: () => navigate(editPath, { replace: true }),
-        })
+        const finish = (note?: string) =>
+          issueLink.mutate(created.id, {
+            onSuccess: (link) => setLinkDialog({ link, nextPath: editPath, note }),
+            onError: () => navigate(editPath, { replace: true }),
+          })
+        if (!pending) return finish()
+        uploadAvatar.mutate(
+          { id: created.id, file: pending.file },
+          {
+            onSuccess: () => finish(),
+            onError: () =>
+              finish("The profile picture couldn't be uploaded. Add it from the user's page."),
+          },
+        )
       },
     })
   }
@@ -159,6 +163,12 @@ export function UserForm({ user }: { user?: ManagedUser }) {
   return (
     <>
       <form onSubmit={submit} className="flex max-w-md flex-col gap-5">
+        <AvatarField
+          username={form.username}
+          user={user}
+          pending={pending}
+          onPendingChange={setPending}
+        />
         <TextField
           id="username"
           label="Username"
@@ -166,30 +176,6 @@ export function UserForm({ user }: { user?: ManagedUser }) {
           onChange={(v) => set('username', v)}
           error={errors.fields.username}
           required
-        />
-        <div className="grid grid-cols-2 gap-4">
-          <TextField
-            id="first_name"
-            label="First name"
-            value={form.first_name}
-            onChange={(v) => set('first_name', v)}
-            error={errors.fields.first_name}
-          />
-          <TextField
-            id="last_name"
-            label="Last name"
-            value={form.last_name}
-            onChange={(v) => set('last_name', v)}
-            error={errors.fields.last_name}
-          />
-        </div>
-        <TextField
-          id="email"
-          label="Email"
-          type="email"
-          value={form.email}
-          onChange={(v) => set('email', v)}
-          error={errors.fields.email}
         />
         <SwitchField
           label="Active"
@@ -266,7 +252,8 @@ export function UserForm({ user }: { user?: ManagedUser }) {
 
       <ActivationLinkDialog
         link={linkDialog?.link ?? null}
-        userName={nameOf(user ?? form)}
+        note={linkDialog?.note}
+        userName={(user ?? form).username}
         isReset={user?.has_password ?? false}
         onClose={closeLinkDialog}
       />
@@ -277,7 +264,7 @@ export function UserForm({ user }: { user?: ManagedUser }) {
             setDeleteOpen(open)
             if (!open) remove.reset()
           }}
-          userName={nameOf(user)}
+          userName={user.username}
           pending={remove.isPending}
           error={remove.isError ? (formErrors(remove.error).general ?? 'Delete failed.') : null}
           onConfirm={() =>

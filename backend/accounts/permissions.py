@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 
 
 class IsSuperuser(BasePermission):
-    """Account management is for superusers only (is_staff alone is not enough)."""
+    """Account management is for superusers only."""
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         user = request.user

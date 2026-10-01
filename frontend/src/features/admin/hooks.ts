@@ -62,3 +62,32 @@ export function useIssueActivationLink() {
       apiFetch<ActivationLink>(`/api/auth/users/${id}/activation-link/`, { method: 'POST' }),
   })
 }
+
+function useAvatarMutation<V>(request: (variables: V) => Promise<ManagedUser>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: request,
+    onSuccess: async () => {
+      // The picture shows in the list, the login screen and (if it's theirs) the header.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: usersKey }),
+        queryClient.invalidateQueries({ queryKey: meQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ['login-users'] }),
+      ])
+    },
+  })
+}
+
+export function useUploadAvatar() {
+  return useAvatarMutation(({ id, file }: { id: number; file: File }) => {
+    const form = new FormData()
+    form.append('avatar', file)
+    return apiFetch<ManagedUser>(`/api/auth/users/${id}/avatar/`, { method: 'PUT', form })
+  })
+}
+
+export function useRemoveAvatar() {
+  return useAvatarMutation((id: number) =>
+    apiFetch<ManagedUser>(`/api/auth/users/${id}/avatar/`, { method: 'DELETE' }),
+  )
+}

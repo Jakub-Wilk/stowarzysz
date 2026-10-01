@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
+from accounts.avatars import process_avatar
 from accounts.models import ActivationToken, hash_token
 
 User = get_user_model()
@@ -13,31 +14,26 @@ User = get_user_model()
 INVALID_TOKEN_MESSAGE = "This activation link is invalid or has expired."
 
 
-def display_name(user: Any) -> str:
-    return user.get_full_name() or user.get_username()
+def avatar_url(user: Any) -> str | None:
+    return user.avatar.url if user.avatar else None
 
 
 class ManagedUserSerializer(serializers.ModelSerializer):
     """Full account view for superusers. New accounts get no password; they activate via a link."""
 
     has_password = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = (
-            "id",
-            "username",
-            "first_name",
-            "last_name",
-            "email",
-            "is_active",
-            "is_superuser",
-            "has_password",
-        )
-        read_only_fields = ("id", "has_password")
+        fields = ("id", "username", "is_active", "is_superuser", "has_password", "avatar_url")
+        read_only_fields = ("id", "has_password", "avatar_url")
 
     def get_has_password(self, obj: Any) -> bool:
         return obj.has_usable_password()
+
+    def get_avatar_url(self, obj: Any) -> str | None:
+        return avatar_url(obj)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         # Guard against an admin locking themselves out. Since the requester is always an active
@@ -52,20 +48,10 @@ class ManagedUserSerializer(serializers.ModelSerializer):
                 )
         return attrs
 
-    def _sync_staff(self, attrs: dict[str, Any]) -> None:
-        # Superusers need is_staff for the Django admin site; keep the two in step.
-        if "is_superuser" in attrs:
-            attrs["is_staff"] = attrs["is_superuser"]
-
     def create(self, validated_data: dict[str, Any]) -> Any:
-        self._sync_staff(validated_data)
-        user = User(**validated_data)
-        user.set_unusable_password()
-        user.save()
-        return user
+        return User.objects.create_user(password=None, **validated_data)
 
     def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
-        self._sync_staff(validated_data)
         was_active = instance.is_active
         user = super().update(instance, validated_data)
         if was_active and not user.is_active:
@@ -75,30 +61,37 @@ class ManagedUserSerializer(serializers.ModelSerializer):
         return user
 
 
+class AvatarUploadSerializer(serializers.Serializer):
+    avatar = serializers.ImageField(write_only=True)
+
+    def validate_avatar(self, value: Any) -> Any:
+        return process_avatar(value)  # the validated value is the normalised image, ready to store
+
+
 class MeSerializer(serializers.ModelSerializer):
-    display_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "display_name", "is_superuser")
+        fields = ("id", "username", "is_superuser", "avatar_url")
         read_only_fields = fields
 
-    def get_display_name(self, obj: Any) -> str:
-        return display_name(obj)
+    def get_avatar_url(self, obj: Any) -> str | None:
+        return avatar_url(obj)
 
 
 class LoginUserSerializer(serializers.ModelSerializer):
     """What the unauthenticated login screen may know about each account."""
 
-    display_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("username", "display_name")
+        fields = ("username", "avatar_url")
         read_only_fields = fields
 
-    def get_display_name(self, obj: Any) -> str:
-        return display_name(obj)
+    def get_avatar_url(self, obj: Any) -> str | None:
+        return avatar_url(obj)
 
 
 class ActivationLinkSerializer(serializers.Serializer):

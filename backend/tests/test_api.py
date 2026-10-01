@@ -29,17 +29,19 @@ def test_sse_requires_jwt(api_client: APIClient) -> None:
     assert api_client.get("/api/events/").status_code == 401
 
 
-def test_me_includes_display_name(auth_client: APIClient, user) -> None:
-    assert auth_client.get("/api/auth/me/").json()["display_name"] == "alice"
-    user.first_name, user.last_name = "Alice", "Smith"
-    user.save()
-    assert auth_client.get("/api/auth/me/").json()["display_name"] == "Alice Smith"
+def test_me_shape(auth_client: APIClient, user: User) -> None:
+    assert auth_client.get("/api/auth/me/").json() == {
+        "id": user.pk,
+        "username": "alice",
+        "is_superuser": False,
+        "avatar_url": None,
+    }
 
 
 def test_login_users_is_public_and_minimal(api_client: APIClient, user) -> None:
     resp = api_client.get("/api/auth/login-users/")
     assert resp.status_code == 200
-    assert resp.json() == [{"username": "alice", "display_name": "alice"}]
+    assert resp.json() == [{"username": "alice", "avatar_url": None}]
 
 
 def test_login_users_hides_inactive_and_unactivated(api_client: APIClient, user) -> None:

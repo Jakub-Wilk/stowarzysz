@@ -19,6 +19,8 @@ interface ActivationLinkDialogProps {
   userName: string
   /** True when the account already has a password (the link then resets it). */
   isReset: boolean
+  /** Optional warning shown under the link. */
+  note?: string
   onClose: () => void
 }
 
@@ -26,6 +28,7 @@ export function ActivationLinkDialog({
   link,
   userName,
   isReset,
+  note,
   onClose,
 }: ActivationLinkDialogProps) {
   const [copied, setCopied] = useState<'yes' | 'failed' | null>(null)
@@ -74,6 +77,7 @@ export function ActivationLinkDialog({
             Couldn't copy automatically. Select the link and copy it manually.
           </span>
         )}
+        {note && <span className="text-sm text-muted-foreground">{note}</span>}
         <DialogFooter showCloseButton />
       </DialogContent>
     </Dialog>

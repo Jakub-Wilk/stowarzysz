@@ -39,29 +39,25 @@ export function UsersPage() {
       )}
       {users && (
         <ul className="flex flex-col gap-2">
-          {users.map((user) => {
-            const name = `${user.first_name} ${user.last_name}`.trim() || user.username
-            return (
-              <li key={user.id}>
-                <Link
-                  to={`/manage/users/${user.id}`}
-                  className="flex items-center gap-4 rounded-lg border bg-card p-3 transition-colors hover:bg-accent focus-visible:border-ring focus-visible:outline-none"
-                >
-                  <UserAvatar name={name} size="lg" className="size-12" />
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <span className="text-metal truncate text-lg font-medium">{name}</span>
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm text-muted-foreground">@{user.username}</span>
-                      {user.is_superuser && <Badge>Superuser</Badge>}
-                      {!user.is_active && <Badge>Inactive</Badge>}
-                      {!user.has_password && <Badge>Awaiting activation</Badge>}
-                    </span>
-                  </div>
-                  <ChevronRight className="ml-auto size-5 shrink-0" aria-hidden />
-                </Link>
-              </li>
-            )
-          })}
+          {users.map((user) => (
+            <li key={user.id}>
+              <Link
+                to={`/manage/users/${user.id}`}
+                className="flex items-center gap-4 rounded-lg border bg-card p-3 transition-colors hover:bg-accent focus-visible:border-ring focus-visible:outline-none"
+              >
+                <UserAvatar username={user.username} src={user.avatar_url} size="md" />
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="text-metal truncate text-lg font-medium">{user.username}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {user.is_superuser && <Badge>Superuser</Badge>}
+                    {!user.is_active && <Badge>Inactive</Badge>}
+                    {!user.has_password && <Badge>Awaiting activation</Badge>}
+                  </span>
+                </div>
+                <ChevronRight className="ml-auto size-5 shrink-0" aria-hidden />
+              </Link>
+            </li>
+          ))}
         </ul>
       )}
     </>

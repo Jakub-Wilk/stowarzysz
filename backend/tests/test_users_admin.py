@@ -11,16 +11,6 @@ def detail_url(user: User) -> str:
 
 
 @pytest.fixture
-def staff_client(db) -> APIClient:
-    """is_staff but not superuser: must not get management access."""
-    User.objects.create_user("staffer", password="staff-pass-123", is_staff=True)
-    client = APIClient()
-    resp = client.post("/api/auth/token/", {"username": "staffer", "password": "staff-pass-123"})
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
-    return client
-
-
-@pytest.fixture
 def boss(admin_client: APIClient) -> User:
     return User.objects.get(username="boss")
 
@@ -36,16 +26,12 @@ def test_endpoints_require_auth(api_client: APIClient, user: User) -> None:
     assert api_client.delete(detail_url(user)).status_code == 401
 
 
-@pytest.mark.parametrize("client_fixture", ["auth_client", "staff_client"])
-def test_endpoints_require_superuser(
-    client_fixture: str, request: pytest.FixtureRequest, user: User
-) -> None:
-    client: APIClient = request.getfixturevalue(client_fixture)
-    assert client.get(LIST_URL).status_code == 403
-    assert client.post(LIST_URL, {"username": "x"}).status_code == 403
-    assert client.get(detail_url(user)).status_code == 403
-    assert client.patch(detail_url(user), {"first_name": "X"}).status_code == 403
-    assert client.delete(detail_url(user)).status_code == 403
+def test_endpoints_require_superuser(auth_client: APIClient, user: User) -> None:
+    assert auth_client.get(LIST_URL).status_code == 403
+    assert auth_client.post(LIST_URL, {"username": "x"}).status_code == 403
+    assert auth_client.get(detail_url(user)).status_code == 403
+    assert auth_client.patch(detail_url(user), {"is_active": False}).status_code == 403
+    assert auth_client.delete(detail_url(user)).status_code == 403
     assert User.objects.filter(pk=user.pk).exists()
 
 
@@ -60,17 +46,15 @@ def test_list_users(admin_client: APIClient, user: User) -> None:
     assert rows["alice"] == {
         "id": user.pk,
         "username": "alice",
-        "first_name": "",
-        "last_name": "",
-        "email": "alice@example.com",
         "is_active": True,
         "is_superuser": False,
         "has_password": True,
+        "avatar_url": None,
     }
 
 
 def test_create_user_is_passwordless(admin_client: APIClient) -> None:
-    resp = admin_client.post(LIST_URL, {"username": "bob", "first_name": "Bob"})
+    resp = admin_client.post(LIST_URL, {"username": "bob"})
     assert resp.status_code == 201
     body = resp.json()
     assert body["has_password"] is False
@@ -79,11 +63,10 @@ def test_create_user_is_passwordless(admin_client: APIClient) -> None:
     assert not User.objects.get(username="bob").has_usable_password()
 
 
-def test_create_superuser_sets_staff(admin_client: APIClient) -> None:
+def test_create_superuser(admin_client: APIClient) -> None:
     resp = admin_client.post(LIST_URL, {"username": "root2", "is_superuser": True})
     assert resp.status_code == 201
-    created = User.objects.get(username="root2")
-    assert created.is_superuser and created.is_staff
+    assert User.objects.get(username="root2").is_superuser
 
 
 def test_create_rejects_duplicate_username(admin_client: APIClient, user: User) -> None:
@@ -103,14 +86,18 @@ def test_unknown_user_is_404(admin_client: APIClient) -> None:
 # --- update ----------------------------------------------------------------
 
 
-def test_patch_updates_fields(admin_client: APIClient, user: User) -> None:
-    resp = admin_client.patch(
-        detail_url(user), {"first_name": "Alice", "last_name": "Smith", "email": "a@b.co"}
-    )
+def test_patch_updates_username(admin_client: APIClient, user: User) -> None:
+    resp = admin_client.patch(detail_url(user), {"username": "alicia"})
     assert resp.status_code == 200
     user.refresh_from_db()
-    assert (user.first_name, user.last_name, user.email) == ("Alice", "Smith", "a@b.co")
+    assert user.username == "alicia"
     assert user.check_password("s3cret-pass-123")  # password untouched
+
+
+def test_removed_profile_fields_are_ignored(admin_client: APIClient, user: User) -> None:
+    resp = admin_client.patch(detail_url(user), {"first_name": "X", "email": "x@y.z"})
+    assert resp.status_code == 200
+    assert "first_name" not in resp.json() and "email" not in resp.json()
 
 
 def test_patch_cannot_set_password_or_id(admin_client: APIClient, user: User) -> None:
@@ -127,13 +114,13 @@ def test_patch_rejects_duplicate_username(admin_client: APIClient, user: User, b
     assert admin_client.patch(detail_url(user), {"username": "boss"}).status_code == 400
 
 
-def test_promote_and_demote_syncs_staff(admin_client: APIClient, user: User) -> None:
+def test_promote_and_demote(admin_client: APIClient, user: User) -> None:
     admin_client.patch(detail_url(user), {"is_superuser": True})
     user.refresh_from_db()
-    assert user.is_superuser and user.is_staff
+    assert user.is_superuser
     admin_client.patch(detail_url(user), {"is_superuser": False})
     user.refresh_from_db()
-    assert not user.is_superuser and not user.is_staff
+    assert not user.is_superuser
 
 
 def test_cannot_deactivate_or_demote_self(admin_client: APIClient, boss: User) -> None:

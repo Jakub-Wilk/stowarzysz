@@ -34,3 +34,6 @@ dev-dist/
 *.log
 .pnpm-store/
 coverage/
+
+# Uploads
+backend/media/

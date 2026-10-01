@@ -6,7 +6,7 @@ from accounts.models import User
 
 @pytest.fixture
 def user(db) -> User:
-    return User.objects.create_user("alice", "alice@example.com", "s3cret-pass-123")
+    return User.objects.create_user("alice", "s3cret-pass-123")
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def api_client() -> APIClient:
 
 @pytest.fixture
 def admin_client(db) -> APIClient:
-    User.objects.create_superuser("boss", "boss@example.com", "admin-pass-123")
+    User.objects.create_superuser("boss", "admin-pass-123")
     client = APIClient()
     resp = client.post("/api/auth/token/", {"username": "boss", "password": "admin-pass-123"})
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")

@@ -90,16 +90,18 @@ export async function authorizedFetch(
 export interface ApiOptions extends Omit<RequestInit, 'body'> {
   /** JSON request body. */
   json?: unknown
+  /** Multipart request body (file uploads); the browser sets the Content-Type boundary. */
+  form?: FormData
   /** Send the Bearer token and refresh on 401. Disable for public endpoints. Default: true. */
   auth?: boolean
 }
 
 export async function apiFetch<T>(
   path: string,
-  { json, auth = true, ...init }: ApiOptions = {},
+  { json, form, auth = true, ...init }: ApiOptions = {},
 ): Promise<T> {
   const headers = new Headers(init.headers)
-  let body: string | undefined
+  let body: string | FormData | undefined = form
   if (json !== undefined) {
     headers.set('Content-Type', 'application/json')
     body = JSON.stringify(json)

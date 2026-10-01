@@ -52,8 +52,8 @@ function PasswordForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col items-center gap-5">
-      <UserAvatar name={user.display_name} size="lg" className="size-24 text-3xl" />
-      <h2 className="text-2xl font-semibold">{user.display_name}</h2>
+      <UserAvatar username={user.username} src={user.avatar_url} size="xl" />
+      <h2 className="text-2xl font-semibold">{user.username}</h2>
       <div className="flex w-full max-w-xs gap-2">
         <Input
           type="password"
@@ -116,8 +116,8 @@ function UserList({ onSelect }: { onSelect: (user: LoginUser) => void }) {
               'hover:border-border hover:bg-card focus-visible:border-ring focus-visible:bg-card focus-visible:outline-none',
             )}
           >
-            <UserAvatar name={user.display_name} size="lg" className="size-12" />
-            <span className="text-metal text-lg font-medium">{user.display_name}</span>
+            <UserAvatar username={user.username} src={user.avatar_url} size="md" />
+            <span className="text-metal text-lg font-medium">{user.username}</span>
             <ChevronRight className="ml-auto size-5" aria-hidden />
           </button>
         </li>

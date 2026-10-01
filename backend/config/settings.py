@@ -17,7 +17,6 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
     "daphne",  # must come first: makes `runserver` use ASGI
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -84,6 +83,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# User uploads (profile pictures). Under /api/ so the Vite dev proxy covers it; in production
+# serve MEDIA_ROOT from the web server at MEDIA_URL (Django only does it itself when DEBUG).
+MEDIA_URL = "/api/media/"
+MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "media")))
+
 # --- REST framework / JWT ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
@@ -103,6 +107,9 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    # Tolerate small clock steps (NTP / WSL2 resyncs): otherwise a token can be stamped "in the
+    # future" relative to the next check and rejected as not yet valid (iat).
+    "LEEWAY": 10,
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "stowarzysz API",

@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, serializers, status
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -18,6 +19,7 @@ from accounts.serializers import (
     ActivationCompleteSerializer,
     ActivationLinkSerializer,
     ActivationValidateSerializer,
+    AvatarUploadSerializer,
     LoginUserSerializer,
     ManagedUserSerializer,
     MeSerializer,
@@ -46,7 +48,7 @@ class LoginUserListView(APIView):
     def get(self, request: Request) -> Response:
         users = [
             user
-            for user in User.objects.filter(is_active=True).order_by("first_name", "username")
+            for user in User.objects.filter(is_active=True).order_by("username")
             if user.has_usable_password()
         ]
         return Response(LoginUserSerializer(users, many=True).data)
@@ -71,6 +73,27 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         if instance == self.request.user:
             raise serializers.ValidationError("You can't delete yourself.")
         instance.delete()
+
+
+class UserAvatarView(APIView):
+    """Set (multipart `avatar` file) or remove a user's profile picture."""
+
+    permission_classes = (IsSuperuser,)
+    parser_classes = (MultiPartParser,)
+
+    @extend_schema(request=AvatarUploadSerializer, responses={200: ManagedUserSerializer})
+    def put(self, request: Request, user_id: int) -> Response:
+        user = get_object_or_404(User, pk=user_id)
+        serializer = AvatarUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user.set_avatar(serializer.validated_data["avatar"])
+        return Response(ManagedUserSerializer(user, context={"request": request}).data)
+
+    @extend_schema(request=None, responses={200: ManagedUserSerializer})
+    def delete(self, request: Request, user_id: int) -> Response:
+        user = get_object_or_404(User, pk=user_id)
+        user.clear_avatar()
+        return Response(ManagedUserSerializer(user, context={"request": request}).data)
 
 
 class ActivationLinkView(APIView):
