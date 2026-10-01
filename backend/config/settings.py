@@ -90,6 +90,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"activation": env("ACTIVATION_THROTTLE_RATE", default="10/min")},
 }
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
@@ -102,6 +103,10 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# --- Account activation ---
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173").rstrip("/")
+ACTIVATION_TOKEN_TTL_HOURS = env.int("ACTIVATION_TOKEN_TTL_HOURS", default=72)
 
 # --- CORS ---
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"])

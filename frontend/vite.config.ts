@@ -25,6 +25,8 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
+      // Keep the service worker away from API and SSE requests.
+      workbox: { navigateFallbackDenylist: [/^\/api/] },
       devOptions: { enabled: true },
     }),
   ],
