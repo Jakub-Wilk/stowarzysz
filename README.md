@@ -76,3 +76,105 @@ Pre-commit (`.pre-commit-config.yaml`) runs on every commit:
 - Frontend: `oxlint`, `oxfmt`, `tsc`
 
 Run everything manually with `uv run --project backend pre-commit run --all-files`.
+
+## Deployment (Docker)
+
+[docker-compose.prod.yml](docker-compose.prod.yml) runs three containers:
+
+| Service   | What it does                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------- |
+| `db`      | Postgres 17, data in the `pgdata` volume                                                           |
+| `backend` | Django under Daphne (ASGI); applies migrations on every start; uploads go to the `media` volume    |
+| `web`     | nginx: serves the built frontend, proxies `/api/` to the backend (SSE unbuffered), serves `/api/media/` from the `media` volume |
+
+The compose project is named `stowarzysz-prod`, so it never shares containers or volumes with the dev `docker-compose.yml`.
+
+### Prerequisites
+
+- A server with Docker and the Compose plugin.
+- A domain name pointing at it, and a reverse proxy that terminates **HTTPS** (Caddy, Traefik, nginx + certbot, a cloud load balancer, ...). HTTPS is not optional: browsers only allow service workers and Web Push on HTTPS.
+
+### 1. Configure
+
+```sh
+cp .env.prod.example .env.prod
+```
+
+Fill in `.env.prod`:
+
+| Variable                                | Meaning                                                                                  |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`                     | Any strong password; the database is only reachable inside the compose network           |
+| `SECRET_KEY`                            | Django secret. `python -c "import secrets; print(secrets.token_urlsafe(50))"`            |
+| `SECRET_SANTA_KEY`                      | Fernet key, see [below](#secret-santa-key). Generate once and back it up                 |
+| `FRONTEND_URL`                          | Public URL, e.g. `https://stowarzysz.example.com` (no trailing slash). Used for activation links and CORS |
+| `ALLOWED_HOSTS`                         | Comma-separated hostnames, e.g. `stowarzysz.example.com`                                 |
+| `WEB_PORT`                              | Host port for the `web` container (default `8080`)                                       |
+| `VAPID_*`                               | Web Push keys, see [step 2](#2-generate-vapid-keys-web-push)                             |
+
+### 2. Generate VAPID keys (Web Push)
+
+Push notifications ("a new vote needs your answer") are sent with the Web Push protocol. The browser vendors' push services (Google, Mozilla, Apple) are shared by everyone, so your server proves who it is with a **VAPID key pair**:
+
+- the **public key** is handed to the browser when a user enables notifications; the browser ties that subscription to it;
+- the **private key** stays on the server and signs every push it sends;
+- `VAPID_SUBJECT` is a contact (`mailto:you@example.com`) the push services can use if your server misbehaves.
+
+Generate the pair once:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python manage.py generate_vapid_keys
+```
+
+Paste the printed `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` into `.env.prod` and set `VAPID_SUBJECT`.
+
+- **Keep the keys stable.** Subscriptions are bound to the public key; if you change it, every user has to re-enable notifications. Back the keys up with the rest of `.env.prod`.
+- **Optional.** Without keys the app works normally: notifications are skipped and the frontend hides the toggle.
+- The backend container needs outbound HTTPS access to the push services.
+- iOS only supports push for a PWA that was added to the home screen.
+
+### Secret Santa key
+
+`SECRET_SANTA_KEY` is a [Fernet](https://cryptography.io/en/latest/fernet/) key that encrypts who draws whom while an event is running, so the database alone never reveals the pairing. Generate it once with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. **If you lose or change it, pairings of running events can no longer be decrypted.**
+
+### 3. Start
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+The first start builds both images and runs the database migrations automatically. The app is now listening on `http://<server>:<WEB_PORT>`.
+
+### 4. Put HTTPS in front
+
+Point your reverse proxy at `localhost:<WEB_PORT>`. It must pass the `Host` header through and set `X-Forwarded-Proto`. For example, with Caddy the whole config is:
+
+```
+stowarzysz.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Leave response buffering off for `/api/events/` if your proxy buffers by default (the SSE stream must flow immediately).
+
+### 5. Create the first admin
+
+Accounts have a username only and are created by superusers in the app (users activate their account through a link), so the very first superuser is created from the command line:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend python manage.py createsuperuser
+```
+
+Then log in at `FRONTEND_URL` and create everyone else from the management screen.
+
+### Operations
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f backend    # logs
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build      # update after git pull (migrations run on start)
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup.sql   # database backup
+```
+
+Back up three things: the database, the `media` volume (profile pictures) and `.env.prod`. Never run `docker compose down -v` in production: `-v` deletes the volumes (your data).
+
+Everything runs in a single backend process, which is what the in-memory SSE channels expect. If you ever scale the backend to several processes or replicas, set `EVENTSTREAM_REDIS` first (see [Backend](#backend)).
