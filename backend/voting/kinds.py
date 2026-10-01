@@ -52,15 +52,19 @@ class ScoreKind(PollKind):
 
     def validate_config(self, config: Any) -> dict[str, Any]:
         if config not in ({}, None):
-            raise serializers.ValidationError("A score vote takes no configuration.")
+            raise serializers.ValidationError("Głosowanie punktowe nie przyjmuje konfiguracji.")
         return {}
 
     def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
         value = ballot.get("value") if isinstance(ballot, dict) else None
         if not isinstance(value, int) or isinstance(value, bool):
-            raise serializers.ValidationError("Ballot must be {'value': <integer>}.")
+            raise serializers.ValidationError(
+                "Głos musi mieć postać {'value': <liczba całkowita>}."
+            )
         if not self.MIN <= value <= self.MAX:
-            raise serializers.ValidationError(f"Score must be between {self.MIN} and {self.MAX}.")
+            raise serializers.ValidationError(
+                f"Ocena musi mieścić się w zakresie od {self.MIN} do {self.MAX}."
+            )
         return {"value": value}
 
     def veto_ballot(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -100,7 +104,7 @@ def get_kind(key: str) -> PollKind:
     try:
         return KINDS[key]
     except KeyError:
-        raise serializers.ValidationError(f"Unknown vote type: {key!r}.") from None
+        raise serializers.ValidationError(f"Nieznany rodzaj głosowania: {key!r}.") from None
 
 
 register(ScoreKind())

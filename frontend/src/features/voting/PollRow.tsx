@@ -8,7 +8,7 @@ import { getKindUI } from '@/features/voting/kinds'
 import type { PollListItem } from '@/lib/api-types'
 import { cn } from '@/lib/utils'
 
-/** One vote in the lists: active ones carry an "Active" label, finished ones their outcome. */
+/** One vote in the lists: active ones carry an „Obrady trwają”, finished ones their outcome. */
 export function PollRow({ poll }: { poll: PollListItem }) {
   const isOpen = poll.status === 'open'
   const ResultChip = getKindUI(poll.kind)?.ResultChip
@@ -33,13 +33,13 @@ export function PollRow({ poll }: { poll: PollListItem }) {
           {isOpen && (
             <>
               <span className="animate-glow rounded-full bg-primary px-2.5 py-0.5 font-bold text-primary-foreground uppercase">
-                Active
+                Obrady trwają
               </span>
               <span>
-                {poll.voted_count}/{poll.participant_count} voted
+                Zagłosowało {poll.voted_count}/{poll.participant_count} posłów
               </span>
               {needsYou && (
-                <span className="font-semibold text-foreground">Your vote is needed</span>
+                <span className="font-semibold text-foreground">Izba czeka na Twój głos</span>
               )}
             </>
           )}

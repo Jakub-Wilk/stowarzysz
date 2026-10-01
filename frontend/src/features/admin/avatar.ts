@@ -9,9 +9,9 @@ export interface PendingPicture {
 }
 
 export function validateImage(file: File): string | null {
-  if (!file.type.startsWith('image/')) return 'Choose an image file.'
+  if (!file.type.startsWith('image/')) return 'Wybierz plik graficzny.'
   if (file.size > MAX_IMAGE_BYTES) {
-    return `Image is too large (max ${MAX_IMAGE_BYTES / (1024 * 1024)} MB).`
+    return `Obraz jest za duży (maks. ${MAX_IMAGE_BYTES / (1024 * 1024)} MB).`
   }
   return null
 }

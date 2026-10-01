@@ -7,7 +7,7 @@ import { PageTransition } from '@/components/motion/PageTransition'
 export function ManageLayout() {
   return (
     <div className="mx-auto flex min-h-svh max-w-2xl flex-col">
-      <AppHeader section="Management" />
+      <AppHeader section="Zarządzanie" />
       <main className="flex-1 p-4">
         <PageTransition>
           <Outlet />

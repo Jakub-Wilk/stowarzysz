@@ -25,7 +25,7 @@ class EventStreamJWTMiddleware:
                 return JsonResponse({"detail": str(exc.detail)}, status=401)
             if result is None:
                 return JsonResponse(
-                    {"detail": "Authentication credentials were not provided."}, status=401
+                    {"detail": "Nie podano danych uwierzytelniających."}, status=401
                 )
             request.user = result[0]  # ty: ignore[unresolved-attribute]
         return self.get_response(request)

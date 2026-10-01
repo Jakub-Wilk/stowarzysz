@@ -23,19 +23,19 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
 
   const errors = formErrors(activate.error)
   const message = mismatch
-    ? "Passwords don't match."
+    ? 'Hasła nie są takie same.'
     : activate.isError
       ? (errors.fields.password ?? errors.fields.token ?? errors.general)
       : null
 
   return (
     <form onSubmit={submit} className="flex w-full max-w-xs flex-col items-center gap-4">
-      <h2 className="text-2xl font-semibold">Welcome, {username}</h2>
+      <h2 className="text-2xl font-semibold">Witaj, {username}</h2>
       <Input
         type="password"
         autoComplete="new-password"
-        placeholder="New password"
-        aria-label="New password"
+        placeholder="Nowe hasło"
+        aria-label="Nowe hasło"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="h-14 text-lg"
@@ -43,8 +43,8 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
       <Input
         type="password"
         autoComplete="new-password"
-        placeholder="Repeat password"
-        aria-label="Repeat password"
+        placeholder="Powtórz hasło"
+        aria-label="Powtórz hasło"
         aria-invalid={mismatch}
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
@@ -58,7 +58,7 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
         className="h-14 w-full text-lg"
         disabled={!password || mismatch || activate.isPending}
       >
-        Set password and sign in
+        Ustaw hasło i zaloguj
       </Button>
     </form>
   )
@@ -73,15 +73,15 @@ export function ActivatePage() {
     <div className="flex min-h-svh flex-col">
       <div className="h-1 bg-(image:--metal)" />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-10 p-6">
-        <Brand tagline="Set your password" />
-        {validation.isPending && <span className="text-sm">Checking your link…</span>}
+        <Brand tagline="Ustaw swoje hasło" />
+        {validation.isPending && <span className="text-sm">Sprawdzanie linku…</span>}
         {validation.isError && (
           <div className="flex flex-col items-center gap-4 text-center">
             <span role="alert" className="text-sm text-destructive">
-              This link is invalid or has expired. Ask an administrator for a new one.
+              Ten link jest nieprawidłowy lub wygasł. Poproś administratora o nowy.
             </span>
             <Button variant="outline" nativeButton={false} render={<Link to="/login" />}>
-              Go to sign in
+              Przejdź do logowania
             </Button>
           </div>
         )}

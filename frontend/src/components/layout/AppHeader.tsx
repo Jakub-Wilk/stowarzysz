@@ -1,7 +1,7 @@
 import { UserPanel } from '@/components/layout/UserPanel'
 
 interface AppHeaderProps {
-  /** Shown next to the logo, e.g. "Management". */
+  /** Shown next to the logo, e.g. "Zarządzanie". */
   section?: string
 }
 

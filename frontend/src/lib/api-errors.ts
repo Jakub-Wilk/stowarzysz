@@ -12,7 +12,7 @@ const toText = (value: unknown): string =>
 
 /** Flattens a DRF error body ({field: [msgs]}, {detail}, or [msgs]) for display in a form. */
 export function formErrors(error: unknown): FormErrors {
-  const fallback = 'Something went wrong. Please try again.'
+  const fallback = 'Coś poszło nie tak. Spróbuj ponownie.'
   if (!(error instanceof ApiError)) return { fields: {}, general: fallback }
   const body = error.body
   if (Array.isArray(body)) return { fields: {}, general: toText(body) }

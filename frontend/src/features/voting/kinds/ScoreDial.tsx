@@ -9,17 +9,17 @@ export const MIN = -5
 export const MAX = 5
 
 const WORDS: Record<number, string> = {
-  [-5]: 'Hell no',
-  [-4]: 'No way',
-  [-3]: 'Nope',
-  [-2]: 'Rather not',
-  [-1]: 'Not really',
-  0: 'Neutral',
-  1: 'Fine',
-  2: 'Sure',
-  3: 'Good',
-  4: 'Great',
-  5: 'Love it',
+  [-5]: 'Skandal',
+  [-4]: 'Hańba',
+  [-3]: 'Sprzeciw',
+  [-2]: 'Niezbyt',
+  [-1]: 'Raczej nie',
+  0: 'Obojętnie',
+  1: 'Ujdzie',
+  2: 'Może być',
+  3: 'Popieram',
+  4: 'Brawo',
+  5: 'Owacja',
 }
 
 // Geometry of the half-circle, in SVG user units (viewBox is 300 x 190).
@@ -98,11 +98,11 @@ export function ScoreDial({ value, onChange, disabled }: ScoreDialProps) {
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           role="slider"
           tabIndex={disabled ? -1 : 0}
-          aria-label="Your score"
+          aria-label="Twoja ocena"
           aria-valuemin={MIN}
           aria-valuemax={MAX}
           aria-valuenow={value ?? undefined}
-          aria-valuetext={value === null ? 'No score yet' : `${value}, ${WORDS[value]}`}
+          aria-valuetext={value === null ? 'Brak oceny' : `${value}, ${WORDS[value]}`}
           aria-disabled={disabled}
           className="block w-full touch-none rounded-2xl outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50"
           onKeyDown={onKeyDown}
@@ -210,7 +210,7 @@ export function ScoreDial({ value, onChange, disabled }: ScoreDialProps) {
             {value === null ? '–' : value > 0 ? `+${value}` : value}
           </span>
           <span className="mt-1 text-base text-muted-foreground">
-            {value === null ? 'Drag the dial' : WORDS[value]}
+            {value === null ? 'Przeciągnij pokrętło' : WORDS[value]}
           </span>
         </div>
       </div>
@@ -220,18 +220,20 @@ export function ScoreDial({ value, onChange, disabled }: ScoreDialProps) {
           type="button"
           variant="outline"
           size="icon-lg"
-          aria-label="Lower score"
+          aria-label="Zmniejsz ocenę"
           disabled={disabled || value === MIN}
           onClick={() => set((value ?? 0) - 1)}
         >
           <Minus />
         </Button>
-        <span className="text-sm text-muted-foreground">Drag, tap or step</span>
+        <span className="text-sm text-muted-foreground">
+          Przeciągnij, dotknij lub zmieniaj krokami
+        </span>
         <Button
           type="button"
           variant="outline"
           size="icon-lg"
-          aria-label="Raise score"
+          aria-label="Zwiększ ocenę"
           disabled={disabled || value === MAX}
           onClick={() => set((value ?? 0) + 1)}
         >

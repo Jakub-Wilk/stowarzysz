@@ -26,7 +26,11 @@ function Heading({ children }: { children: string }) {
 
 function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) => void }) {
   return (
-    <div role="radiogroup" aria-label="Show" className="relative flex rounded-lg border p-0.5">
+    <div
+      role="radiogroup"
+      aria-label="Pokaż"
+      className="relative grid flex-1 grid-cols-2 rounded-lg border p-0.5"
+    >
       <span
         aria-hidden
         className={cn(
@@ -35,8 +39,8 @@ function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) =>
         )}
       />
       {[
-        { label: 'All', value: false },
-        { label: 'Mine', value: true },
+        { label: 'Wszystkie', value: false },
+        { label: 'Moje', value: true },
       ].map(({ label, value }) => (
         <button
           key={label}
@@ -45,7 +49,7 @@ function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) =>
           aria-checked={mine === value}
           onClick={() => onChange(value)}
           className={cn(
-            'relative min-h-11 flex-1 rounded-md px-4 text-base transition-colors',
+            'relative min-h-11 rounded-md px-4 text-base transition-colors',
             mine === value ? 'text-primary-foreground' : 'hover:bg-accent/60',
           )}
         >
@@ -79,76 +83,84 @@ export function VotingPage() {
 
   return (
     <>
+      <h2 className="mb-4 text-2xl font-semibold">Sejmik</h2>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold">Voting</h2>
-        <div className="flex items-center gap-2">
-          <Scope mine={mine} onChange={setMine} />
-          <Button nativeButton={false} render={<Link to="/voting/new" />}>
-            <Plus /> New vote
-          </Button>
-        </div>
+        <Scope mine={mine} onChange={setMine} />
+        <Button nativeButton={false} render={<Link to="/voting/new" />}>
+          <Plus /> Głosowanie
+        </Button>
       </div>
 
-      {(open.isError || closed.isError) && (
-        <div className="mt-6 flex flex-col items-start gap-2">
-          <span role="alert" className="text-base text-destructive">
-            Couldn&apos;t load votes.
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void open.refetch()
-              void closed.refetch()
-            }}
+      {/* Re-keyed per scope so the list swipes in from the side its switch option is on. */}
+      <div
+        key={String(mine)}
+        className={mine ? 'animate-swipe-from-right' : 'animate-swipe-from-left'}
+      >
+        {(open.isError || closed.isError) && (
+          <div className="mt-6 flex flex-col items-start gap-2">
+            <span role="alert" className="text-base text-destructive">
+              Nie udało się wczytać porządku obrad.
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => {
+                void open.refetch()
+                void closed.refetch()
+              }}
+            >
+              Spróbuj ponownie
+            </Button>
+          </div>
+        )}
+
+        {open.isPending && closed.isPending && (
+          <div
+            className="mt-8 flex flex-col gap-3"
+            role="status"
+            aria-label="Ładowanie porządku obrad"
           >
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {open.isPending && closed.isPending && (
-        <div className="mt-8 flex flex-col gap-3" role="status" aria-label="Loading votes">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-      )}
-
-      {nothing && (
-        <p className="mt-10 text-center text-base text-muted-foreground">
-          No votes yet. Call the first one!
-        </p>
-      )}
-
-      {open.data && open.data.length > 0 && (
-        <section>
-          <Heading>Active</Heading>
-          <Stagger as="ul" className="flex flex-col gap-3">
-            {open.data.map((poll) => (
-              <PollRow key={poll.id} poll={poll} />
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-24" />
             ))}
-          </Stagger>
-        </section>
-      )}
+          </div>
+        )}
 
-      {groupByDay(history).map(([label, polls]) => (
-        <section key={label}>
-          <Heading>{label}</Heading>
-          <Stagger as="ul" className="flex flex-col gap-3">
-            {polls.map((poll) => (
-              <PollRow key={poll.id} poll={poll} />
-            ))}
-          </Stagger>
-        </section>
-      ))}
+        {nothing && (
+          <p className="mt-10 text-center text-base text-muted-foreground">
+            Porządek obrad jest pusty. Zarządź pierwsze głosowanie!
+          </p>
+        )}
 
-      {hasNextPage && (
-        <div ref={sentinel} className="mt-4 flex justify-center">
-          <Button variant="ghost" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
-            {isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </Button>
-        </div>
-      )}
+        {open.data && open.data.length > 0 && (
+          <section>
+            <Heading>Trwające obrady</Heading>
+            <Stagger as="ul" className="flex flex-col gap-3">
+              {open.data.map((poll) => (
+                <PollRow key={poll.id} poll={poll} />
+              ))}
+            </Stagger>
+          </section>
+        )}
+
+        {groupByDay(history).map(([label, polls]) => (
+          <section key={label}>
+            <Heading>{label}</Heading>
+            <Stagger as="ul" className="flex flex-col gap-3">
+              {polls.map((poll) => (
+                <PollRow key={poll.id} poll={poll} />
+              ))}
+            </Stagger>
+          </section>
+        ))}
+
+        {hasNextPage && (
+          <div ref={sentinel} className="mt-4 flex justify-center">
+            <Button variant="ghost" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
+              {isFetchingNextPage ? 'Ładowanie…' : 'Wczytaj więcej'}
+            </Button>
+          </div>
+        )}
+      </div>
     </>
   )
 }

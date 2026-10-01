@@ -41,13 +41,13 @@ function LockedActions({
 
   return (
     <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogCancel>Anuluj</AlertDialogCancel>
       <AlertDialogAction
         variant="destructive"
         disabled={remaining > 0 || pending}
         onClick={onConfirm}
       >
-        {remaining > 0 ? `Delete (${remaining})` : 'Delete'}
+        {remaining > 0 ? `Usuń (${remaining})` : 'Usuń'}
       </AlertDialogAction>
     </AlertDialogFooter>
   )
@@ -66,10 +66,10 @@ export function DeleteUserDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {userName}?</AlertDialogTitle>
+          <AlertDialogTitle>Usunąć użytkownika {userName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes the account and signs the user out everywhere. It can't be
-            undone.
+            Konto zostanie trwale usunięte, a użytkownik zostanie wylogowany ze wszystkich urządzeń.
+            Tej operacji nie można cofnąć.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (

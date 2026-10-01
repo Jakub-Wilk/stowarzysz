@@ -9,7 +9,8 @@ code needs nothing per component.
 - Durations: `--duration-fast|base|slow`. Easings: `--ease-out-soft`, `--ease-spring`.
 - Utilities: `animate-fade-up`, `animate-pop-in`, `animate-shimmer` (skeletons), `animate-glow`
   (attention pulse), `animate-bump` (feedback), `animate-wiggle` (errors), `animate-flash`
-  (live-update highlight), `stagger` (delay from `--i`, capped).
+  (live-update highlight), `animate-swipe-from-right|left` (content swapped by a switch; re-key the
+  wrapper), `stagger` (delay from `--i`, capped).
 - Primitives: `Stagger` (lists), `Reveal` (one block), `PageTransition` (layouts),
   `Skeleton` (`components/ui`), `useCountUp(n)`, `useFlashOnChange(key)`.
 

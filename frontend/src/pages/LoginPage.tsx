@@ -12,8 +12,8 @@ import { UserAvatar } from '@/features/auth/UserAvatar'
 import { cn } from '@/lib/utils'
 
 function loginErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 401) return 'Incorrect password.'
-  return "Couldn't sign in. Please try again."
+  if (error instanceof ApiError && error.status === 401) return 'Nieprawidłowe hasło.'
+  return 'Nie udało się zalogować. Spróbuj ponownie.'
 }
 
 const SLIDE_MS = 300
@@ -59,8 +59,8 @@ function PasswordForm({
         <Input
           type="password"
           autoComplete="current-password"
-          placeholder="Password"
-          aria-label="Password"
+          placeholder="Hasło"
+          aria-label="Hasło"
           aria-invalid={login.isError}
           ref={input}
           value={password}
@@ -70,7 +70,7 @@ function PasswordForm({
         <Button
           type="submit"
           size="icon-lg"
-          aria-label="Sign in"
+          aria-label="Zaloguj"
           disabled={!password || login.isPending}
           className="h-14 w-14"
         >
@@ -85,7 +85,7 @@ function PasswordForm({
         {login.isError ? loginErrorMessage(login.error) : ''}
       </span>
       <Button type="button" variant="ghost" onClick={onBack}>
-        <ChevronLeft /> Switch user
+        <ChevronLeft /> Zmień użytkownika
       </Button>
     </form>
   )
@@ -94,19 +94,22 @@ function PasswordForm({
 function UserList({ onSelect }: { onSelect: (user: LoginUser) => void }) {
   const { data: users, isPending, isError, refetch } = useLoginUsers()
 
-  if (isPending) return <span className="text-sm text-muted-foreground">Loading users…</span>
+  if (isPending)
+    return <span className="text-sm text-muted-foreground">Ładowanie użytkowników…</span>
   if (isError) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <span className="text-sm text-destructive">Couldn't load users.</span>
+        <span className="text-sm text-destructive">Nie udało się wczytać użytkowników.</span>
         <Button variant="outline" onClick={() => refetch()}>
-          Retry
+          Spróbuj ponownie
         </Button>
       </div>
     )
   }
   if (users.length === 0) {
-    return <span className="text-sm text-muted-foreground">No accounts have been set up yet.</span>
+    return (
+      <span className="text-sm text-muted-foreground">Nie utworzono jeszcze żadnych kont.</span>
+    )
   }
 
   return (
@@ -135,7 +138,7 @@ export function LoginPage() {
   // The user stays set while sliding back, so the password pane doesn't empty mid-animation.
   const [user, setUser] = useState<LoginUser | null>(null)
   const [open, setOpen] = useState(false)
-  const tagline = open ? 'Enter your password to continue' : 'Select your account to begin'
+  const tagline = open ? 'Wpisz hasło, aby kontynuować' : 'Wybierz konto, aby zacząć'
 
   const pane = 'flex w-full shrink-0 flex-col items-center justify-center px-3 md:items-start'
 

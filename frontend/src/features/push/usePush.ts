@@ -49,7 +49,7 @@ export function usePush() {
   const enable = useMutation({
     mutationFn: async () => {
       const publicKey = key.data?.public_key
-      if (!publicKey) throw new Error('Notifications are not configured on the server.')
+      if (!publicKey) throw new Error('Powiadomienia nie są skonfigurowane na serwerze.')
       // Must happen in response to a click: browsers ignore prompts that aren't.
       if ((await Notification.requestPermission()) !== 'granted') return
       const registration = await navigator.serviceWorker.ready

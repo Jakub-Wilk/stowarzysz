@@ -2,13 +2,13 @@ import { ChevronRight, Users, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 
 const objectTypes: { path: string; label: string; icon: LucideIcon }[] = [
-  { path: '/manage/users', label: 'Users', icon: Users },
+  { path: '/manage/users', label: 'Użytkownicy', icon: Users },
 ]
 
 export function ManageIndexPage() {
   return (
     <>
-      <h2 className="mb-4 text-xl font-semibold">Manage</h2>
+      <h2 className="mb-4 text-xl font-semibold">Zarządzanie</h2>
       <ul className="flex flex-col gap-2">
         {objectTypes.map(({ path, label, icon: Icon }) => (
           <li key={path}>

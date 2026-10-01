@@ -1,0 +1,16 @@
+const rules = new Intl.PluralRules('pl')
+
+/** Polish noun forms: 1 głos, 2 głosy, 5 głosów. */
+export interface PluralForms {
+  one: string
+  few: string
+  many: string
+}
+
+/** Picks the Polish noun form for `count` (e.g. `plural(3, forms)` -> `few`). */
+export function plural(count: number, forms: PluralForms): string {
+  const category = rules.select(count)
+  return category === 'one' ? forms.one : category === 'few' ? forms.few : forms.many
+}
+
+export const VOTE_FORMS: PluralForms = { one: 'głos', few: 'głosy', many: 'głosów' }

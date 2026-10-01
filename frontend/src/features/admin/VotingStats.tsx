@@ -1,19 +1,19 @@
 import { formatScore } from '@/features/voting/format'
 import type { VotingStats } from '@/lib/api-types'
+import { plural, VOTE_FORMS } from '@/lib/plural'
 
-const plural = (n: number, singular: string, pluralForm = `${singular}s`) =>
-  `${n} ${n === 1 ? singular : pluralForm}`
+const VETO_FORMS = { one: 'weto', few: 'weta', many: 'wet' }
 
 /** One compact line for list rows. Counts finished votes only (open ones stay hidden). */
 export function VotingStatsLine({ stats }: { stats: VotingStats }) {
   if (stats.votes_cast === 0) {
-    return <span className="text-sm text-muted-foreground">No votes yet</span>
+    return <span className="text-sm text-muted-foreground">Brak głosów</span>
   }
   return (
     <span className="text-sm text-muted-foreground">
-      avg {stats.average_score === null ? '—' : formatScore(stats.average_score)} ·{' '}
-      {plural(stats.veto_count, 'veto', 'vetoes')} ({stats.veto_percent}%) ·{' '}
-      {plural(stats.votes_cast, 'vote')}
+      śr. {stats.average_score === null ? '—' : formatScore(stats.average_score)} ·{' '}
+      {stats.veto_count} {plural(stats.veto_count, VETO_FORMS)} ({stats.veto_percent}%) ·{' '}
+      {stats.votes_cast} {plural(stats.votes_cast, VOTE_FORMS)}
     </span>
   )
 }
@@ -31,18 +31,20 @@ function Stat({ label, value }: { label: string; value: string }) {
 export function VotingStatsBlock({ stats }: { stats: VotingStats }) {
   return (
     <section className="mt-10 flex max-w-md flex-col gap-3 border-t pt-6">
-      <h3 className="font-semibold">Voting</h3>
+      <h3 className="font-semibold">Głosowania</h3>
       {stats.votes_cast === 0 ? (
-        <p className="text-sm text-muted-foreground">Hasn&apos;t voted in a finished vote yet.</p>
+        <p className="text-sm text-muted-foreground">
+          Brak zakończonych głosowań z udziałem tej osoby.
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Votes cast" value={String(stats.votes_cast)} />
+          <Stat label="Oddane głosy" value={String(stats.votes_cast)} />
           <Stat
-            label="Average score"
+            label="Średni wynik"
             value={stats.average_score === null ? '—' : formatScore(stats.average_score)}
           />
-          <Stat label="Vetoes" value={String(stats.veto_count)} />
-          <Stat label="Veto rate" value={`${stats.veto_percent}%`} />
+          <Stat label="Weta" value={String(stats.veto_count)} />
+          <Stat label="Odsetek wet" value={`${stats.veto_percent}%`} />
         </div>
       )}
     </section>

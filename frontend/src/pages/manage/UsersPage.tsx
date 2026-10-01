@@ -22,15 +22,15 @@ export function UsersPage() {
 
   return (
     <>
-      <BackLink to="/manage">Manage</BackLink>
+      <BackLink to="/manage">Zarządzanie</BackLink>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Users</h2>
+        <h2 className="text-xl font-semibold">Użytkownicy</h2>
         <Button nativeButton={false} render={<Link to="/manage/users/new" />}>
-          <Plus /> Add user
+          <Plus /> Dodaj użytkownika
         </Button>
       </div>
       {isPending && (
-        <div className="flex flex-col gap-2" role="status" aria-label="Loading users">
+        <div className="flex flex-col gap-2" role="status" aria-label="Ładowanie użytkowników">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20" />
           ))}
@@ -39,10 +39,10 @@ export function UsersPage() {
       {isError && (
         <div className="flex flex-col items-start gap-2">
           <span role="alert" className="text-sm text-destructive">
-            Couldn't load users.
+            Nie udało się wczytać użytkowników.
           </span>
           <Button variant="outline" onClick={() => refetch()}>
-            Retry
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -58,9 +58,9 @@ export function UsersPage() {
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-metal truncate text-lg font-medium">{user.username}</span>
                 <span className="flex flex-wrap items-center gap-1.5">
-                  {user.is_superuser && <Badge>Superuser</Badge>}
-                  {!user.is_active && <Badge>Inactive</Badge>}
-                  {!user.has_password && <Badge>Awaiting activation</Badge>}
+                  {user.is_superuser && <Badge>Superużytkownik</Badge>}
+                  {!user.is_active && <Badge>Nieaktywny</Badge>}
+                  {!user.has_password && <Badge>Oczekuje na aktywację</Badge>}
                 </span>
                 <VotingStatsLine stats={user.voting} />
               </div>

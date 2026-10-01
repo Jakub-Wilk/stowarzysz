@@ -13,6 +13,6 @@ export interface TabDef {
 
 /** Order matters: it is the left-to-right order of the tab bar and of the swipe pager. */
 export const tabs: TabDef[] = [
-  { path: '/voting', label: 'Voting', icon: Vote, page: VotingPage },
+  { path: '/voting', label: 'Sejmik', icon: Vote, page: VotingPage },
   { path: '/secret-santa', label: 'Secret Santa', icon: Gift, page: SecretSantaPage },
 ]

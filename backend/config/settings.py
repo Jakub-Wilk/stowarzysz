@@ -77,8 +77,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# The app is Polish: Django/DRF built-in messages and our own API messages are in Polish.
+LANGUAGE_CODE = "pl"
+TIME_ZONE = "Europe/Warsaw"
 USE_I18N = True
 USE_TZ = True
 

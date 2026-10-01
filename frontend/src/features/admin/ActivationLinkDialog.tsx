@@ -54,11 +54,11 @@ export function ActivationLinkDialog({
     >
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>{isReset ? 'Password reset link' : 'Activation link'}</DialogTitle>
+          <DialogTitle>{isReset ? 'Link do resetu hasła' : 'Link aktywacyjny'}</DialogTitle>
           <DialogDescription>
-            Send this one-time link to {userName}. They use it to set their password
-            {link && ` before ${new Date(link.expires_at).toLocaleString()}`}. It won't be shown
-            again, and issuing a new link voids this one.
+            Jednorazowy link dla użytkownika {userName}, służący do ustawienia hasła
+            {link && ` (ważny do ${new Date(link.expires_at).toLocaleString('pl-PL')})`}. Nie
+            zostanie pokazany ponownie, a wygenerowanie nowego linku unieważnia ten.
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2">
@@ -69,12 +69,12 @@ export function ActivationLinkDialog({
             onFocus={(e) => e.currentTarget.select()}
           />
           <Button type="button" variant="outline" onClick={copy}>
-            {copied === 'yes' ? <Check /> : <Copy />} {copied === 'yes' ? 'Copied' : 'Copy'}
+            {copied === 'yes' ? <Check /> : <Copy />} {copied === 'yes' ? 'Skopiowano' : 'Kopiuj'}
           </Button>
         </div>
         {copied === 'failed' && (
           <span role="alert" className="text-sm text-destructive">
-            Couldn't copy automatically. Select the link and copy it manually.
+            Nie udało się skopiować automatycznie. Zaznacz link i skopiuj go ręcznie.
           </span>
         )}
         {note && <span className="text-sm text-muted-foreground">{note}</span>}

@@ -12,7 +12,7 @@ export function BottomTabs() {
 
   return (
     <nav
-      aria-label="Main"
+      aria-label="Główna nawigacja"
       className="sticky bottom-0 z-10 border-t bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
       <ul className="relative flex h-[4.5rem]">

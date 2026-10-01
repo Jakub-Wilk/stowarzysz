@@ -12,15 +12,15 @@ function EditUser({ id }: { id: number }) {
   if (error instanceof ApiError && error.status === 404) {
     return <Navigate to="/manage/users" replace />
   }
-  if (isPending) return <span className="text-sm text-muted-foreground">Loading…</span>
+  if (isPending) return <span className="text-sm text-muted-foreground">Ładowanie…</span>
   if (error) {
     return (
       <div className="flex flex-col items-start gap-2">
         <span role="alert" className="text-sm text-destructive">
-          Couldn't load this user.
+          Nie udało się wczytać użytkownika.
         </span>
         <Button variant="outline" onClick={() => refetch()}>
-          Retry
+          Spróbuj ponownie
         </Button>
       </div>
     )
@@ -41,10 +41,10 @@ export function UserFormPage() {
 
   return (
     <>
-      <BackLink to="/manage/users">Users</BackLink>
+      <BackLink to="/manage/users">Użytkownicy</BackLink>
       {userId === null ? (
         <>
-          <h2 className="mb-6 text-xl font-semibold">New user</h2>
+          <h2 className="mb-6 text-xl font-semibold">Nowy użytkownik</h2>
           <UserForm />
         </>
       ) : (

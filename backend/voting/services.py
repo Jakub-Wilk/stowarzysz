@@ -18,7 +18,7 @@ REACTION_EMOJI = ("❤️", "🔥", "😭", "👎", "🤣")
 
 class Conflict(APIException):
     status_code = 409
-    default_detail = "This vote has already ended."
+    default_detail = "To głosowanie już się zakończyło."
     default_code = "conflict"
 
 
@@ -32,7 +32,7 @@ def _locked_open_poll(poll_id: int) -> Poll:
 def _participant(poll: Poll, user: Any) -> PollParticipant:
     participant = PollParticipant.objects.filter(poll=poll, user=user).first()
     if participant is None:
-        raise PermissionDenied("You're not part of this vote.")
+        raise PermissionDenied("Nie bierzesz udziału w tym głosowaniu.")
     return participant
 
 
@@ -69,7 +69,7 @@ def create_poll(
     wanted = set(participant_ids) | {creator.pk}  # the caller always takes part
     users = list(get_user_model()._default_manager.filter(pk__in=wanted, is_active=True))
     if len(users) != len(wanted):
-        raise ValidationError({"participant_ids": "Unknown or inactive user."})
+        raise ValidationError({"participant_ids": "Nieznany lub nieaktywny użytkownik."})
 
     with transaction.atomic():
         poll = Poll.objects.create(creator=creator, title=title, kind=kind_key, config=clean_config)
@@ -78,7 +78,12 @@ def create_poll(
 
         def announce() -> None:
             broadcast("poll.created", {"poll_id": poll.pk})
-            send_push(notify_ids, title="New vote", body=poll.title, url=f"/voting/{poll.pk}")
+            send_push(
+                notify_ids,
+                title="Nowe głosowanie w Sejmiku",
+                body=poll.title,
+                url=f"/voting/{poll.pk}",
+            )
 
         transaction.on_commit(announce)
     return poll
@@ -89,7 +94,7 @@ def cast_ballot(poll_id: int, user: Any, ballot: Any) -> Poll:
         poll = _locked_open_poll(poll_id)
         participant = _participant(poll, user)
         if participant.vetoed:
-            raise ValidationError("You vetoed this vote; a veto can't be undone.")
+            raise ValidationError("Zawetowano już to głosowanie; weta nie można cofnąć.")
         participant.ballot = get_kind(poll.kind).validate_ballot(poll.config, ballot)
         participant.voted_at = timezone.now()
         participant.save(update_fields=["ballot", "voted_at"])
@@ -113,12 +118,12 @@ def close_early(poll_id: int, user: Any) -> Poll:
     with transaction.atomic():
         poll = _locked_open_poll(poll_id)
         if poll.creator_id != user.pk:
-            raise PermissionDenied("Only the person who called the vote can end it.")
+            raise PermissionDenied("Tylko osoba, która rozpoczęła głosowanie, może je zakończyć.")
         _close(poll, Poll.CloseReason.CREATOR)
     return poll
 
 
 def send_reaction(poll: Poll, user: Any, emoji: str) -> None:
     if poll.status != Poll.Status.CLOSED:
-        raise ValidationError("Reactions are for finished votes.")
+        raise ValidationError("Reakcje są dostępne dla zakończonych głosowań.")
     broadcast("poll.reaction", {"poll_id": poll.pk, "emoji": emoji, "user_id": user.pk})

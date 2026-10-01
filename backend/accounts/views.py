@@ -87,7 +87,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_destroy(self, instance: User) -> None:
         if instance == self.request.user:
-            raise serializers.ValidationError("You can't delete yourself.")
+            raise serializers.ValidationError("Nie możesz usunąć samego siebie.")
         instance.delete()
 
 
@@ -121,7 +121,9 @@ class ActivationLinkView(APIView):
     def post(self, request: Request, user_id: int) -> Response:
         user = get_object_or_404(User, pk=user_id)
         if not user.is_active:
-            raise serializers.ValidationError("Cannot issue a link for an inactive user.")
+            raise serializers.ValidationError(
+                "Nie można wystawić linku dla nieaktywnego użytkownika."
+            )
         token, raw = ActivationToken.issue(user, created_by=request.user)
         data = {
             "token": raw,

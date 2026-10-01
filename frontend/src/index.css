@@ -108,7 +108,29 @@
   --animate-bump: bump var(--duration-base) var(--ease-spring);
   --animate-wiggle: wiggle 360ms ease-in-out;
   --animate-flash: flash 1.4s ease-out;
+  --animate-swipe-from-right: swipe-from-right var(--duration-slow) var(--ease-out-soft) both;
+  --animate-swipe-from-left: swipe-from-left var(--duration-slow) var(--ease-out-soft) both;
 
+  @keyframes swipe-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(2.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes swipe-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-2.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
   @keyframes fade-up {
     from {
       opacity: 0;

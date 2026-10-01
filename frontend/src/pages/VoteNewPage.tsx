@@ -43,11 +43,11 @@ export function VoteNewPage() {
 
   return (
     <>
-      <BackLink to="/voting">Voting</BackLink>
-      <h2 className="mb-6 text-2xl font-semibold">New vote</h2>
+      <BackLink to="/voting">Sejmik</BackLink>
+      <h2 className="mb-6 text-2xl font-semibold">Nowe głosowanie</h2>
       <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="title">What are we voting on?</Label>
+          <Label htmlFor="title">Przedmiot głosowania</Label>
           <Input
             id="title"
             value={title}
@@ -65,25 +65,25 @@ export function VoteNewPage() {
 
         <fieldset className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <legend className="text-base font-medium">Who votes?</legend>
+            <legend className="text-base font-medium">Którzy posłowie głosują?</legend>
             {others.length > 0 && (
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setChosen(allChosen ? new Set() : new Set(others.map((p) => p.id)))}
               >
-                {allChosen ? 'Select none' : 'Select all'}
+                {allChosen ? 'Odznacz wszystkich' : 'Zaznacz wszystkich'}
               </Button>
             )}
           </div>
           {me && (
             <div className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 opacity-80">
-              <Checkbox checked disabled aria-label="You" />
+              <Checkbox checked disabled aria-label="Wnioskodawca" />
               <UserAvatar username={me.username} src={me.avatar_url} size="md" />
-              <span className="text-metal text-lg font-medium">{me.username} (you)</span>
+              <span className="text-metal text-lg font-medium">{me.username} (wnioskodawca)</span>
             </div>
           )}
-          {people.isPending && <span className="text-base text-muted-foreground">Loading…</span>}
+          {people.isPending && <span className="text-base text-muted-foreground">Ładowanie…</span>}
           {others.map((person) => (
             <label
               key={person.id}
@@ -112,7 +112,7 @@ export function VoteNewPage() {
         )}
         <div>
           <Button type="submit" disabled={!title.trim() || create.isPending}>
-            Call vote
+            Zarządź głosowanie
           </Button>
         </div>
       </form>

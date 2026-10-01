@@ -6,9 +6,12 @@ import { formatScore } from '@/features/voting/format'
 import { ScoreDial } from '@/features/voting/kinds/ScoreDial'
 import { toneClasses } from '@/features/voting/tone'
 import type { Ballot, PollDetail, PollResult } from '@/lib/api-types'
+import { plural } from '@/lib/plural'
 import { cn } from '@/lib/utils'
 
 import type { BallotInputProps } from './types'
+
+const VETO_FORMS = { one: 'weto', few: 'weta', many: 'wet' }
 
 interface ScoreResult {
   votes_cast: number
@@ -47,7 +50,7 @@ export function ScoreBallotInput({ value, pending, onSubmit }: BallotInputProps)
         disabled={picked === null || picked === saved || pending}
         onClick={() => picked !== null && onSubmit({ value: picked })}
       >
-        {saved === null ? 'Cast vote' : 'Change vote'}
+        {saved === null ? 'Oddaj głos' : 'Zmień głos'}
       </Button>
     </div>
   )
@@ -65,7 +68,7 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
             role="status"
             className="rounded-md bg-negative px-4 py-1 text-lg font-black tracking-[0.3em] text-background uppercase"
           >
-            Vetoed
+            Zawetowano
           </div>
         )}
         {result && result.score !== null ? (
@@ -73,12 +76,13 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
             {formatScore(result.score)}
           </div>
         ) : (
-          <div className="text-xl font-semibold">No votes cast</div>
+          <div className="text-xl font-semibold">Nie oddano głosów</div>
         )}
         {result && (
           <div className="text-base text-muted-foreground">
-            {result.votes_cast} of {poll.participant_count} voted
-            {result.veto_count > 1 && ` · ${result.veto_count} vetoes`}
+            Zagłosowało {result.votes_cast} z {poll.participant_count} posłów
+            {result.veto_count > 1 &&
+              ` · ${result.veto_count} ${plural(result.veto_count, VETO_FORMS)}`}
           </div>
         )}
       </div>
@@ -97,7 +101,7 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
               </span>
               {vetoed && (
                 <span className="rounded-full bg-negative/15 px-2 py-0.5 text-xs font-bold text-negative uppercase">
-                  Veto
+                  Weto
                 </span>
               )}
               {has_voted && value !== null ? (
@@ -110,7 +114,7 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
                   {value > 0 ? `+${value}` : value}
                 </span>
               ) : (
-                <span className="text-base text-muted-foreground">didn&apos;t vote</span>
+                <span className="text-base text-muted-foreground">brak głosu</span>
               )}
             </li>
           )
@@ -127,7 +131,7 @@ export function ScoreResultChip({ result }: { result: PollResult }) {
     <span className="flex items-center gap-1.5">
       {parsed?.vetoed && (
         <span className="rounded-full bg-negative px-2 py-0.5 text-xs font-black text-background uppercase">
-          Vetoed
+          Zawetowano
         </span>
       )}
       <span className={cn('rounded-full px-2.5 py-0.5 text-sm font-bold tabular-nums', tone.chip)}>

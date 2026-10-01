@@ -19,6 +19,7 @@ export default defineConfig({
       manifest: {
         name: 'stowarzysz',
         short_name: 'stowarzysz',
+        lang: 'pl',
         start_url: '/',
         display: 'standalone',
         background_color: '#0e0818',

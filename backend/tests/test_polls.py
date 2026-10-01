@@ -118,7 +118,7 @@ def test_create_includes_creator_and_notifies_the_others(
     assert pushes == [
         {
             "user_ids": [bob.pk],
-            "title": "New vote",
+            "title": "Nowe głosowanie w Sejmiku",
             "body": "Pizza?",
             "url": f"/voting/{body['id']}",
         }

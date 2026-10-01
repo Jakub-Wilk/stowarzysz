@@ -70,7 +70,7 @@ export function AvatarField({ username, user, pending, onPendingChange }: Avatar
           type="file"
           accept="image/*"
           className="hidden"
-          aria-label="Profile picture file"
+          aria-label="Plik zdjęcia profilowego"
           onChange={onFile}
         />
         <div className="flex flex-wrap gap-2">
@@ -80,15 +80,15 @@ export function AvatarField({ username, user, pending, onPendingChange }: Avatar
             disabled={busy}
             onClick={() => input.current?.click()}
           >
-            <ImagePlus /> {current ? 'Change picture' : 'Add picture'}
+            <ImagePlus /> {current ? 'Zmień zdjęcie' : 'Dodaj zdjęcie'}
           </Button>
           {current && (
             <Button type="button" variant="ghost" disabled={busy} onClick={removePicture}>
-              <Trash2 /> Remove
+              <Trash2 /> Usuń
             </Button>
           )}
         </div>
-        {busy && <span className="text-sm text-muted-foreground">Saving…</span>}
+        {busy && <span className="text-sm text-muted-foreground">Zapisywanie…</span>}
         {error && (
           <span role="alert" className="text-sm text-destructive">
             {error}

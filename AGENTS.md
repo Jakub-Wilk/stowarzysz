@@ -2,6 +2,10 @@
 
 Conventions for working in this repo, for humans and coding agents. See [README.md](README.md) for setup.
 
+## Language
+
+**The app is Polish.** Everything a user sees is in Polish: UI text, API error messages (`ValidationError`, `PermissionDenied`, ...), push notification titles and bodies, dates (`pl-PL`) and plurals (Polish has three forms; use the helper in `frontend/src/lib/`, don't write `n === 1 ? ... : ...`). New user-facing strings must be Polish; don't add English ones, and don't introduce an i18n framework unless asked. Code, identifiers, comments, commit messages and these docs stay in English. Use the established terms: *głosowanie* (vote/poll), *weto* (veto), *oddaj głos* (cast vote), *Zarządzanie* (management), *Sejmik* (the voting section), *posłowie* (participants), *wnioskodawca* (poll creator), *obrady* (ongoing votes).
+
 ## Layout
 
 ```

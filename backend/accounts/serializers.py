@@ -13,7 +13,7 @@ from voting.stats import VotingStatsSerializer, voting_stats
 
 User = get_user_model()
 
-INVALID_TOKEN_MESSAGE = "This activation link is invalid or has expired."
+INVALID_TOKEN_MESSAGE = "Ten link aktywacyjny jest nieprawidłowy lub wygasł."
 
 
 def avatar_url(user: Any) -> str | None:
@@ -70,10 +70,12 @@ class ManagedUserSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if self.instance is not None and request is not None and self.instance == request.user:
             if attrs.get("is_active") is False:
-                raise serializers.ValidationError({"is_active": "You can't deactivate yourself."})
+                raise serializers.ValidationError(
+                    {"is_active": "Nie możesz dezaktywować samego siebie."}
+                )
             if attrs.get("is_superuser") is False:
                 raise serializers.ValidationError(
-                    {"is_superuser": "You can't remove your own superuser status."}
+                    {"is_superuser": "Nie możesz odebrać sobie uprawnień superużytkownika."}
                 )
         return attrs
 

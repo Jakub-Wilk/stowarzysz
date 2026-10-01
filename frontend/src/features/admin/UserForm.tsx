@@ -148,7 +148,7 @@ export function UserForm({ user }: { user?: ManagedUser }) {
           {
             onSuccess: () => finish(),
             onError: () =>
-              finish("The profile picture couldn't be uploaded. Add it from the user's page."),
+              finish('Nie udało się wgrać zdjęcia profilowego. Dodaj je na stronie użytkownika.'),
           },
         )
       },
@@ -172,25 +172,29 @@ export function UserForm({ user }: { user?: ManagedUser }) {
         />
         <TextField
           id="username"
-          label="Username"
+          label="Nazwa użytkownika"
           value={form.username}
           onChange={(v) => set('username', v)}
           error={errors.fields.username}
           required
         />
         <SwitchField
-          label="Active"
-          hint={isSelf ? "You can't deactivate yourself." : 'Inactive accounts cannot sign in.'}
+          label="Aktywny"
+          hint={
+            isSelf
+              ? 'Nie możesz dezaktywować samego siebie.'
+              : 'Nieaktywne konta nie mogą się logować.'
+          }
           checked={form.is_active}
           onChange={(v) => set('is_active', v)}
           disabled={isSelf}
         />
         <SwitchField
-          label="Superuser"
+          label="Superużytkownik"
           hint={
             isSelf
-              ? "You can't remove your own access."
-              : 'Can open the management area and edit all accounts.'
+              ? 'Nie możesz odebrać sobie własnych uprawnień.'
+              : 'Ma dostęp do panelu zarządzania i może edytować wszystkie konta.'
           }
           checked={form.is_superuser}
           onChange={(v) => set('is_superuser', v)}
@@ -203,9 +207,9 @@ export function UserForm({ user }: { user?: ManagedUser }) {
         )}
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving || (user !== undefined && !dirty)}>
-            {user ? 'Save changes' : 'Create user'}
+            {user ? 'Zapisz zmiany' : 'Utwórz użytkownika'}
           </Button>
-          {user && update.isSuccess && !dirty && <span className="text-sm">Saved</span>}
+          {user && update.isSuccess && !dirty && <span className="text-sm">Zapisano</span>}
         </div>
       </form>
 
@@ -214,11 +218,11 @@ export function UserForm({ user }: { user?: ManagedUser }) {
       {user && (
         <section className="mt-10 flex max-w-md flex-col gap-4 border-t pt-6">
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold">{user.has_password ? 'Password reset' : 'Activation'}</h3>
+            <h3 className="font-semibold">{user.has_password ? 'Reset hasła' : 'Aktywacja'}</h3>
             <p className="text-sm text-muted-foreground">
               {user.has_password
-                ? 'Issue a one-time link that lets this user choose a new password.'
-                : 'This account has no password yet. Issue a one-time link so the user can set one.'}
+                ? 'Wygeneruj jednorazowy link, dzięki któremu użytkownik ustawi nowe hasło.'
+                : 'To konto nie ma jeszcze hasła. Wygeneruj jednorazowy link, aby użytkownik mógł je ustawić.'}
             </p>
             <div>
               <Button
@@ -228,25 +232,25 @@ export function UserForm({ user }: { user?: ManagedUser }) {
                   issueLink.mutate(user.id, { onSuccess: (link) => setLinkDialog({ link }) })
                 }
               >
-                {user.has_password ? 'Issue reset link' : 'Issue activation link'}
+                {user.has_password ? 'Wygeneruj link do resetu' : 'Wygeneruj link aktywacyjny'}
               </Button>
             </div>
             {issueLink.isError && (
               <span role="alert" className="text-sm text-destructive">
-                {formErrors(issueLink.error).general ?? 'Could not issue a link.'}
+                {formErrors(issueLink.error).general ?? 'Nie udało się wygenerować linku.'}
               </span>
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <h3 className="font-semibold">Delete account</h3>
+            <h3 className="font-semibold">Usuń konto</h3>
             <div>
               <Button variant="destructive" disabled={isSelf} onClick={() => setDeleteOpen(true)}>
-                Delete user
+                Usuń użytkownika
               </Button>
             </div>
             {isSelf && (
               <span className="text-sm text-muted-foreground">
-                You can't delete your own account.
+                Nie możesz usunąć własnego konta.
               </span>
             )}
           </div>
@@ -269,7 +273,9 @@ export function UserForm({ user }: { user?: ManagedUser }) {
           }}
           userName={user.username}
           pending={remove.isPending}
-          error={remove.isError ? (formErrors(remove.error).general ?? 'Delete failed.') : null}
+          error={
+            remove.isError ? (formErrors(remove.error).general ?? 'Nie udało się usunąć.') : null
+          }
           onConfirm={() =>
             remove.mutate(user.id, {
               onSuccess: () => navigate('/manage/users', { replace: true }),

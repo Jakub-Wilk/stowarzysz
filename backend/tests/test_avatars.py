@@ -113,7 +113,7 @@ def test_rejects_oversized_upload(
     monkeypatch.setattr(avatars, "MAX_UPLOAD_BYTES", 10)
     resp = upload(admin_client, user)
     assert resp.status_code == 400
-    assert "too large" in str(resp.json())
+    assert "za duży" in str(resp.json())
 
 
 def test_unknown_user_is_404(admin_client: APIClient) -> None:

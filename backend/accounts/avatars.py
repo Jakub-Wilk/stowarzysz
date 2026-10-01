@@ -16,7 +16,7 @@ def process_avatar(upload: UploadedFile) -> ContentFile:
     """
     if upload.size is not None and upload.size > MAX_UPLOAD_BYTES:
         raise serializers.ValidationError(
-            f"Image is too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)."
+            f"Obraz jest za duży (maks. {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)."
         )
     try:
         with Image.open(upload) as source:  # ty: ignore[invalid-argument-type]
@@ -24,7 +24,7 @@ def process_avatar(upload: UploadedFile) -> ContentFile:
             mode = "RGBA" if "A" in image.getbands() else "RGB"
             image = ImageOps.fit(image.convert(mode), (AVATAR_SIZE, AVATAR_SIZE))
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
-        raise serializers.ValidationError("Upload a valid image.") from exc
+        raise serializers.ValidationError("Prześlij prawidłowy obraz.") from exc
 
     buffer = BytesIO()
     image.save(buffer, format="WEBP", quality=85)

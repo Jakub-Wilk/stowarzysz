@@ -2,6 +2,8 @@
 
 Monorepo with a Django backend and a Vite PWA frontend.
 
+> **Language:** the app is **Polish** (`pl`). The UI, API error messages, push notifications and date formats are all in Polish; the code, comments and developer docs stay in English. See [Language](#language).
+
 | Directory   | Stack                                                                                 |
 | ----------- | ------------------------------------------------------------------------------------- |
 | `backend/`  | Django 6, Django REST Framework, SimpleJWT, ASGI-only (Daphne), SSE via django-eventstream, PostgreSQL, managed with [uv](https://docs.astral.sh/uv/) |
@@ -56,6 +58,15 @@ uv run pytest                            # needs the Postgres container running
 pnpm dlx shadcn@latest add dialog   # add shadcn components (Tailwind v4, config in components.json)
 pnpm lint | format | typecheck | build
 ```
+
+## Language
+
+The product is Polish-only; there is no language switcher and no i18n framework.
+
+- **UI text** is written directly in Polish in the components (`frontend/src/`). `index.html` and the PWA manifest declare `lang="pl"`, and dates and counts are formatted for `pl-PL` (use the Polish plural helper in `frontend/src/lib/` for counts).
+- **Backend:** `LANGUAGE_CODE = "pl"` and `TIME_ZONE = "Europe/Warsaw"`, so Django and DRF built-in messages (validation, auth, password rules) come out in Polish. Our own API messages and push notification texts are written in Polish in the code.
+- **Stays English:** code, identifiers, comments, commit messages, API field names and values, and developer documentation.
+- Tests assert on Polish strings where they check messages.
 
 ## Code quality
 

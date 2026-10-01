@@ -22,6 +22,7 @@ import { useSmoke } from '@/features/voting/SmokeLayer'
 import { ApiError } from '@/lib/api'
 import { formErrors } from '@/lib/api-errors'
 import { REACTION_EMOJI, type PollDetail } from '@/lib/api-types'
+import { plural, VOTE_FORMS } from '@/lib/plural'
 import { cn } from '@/lib/utils'
 
 function Progress({ poll }: { poll: PollDetail }) {
@@ -34,12 +35,14 @@ function Progress({ poll }: { poll: PollDetail }) {
   }, [pct])
   const voted = useCountUp(poll.voted_count, 500)
   return (
-    <section className="flex flex-col gap-3" aria-label="Progress">
+    <section className="flex flex-col gap-3" aria-label="Postęp">
       <div className="flex items-center justify-between text-base">
         <span>
-          {voted} of {poll.participant_count} voted
+          Zagłosowało {voted} z {poll.participant_count} posłów
         </span>
-        <span className="text-sm text-muted-foreground">Votes are hidden until the end</span>
+        <span className="text-sm text-muted-foreground">
+          Głosowanie jest tajne do jego zakończenia
+        </span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
@@ -51,7 +54,7 @@ function Progress({ poll }: { poll: PollDetail }) {
         {poll.participants.map(({ user, has_voted }) => (
           <li
             key={user.id}
-            title={`${user.username}${has_voted ? ' has voted' : ' hasn’t voted yet'}`}
+            title={`${user.username}${has_voted ? ': oddano głos' : ': jeszcze nie oddano głosu'}`}
             className={cn('relative flex flex-col items-center gap-1', !has_voted && 'opacity-50')}
           >
             <UserAvatar username={user.username} src={user.avatar_url} size="md" />
@@ -84,10 +87,10 @@ function OpenVote({ poll }: { poll: PollDetail }) {
 
       {poll.can_vote && BallotInput && (
         <section className="flex flex-col gap-4">
-          <h3 className="text-lg font-semibold">Your vote</h3>
+          <h3 className="text-lg font-semibold">Twój głos</h3>
           {poll.my.vetoed ? (
             <p className="rounded-lg border border-negative/60 bg-negative/10 p-4 text-base">
-              You vetoed this vote. It counts as the lowest possible score.
+              Twoje weto liczy się jako najniższy możliwy wynik.
             </p>
           ) : (
             <BallotInput
@@ -100,7 +103,7 @@ function OpenVote({ poll }: { poll: PollDetail }) {
           )}
           {!poll.my.vetoed && (
             <Button variant="destructive" className="w-full" onClick={() => setConfirm('veto')}>
-              Veto
+              Weto
             </Button>
           )}
         </section>
@@ -108,18 +111,18 @@ function OpenVote({ poll }: { poll: PollDetail }) {
 
       {!poll.my.participating && (
         <p className="rounded-lg border bg-card p-4 text-base">
-          You&apos;re not part of this vote. You can follow along and see the result when it ends.
+          Nie uczestniczysz w tym głosowaniu. Możesz śledzić obrady i poznać wynik po zakończeniu.
         </p>
       )}
 
       {poll.can_close && (
         <section className="flex flex-col gap-2 border-t pt-4">
           <p className="text-base text-muted-foreground">
-            You called this vote, so you can end it before everyone has voted. Only the votes cast
-            so far count.
+            Jako wnioskodawca możesz zamknąć głosowanie, zanim wszyscy posłowie zagłosują. Liczą się
+            tylko głosy oddane dotąd.
           </p>
           <Button variant="outline" className="w-full" onClick={() => setConfirm('close')}>
-            End vote now
+            Zakończ głosowanie
           </Button>
         </section>
       )}
@@ -133,18 +136,18 @@ function OpenVote({ poll }: { poll: PollDetail }) {
       <ConfirmDialog
         open={confirm === 'veto'}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Veto this vote?"
-        description="A veto counts as the lowest score and marks the result as vetoed for everyone. You can't take it back."
-        confirmLabel="Veto"
+        title="Zawetować to głosowanie?"
+        description="Weto liczy się jako najniższy wynik i oznacza wynik głosowania jako zawetowany dla wszystkich. Nie można tego cofnąć."
+        confirmLabel="Weto"
         pending={veto.isPending}
         onConfirm={() => veto.mutate(undefined, { onSettled: () => setConfirm(null) })}
       />
       <ConfirmDialog
         open={confirm === 'close'}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="End the vote now?"
-        description={`Only the ${poll.voted_count} vote${poll.voted_count === 1 ? '' : 's'} cast so far will count, and nobody else will be able to vote.`}
-        confirmLabel="End vote"
+        title="Zakończyć głosowanie teraz?"
+        description={`Liczyć się będzie tylko ${poll.voted_count} ${plural(poll.voted_count, VOTE_FORMS)} oddanych dotąd, a pozostali posłowie nie będą mogli już zagłosować.`}
+        confirmLabel="Zakończ głosowanie"
         pending={close.isPending}
         onConfirm={() => close.mutate(undefined, { onSettled: () => setConfirm(null) })}
       />
@@ -174,13 +177,13 @@ function ClosedVote({ poll }: { poll: PollDetail }) {
       <div
         className="mx-auto grid w-full max-w-md grid-cols-5 gap-2"
         role="group"
-        aria-label="Reactions"
+        aria-label="Reakcje"
       >
         {REACTION_EMOJI.map((emoji) => (
           <button
             key={emoji}
             type="button"
-            aria-label={`React ${emoji}`}
+            aria-label={`Zareaguj ${emoji}`}
             onClick={() => {
               spawn(emoji) // instant for you; everyone else gets it over the live stream
               react.mutate(emoji)
@@ -193,7 +196,7 @@ function ClosedVote({ poll }: { poll: PollDetail }) {
       </div>
       {react.isError && (
         <span role="alert" className="text-center text-sm text-destructive">
-          {formErrors(react.error).general ?? 'Couldn’t send that reaction.'}
+          {formErrors(react.error).general ?? 'Nie udało się wysłać reakcji.'}
         </span>
       )}
       {layer}
@@ -213,15 +216,15 @@ export function VoteDetailPage() {
 
   return (
     <>
-      <BackLink to="/voting">Voting</BackLink>
-      {isPending && <span className="text-sm text-muted-foreground">Loading…</span>}
+      <BackLink to="/voting">Sejmik</BackLink>
+      {isPending && <span className="text-sm text-muted-foreground">Ładowanie…</span>}
       {error && !isPending && (
         <div className="flex flex-col items-start gap-2">
           <span role="alert" className="text-sm text-destructive">
-            Couldn&apos;t load this vote.
+            Nie udało się wczytać głosowania.
           </span>
           <Button variant="outline" onClick={() => refetch()}>
-            Retry
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -240,7 +243,7 @@ export function VoteDetailPage() {
               </span>
               {poll.status === 'open' && (
                 <span className="rounded-full bg-primary px-2.5 py-0.5 text-sm font-bold text-primary-foreground uppercase">
-                  Active
+                  Obrady trwają
                 </span>
               )}
             </div>

@@ -93,14 +93,20 @@ def test_sends_to_listed_users_only(configured, db) -> None:
     subscribe(a, "ep-a2")  # a second device
     subscribe(b, "ep-b")
     subscribe(c, "ep-c")
-    sender.send_push([a.pk, b.pk], title="New vote", body="Pizza?", url="/voting/1")
+    sender.send_push(
+        [a.pk, b.pk], title="Nowe głosowanie w Sejmiku", body="Pizza?", url="/voting/1"
+    )
     assert sorted(c["subscription_info"]["endpoint"] for c in configured) == [
         "ep-a1",
         "ep-a2",
         "ep-b",
     ]
     first = configured[0]
-    assert json.loads(first["data"]) == {"title": "New vote", "body": "Pizza?", "url": "/voting/1"}
+    assert json.loads(first["data"]) == {
+        "title": "Nowe głosowanie w Sejmiku",
+        "body": "Pizza?",
+        "url": "/voting/1",
+    }
     assert first["vapid_private_key"] == "priv"
     assert first["vapid_claims"] == {"sub": "mailto:test@example.com"}
 

@@ -15,7 +15,7 @@ function NotificationsToggle() {
   if (state === 'blocked') {
     return (
       <p className="text-center text-sm text-muted-foreground">
-        Notifications are blocked in your browser settings for this site.
+        Powiadomienia są zablokowane w ustawieniach przeglądarki dla tej strony.
       </p>
     )
   }
@@ -28,11 +28,11 @@ function NotificationsToggle() {
         disabled={busy}
         onClick={() => (on ? disable.mutate() : enable.mutate())}
       >
-        {on ? <BellOff /> : <Bell />} {on ? 'Turn off notifications' : 'Turn on notifications'}
+        {on ? <BellOff /> : <Bell />} {on ? 'Wyłącz powiadomienia' : 'Włącz powiadomienia'}
       </Button>
       {(enable.isError || disable.isError) && (
         <span role="alert" className="text-center text-sm text-destructive">
-          Couldn&apos;t change notifications. Try again later.
+          Nie udało się zmienić ustawień powiadomień. Spróbuj ponownie później.
         </span>
       )}
     </>
@@ -48,7 +48,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger
-        aria-label={`Account: ${me.username}`}
+        aria-label={`Konto: ${me.username}`}
         className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <UserAvatar username={me.username} src={me.avatar_url} />
@@ -63,7 +63,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
           disabled={logout.isPending}
           onClick={() => logout.mutate()}
         >
-          <LogOut /> Log out
+          <LogOut /> Wyloguj
         </Button>
         {me.is_superuser &&
           (inManage ? (
@@ -73,7 +73,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
               nativeButton={false}
               render={<Link to="/" />}
             >
-              <ArrowLeft /> Back to app
+              <ArrowLeft /> Wróć do aplikacji
             </Button>
           ) : (
             <Button
@@ -82,7 +82,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
               nativeButton={false}
               render={<Link to="/manage" />}
             >
-              <Settings /> Management
+              <Settings /> Zarządzanie
             </Button>
           ))}
       </PopoverContent>

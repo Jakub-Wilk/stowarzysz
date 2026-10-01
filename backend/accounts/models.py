@@ -20,7 +20,7 @@ class UserManager(BaseUserManager["User"]):
     def create_user(self, username: str, password: str | None = None, **extra: Any) -> User:
         """`password=None` creates an account with no usable password (activated via a link)."""
         if not username:
-            raise ValueError("The username must be set")
+            raise ValueError("Nazwa użytkownika jest wymagana")
         user = self.model(username=self.model.normalize_username(username), **extra)
         user.set_password(password)
         user.save(using=self._db)
@@ -41,7 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         max_length=150,
         unique=True,
         validators=[UnicodeUsernameValidator()],
-        error_messages={"unique": "A user with that username already exists."},
+        error_messages={"unique": "Użytkownik o takiej nazwie już istnieje."},
     )
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)

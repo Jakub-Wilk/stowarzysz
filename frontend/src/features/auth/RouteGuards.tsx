@@ -12,10 +12,12 @@ export function RequireAuth() {
   const me = useMe()
 
   if (!hasSession) return <Navigate to="/login" replace />
-  if (me.isPending) return <FullScreenMessage>Loading…</FullScreenMessage>
+  if (me.isPending) return <FullScreenMessage>Ładowanie…</FullScreenMessage>
   if (me.isError) {
     // A rejected refresh token clears the session (handled above); anything else is transient.
-    return <FullScreenMessage>Can't reach the server. Please try again.</FullScreenMessage>
+    return (
+      <FullScreenMessage>Nie można połączyć się z serwerem. Spróbuj ponownie.</FullScreenMessage>
+    )
   }
   return <Outlet />
 }
