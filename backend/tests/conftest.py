@@ -28,3 +28,10 @@ def auth_client(api_client: APIClient, user: User) -> APIClient:
     resp = api_client.post("/api/auth/token/", {"username": "alice", "password": "s3cret-pass-123"})
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return api_client
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache() -> None:
+    from django.core.cache import cache
+
+    cache.clear()  # throttle counters live in the cache

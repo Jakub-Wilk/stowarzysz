@@ -9,6 +9,7 @@ import { ActivationLinkDialog } from '@/features/admin/ActivationLinkDialog'
 import { AvatarField } from '@/features/admin/AvatarField'
 import type { PendingPicture } from '@/features/admin/avatar'
 import { DeleteUserDialog } from '@/features/admin/DeleteUserDialog'
+import { VotingStatsBlock } from '@/features/admin/VotingStats'
 import {
   useCreateUser,
   useDeleteUser,
@@ -207,6 +208,8 @@ export function UserForm({ user }: { user?: ManagedUser }) {
           {user && update.isSuccess && !dirty && <span className="text-sm">Saved</span>}
         </div>
       </form>
+
+      {user && <VotingStatsBlock stats={user.voting} />}
 
       {user && (
         <section className="mt-10 flex max-w-md flex-col gap-4 border-t pt-6">

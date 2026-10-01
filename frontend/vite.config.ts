@@ -12,6 +12,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Custom service worker (src/sw.ts) so it can also handle Web Push.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'stowarzysz',
         short_name: 'stowarzysz',
@@ -25,9 +29,7 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      // Keep the service worker away from API and SSE requests.
-      workbox: { navigateFallbackDenylist: [/^\/api/] },
-      devOptions: { enabled: true },
+      devOptions: { enabled: true, type: 'module' },
     }),
   ],
   resolve: {

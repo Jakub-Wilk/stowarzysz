@@ -50,6 +50,7 @@ def test_list_users(admin_client: APIClient, user: User) -> None:
         "is_superuser": False,
         "has_password": True,
         "avatar_url": None,
+        "voting": {"votes_cast": 0, "average_score": None, "veto_count": 0, "veto_percent": 0.0},
     }
 
 

@@ -4,11 +4,12 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useManagedUsers } from '@/features/admin/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
-import { BackLink } from '@/pages/manage/BackLink'
+import { BackLink } from '@/components/layout/BackLink'
+import { VotingStatsLine } from '@/features/admin/VotingStats'
 
 function Badge({ children }: { children: string }) {
   return (
-    <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+    <span className="rounded-full border px-2 py-0.5 text-sm text-muted-foreground">
       {children}
     </span>
   )
@@ -53,6 +54,7 @@ export function UsersPage() {
                     {!user.is_active && <Badge>Inactive</Badge>}
                     {!user.has_password && <Badge>Awaiting activation</Badge>}
                   </span>
+                  <VotingStatsLine stats={user.voting} />
                 </div>
                 <ChevronRight className="ml-auto size-5 shrink-0" aria-hidden />
               </Link>

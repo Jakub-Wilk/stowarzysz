@@ -64,14 +64,14 @@ function PasswordForm({
           ref={input}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="h-10 flex-1"
+          className="h-14 flex-1 text-lg"
         />
         <Button
           type="submit"
           size="icon-lg"
           aria-label="Sign in"
           disabled={!password || login.isPending}
-          className="h-10 w-10"
+          className="h-14 w-14"
         >
           <ArrowRight />
         </Button>

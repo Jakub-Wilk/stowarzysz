@@ -3,11 +3,13 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from accounts.avatars import process_avatar
 from accounts.models import ActivationToken, hash_token
+from voting.stats import VotingStatsSerializer, voting_stats
 
 User = get_user_model()
 
@@ -18,16 +20,43 @@ def avatar_url(user: Any) -> str | None:
     return user.avatar.url if user.avatar else None
 
 
+class PersonSerializer(serializers.ModelSerializer):
+    """Minimal public-to-members view of an account: who they are and their picture."""
+
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "avatar_url")
+        read_only_fields = fields
+
+    def get_avatar_url(self, obj: Any) -> str | None:
+        return avatar_url(obj)
+
+
 class ManagedUserSerializer(serializers.ModelSerializer):
     """Full account view for superusers. New accounts get no password; they activate via a link."""
 
     has_password = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    voting = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "is_active", "is_superuser", "has_password", "avatar_url")
-        read_only_fields = ("id", "has_password", "avatar_url")
+        fields = (
+            "id",
+            "username",
+            "is_active",
+            "is_superuser",
+            "has_password",
+            "avatar_url",
+            "voting",
+        )
+        read_only_fields = ("id", "has_password", "avatar_url", "voting")
+
+    @extend_schema_field(VotingStatsSerializer)
+    def get_voting(self, obj: Any) -> dict[str, Any]:
+        return voting_stats(obj)
 
     def get_has_password(self, obj: Any) -> bool:
         return obj.has_usable_password()

@@ -23,8 +23,10 @@ from accounts.serializers import (
     LoginUserSerializer,
     ManagedUserSerializer,
     MeSerializer,
+    PersonSerializer,
     TokenPairSerializer,
 )
+from voting.stats import annotate_voting_stats
 
 
 class MeView(APIView):
@@ -54,18 +56,32 @@ class LoginUserListView(APIView):
         return Response(LoginUserSerializer(users, many=True).data)
 
 
+class PeopleListView(generics.ListAPIView):
+    """Signed-in directory for pickers (e.g. who takes part in a vote): active, activated users."""
+
+    serializer_class = PersonSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            User.objects.filter(is_active=True)
+            .exclude(password__startswith="!")
+            .order_by("username")
+        )
+
+
 class UserListCreateView(generics.ListCreateAPIView):
     """Superuser lists accounts or creates one with no usable password (activated via a link)."""
 
     permission_classes = (IsSuperuser,)
     serializer_class = ManagedUserSerializer
-    queryset = User.objects.order_by("username")
+    queryset = annotate_voting_stats(User.objects.order_by("username"))
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsSuperuser,)
     serializer_class = ManagedUserSerializer
-    queryset = User.objects.all()
+    queryset = annotate_voting_stats(User.objects.all())
     lookup_url_kwarg = "user_id"
     http_method_names = ("get", "patch", "delete", "head", "options")
 

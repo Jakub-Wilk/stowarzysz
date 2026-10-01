@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useManagedUser } from '@/features/admin/hooks'
 import { UserForm } from '@/features/admin/UserForm'
 import { ApiError } from '@/lib/api'
-import { BackLink } from '@/pages/manage/BackLink'
+import { BackLink } from '@/components/layout/BackLink'
 
 function EditUser({ id }: { id: number }) {
   const { data: user, isPending, error, refetch } = useManagedUser(id)

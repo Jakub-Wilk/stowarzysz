@@ -27,7 +27,8 @@ repos:
         files: ^backend/
       - id: ty
         name: ty check
-        entry: uv run --project backend ty check backend
+        # --project makes ty read backend/pyproject.toml ([tool.ty]); it is run from the repo root.
+        entry: uv run --project backend ty check --project backend
         language: system
         types: [python]
         files: ^backend/

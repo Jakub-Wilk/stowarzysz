@@ -38,7 +38,7 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
         aria-label="New password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="h-10"
+        className="h-14 text-lg"
       />
       <Input
         type="password"
@@ -48,14 +48,14 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
         aria-invalid={mismatch}
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
-        className="h-10"
+        className="h-14 text-lg"
       />
       <span role="alert" className="min-h-5 text-center text-sm text-destructive">
         {message}
       </span>
       <Button
         type="submit"
-        className="h-10 w-full"
+        className="h-14 w-full text-lg"
         disabled={!password || mismatch || activate.isPending}
       >
         Set password and sign in

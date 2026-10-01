@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     "django_eventstream",
     "accounts",
     "core",
+    "voting",
+    "push",
 ]
 
 MIDDLEWARE = [
@@ -128,3 +130,10 @@ CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localho
 EVENTSTREAM_CHANNELMANAGER_CLASS = "core.channels.UserChannelManager"
 EVENTSTREAM_ALLOW_ORIGINS = CORS_ALLOWED_ORIGINS
 EVENTSTREAM_ALLOW_HEADERS = "Authorization"
+
+# --- Web Push (VAPID) ---
+# Generate a key pair with `uv run python manage.py generate_vapid_keys` and put it in .env.
+# Without keys, notifications are skipped and the frontend hides the toggle.
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
+VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
+VAPID_SUBJECT = env("VAPID_SUBJECT", default="mailto:admin@localhost")

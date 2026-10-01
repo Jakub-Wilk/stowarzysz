@@ -53,6 +53,15 @@ importers:
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
+      workbox-core:
+        specifier: ^7.4.1
+        version: 7.4.1
+      workbox-precaching:
+        specifier: ^7.4.1
+        version: 7.4.1
+      workbox-routing:
+        specifier: ^7.4.1
+        version: 7.4.1
     devDependencies:
       '@types/node':
         specifier: ^24.13.3
