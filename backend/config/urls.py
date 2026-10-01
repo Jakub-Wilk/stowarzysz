@@ -8,6 +8,7 @@ urlpatterns = [
     path("api/health/", include("core.urls")),
     path("api/auth/", include("accounts.urls")),
     path("api/polls/", include("voting.urls")),
+    path("api/secret-santa/", include("secretsanta.urls")),
     path("api/push/", include("push.urls")),
     path("api/events/", include(django_eventstream.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

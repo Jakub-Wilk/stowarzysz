@@ -8,8 +8,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 
+from core.events import broadcast
 from push.sender import send_push
-from voting.events import broadcast
 from voting.kinds import Entry, get_kind
 from voting.models import Poll, PollParticipant
 

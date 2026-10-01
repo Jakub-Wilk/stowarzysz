@@ -14,3 +14,9 @@ export function plural(count: number, forms: PluralForms): string {
 }
 
 export const VOTE_FORMS: PluralForms = { one: 'głos', few: 'głosy', many: 'głosów' }
+export const DAY_FORMS: PluralForms = { one: 'dzień', few: 'dni', many: 'dni' }
+export const PARTICIPANT_FORMS: PluralForms = {
+  one: 'uczestnik',
+  few: 'uczestników',
+  many: 'uczestników',
+}

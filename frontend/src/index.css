@@ -4,6 +4,7 @@
 @import '@fontsource-variable/manrope';
 @import '@fontsource/cinzel-decorative/700.css';
 @import './themes/default.css';
+@import './themes/christmas.css';
 
 /* Themes are arbitrary (src/themes/); there is no light/dark mode, so keep `dark:` utilities inert. */
 @custom-variant dark (&:is(.dark *));
@@ -108,9 +109,24 @@
   --animate-bump: bump var(--duration-base) var(--ease-spring);
   --animate-wiggle: wiggle 360ms ease-in-out;
   --animate-flash: flash 1.4s ease-out;
+  --animate-snowfall: snowfall var(--snow-duration, 14s) linear infinite both;
   --animate-swipe-from-right: swipe-from-right var(--duration-slow) var(--ease-out-soft) both;
   --animate-swipe-from-left: swipe-from-left var(--duration-slow) var(--ease-out-soft) both;
 
+  @keyframes snowfall {
+    from {
+      opacity: 0;
+      transform: translate3d(0, -5vh, 0);
+    }
+    10%,
+    90% {
+      opacity: 0.85;
+    }
+    to {
+      opacity: 0;
+      transform: translate3d(var(--snow-drift, 3vw), 105vh, 0);
+    }
+  }
   @keyframes swipe-from-right {
     from {
       opacity: 0;

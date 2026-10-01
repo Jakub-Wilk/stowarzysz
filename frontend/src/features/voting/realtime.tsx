@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Outlet } from 'react-router'
 
+import { SantaThemeSync } from '@/features/secretsanta/SantaThemeSync'
+import { santaKey } from '@/features/secretsanta/hooks'
 import { emitReaction } from '@/features/voting/reactionBus'
 import { REACTION_EMOJI, type ReactionEmoji, type ReactionEvent } from '@/lib/api-types'
 import { useEventStream } from '@/lib/use-event-stream'
@@ -23,10 +25,19 @@ export function RealtimeShell() {
   const queryClient = useQueryClient()
 
   useEventStream((type, data) => {
+    if (type.startsWith('santa.')) {
+      void queryClient.invalidateQueries({ queryKey: santaKey })
+      return
+    }
     if (!type.startsWith('poll.')) return
     void queryClient.invalidateQueries({ queryKey: ['polls'] })
     if (type === 'poll.reaction' && isReactionEvent(data)) emitReaction(data)
   })
 
-  return <Outlet />
+  return (
+    <>
+      <SantaThemeSync />
+      <Outlet />
+    </>
+  )
 }

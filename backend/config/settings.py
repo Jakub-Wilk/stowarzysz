@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "core",
     "voting",
     "push",
+    "secretsanta",
 ]
 
 MIDDLEWARE = [
@@ -138,3 +139,12 @@ EVENTSTREAM_ALLOW_HEADERS = "Authorization"
 VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
 VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
 VAPID_SUBJECT = env("VAPID_SUBJECT", default="mailto:admin@localhost")
+
+# --- Secret Santa ---
+# Fernet key that encrypts who draws whom while an event is running, so the DB alone never
+# reveals the pairing. Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+SECRET_SANTA_KEY = env(
+    "SECRET_SANTA_KEY",
+    default="ZGV2LWluc2VjdXJlLXNhbnRhLWtleS0wMTIzNDU2Nzg=" if DEBUG else environ.Env.NOTSET,
+)

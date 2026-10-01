@@ -26,7 +26,7 @@ def _run_on_commit_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def events(monkeypatch: pytest.MonkeyPatch) -> list[tuple[int, str, Any]]:
     sent: list[tuple[int, str, Any]] = []
-    monkeypatch.setattr("voting.events.notify_user", lambda uid, t, d: sent.append((uid, t, d)))
+    monkeypatch.setattr("core.events.notify_user", lambda uid, t, d: sent.append((uid, t, d)))
     return sent
 
 

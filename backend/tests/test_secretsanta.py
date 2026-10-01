@@ -1,0 +1,286 @@
+from datetime import timedelta
+from typing import Any
+
+import pytest
+from django.utils import timezone
+from rest_framework.test import APIClient
+
+from accounts.models import User
+from secretsanta import services
+from secretsanta.models import SantaAssignment, SantaEvent, SantaGift
+
+URL = "/api/secret-santa/"
+HISTORY = f"{URL}history/"
+
+
+@pytest.fixture(autouse=True)
+def _run_on_commit_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("django.db.transaction.on_commit", lambda fn, **kw: fn())
+
+
+@pytest.fixture
+def events(monkeypatch: pytest.MonkeyPatch) -> list[tuple[int, str, Any]]:
+    sent: list[tuple[int, str, Any]] = []
+    monkeypatch.setattr("core.events.notify_user", lambda uid, t, d: sent.append((uid, t, d)))
+    return sent
+
+
+@pytest.fixture
+def pushes(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    sent: list[dict[str, Any]] = []
+
+    def fake_send_push(user_ids, **kwargs):
+        sent.append({"user_ids": sorted(user_ids), **kwargs})
+
+    monkeypatch.setattr("secretsanta.services.send_push", fake_send_push)
+    return sent
+
+
+def client_for(user: User) -> APIClient:
+    client = APIClient()
+    client.force_authenticate(user)
+    return client
+
+
+@pytest.fixture
+def boss(db) -> User:
+    return User.objects.create_superuser("boss", "admin-pass-123")
+
+
+@pytest.fixture
+def people(db) -> list[User]:
+    return [User.objects.create(username=n) for n in ("alice", "bob", "carol", "dave", "erin")]
+
+
+def deadline(days: int = 10) -> str:
+    return (timezone.now() + timedelta(days=days)).isoformat()
+
+
+def start(boss: User, people: list[User], tiers=(100, 30)) -> Any:
+    return client_for(boss).post(
+        URL,
+        {
+            "participant_ids": [p.pk for p in people],
+            "deadline": deadline(),
+            "gift_tiers": list(tiers),
+        },
+        format="json",
+    )
+
+
+def pairing(people: list[User]) -> dict[int, int]:
+    return {p.pk: client_for(p).get(URL).data["my_victim"]["id"] for p in people}
+
+
+# --- auth ---
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", URL),
+        ("post", URL),
+        ("patch", URL),
+        ("delete", URL),
+        ("get", HISTORY),
+        ("patch", f"{URL}gifts/1/"),
+    ],
+)
+def test_requires_authentication(api_client: APIClient, method: str, path: str) -> None:
+    assert getattr(api_client, method)(path).status_code == 401
+
+
+@pytest.mark.parametrize("method", ["post", "patch", "delete"])
+def test_changes_are_superuser_only(people: list[User], method: str) -> None:
+    assert getattr(client_for(people[0]), method)(URL, {}, format="json").status_code == 403
+
+
+# --- inactive ---
+
+
+def test_inactive_state(people: list[User]) -> None:
+    data = client_for(people[0]).get(URL).data
+    assert data == {"active": False, "event": None, "my_victim": None}
+
+
+# --- start ---
+
+
+def test_start_draws_a_valid_cycle(boss: User, people: list[User]) -> None:
+    assert start(boss, people).status_code == 201
+    drawn = pairing(people)
+    assert set(drawn) == set(drawn.values()) == {p.pk for p in people}  # everyone gives & receives
+    assert all(giver != receiver for giver, receiver in drawn.items())
+    assert all(drawn[receiver] != giver for giver, receiver in drawn.items())  # no swaps
+
+
+def test_draw_is_always_valid() -> None:
+    for size in range(3, 12):
+        ids = list(range(size))
+        for _ in range(50):
+            drawn = services._draw(ids)
+            assert sorted(drawn.values()) == ids
+            assert all(g != r and drawn[r] != g for g, r in drawn.items())
+
+
+def test_start_sends_push_with_victim_and_amounts(
+    boss: User, people: list[User], pushes: list[dict[str, Any]], events: list
+) -> None:
+    start(boss, people)
+    assert len(pushes) == len(people)
+    drawn = pairing(people)
+    names = {p.pk: p.username for p in people}
+    for push in pushes:
+        (giver,) = push["user_ids"]
+        assert names[drawn[giver]] in push["body"]
+        assert "100 zł, 30 zł" in push["body"]
+        assert push["url"] == "/secret-santa"
+    assert {uid for uid, t, _ in events if t == "santa.updated"} >= {p.pk for p in people}
+
+
+def test_pairing_is_not_plain_in_the_db(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    for row in SantaAssignment.objects.all():
+        assert row.receiver_id is None
+        assert row.payload
+        for person in people:
+            assert person.username not in row.payload
+    drawn = pairing(people)
+    row = SantaAssignment.objects.get(giver=people[0])
+    assert services.crypto.open_seal(people[0].pk, row.payload) == drawn[people[0].pk]
+    with pytest.raises(ValueError, match="does not belong"):
+        services.crypto.open_seal(people[1].pk, row.payload)
+
+
+def test_victim_hidden_from_others_including_superuser(boss: User, people: list[User]) -> None:
+    start(boss, people[:3])
+    assert client_for(boss).get(URL).data["my_victim"] is None
+    outsider = client_for(people[4]).get(URL).data
+    assert outsider["active"] is True
+    assert outsider["my_victim"] is None
+    assert outsider["event"]["is_participant"] is False
+    assert len(outsider["event"]["participants"]) == 3
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"gift_tiers": []},
+        {"gift_tiers": [0]},
+        {"gift_tiers": [-5]},
+        {"deadline": "2000-01-01T00:00:00Z"},
+        {"participant_ids": [1, 2]},
+        {"participant_ids": [1, 2, 99999]},
+    ],
+)
+def test_start_validation(boss: User, people: list[User], payload: dict) -> None:
+    body = {
+        "participant_ids": [p.pk for p in people],
+        "deadline": deadline(),
+        "gift_tiers": [50],
+    } | payload
+    if payload.get("participant_ids") == [1, 2]:
+        body["participant_ids"] = [p.pk for p in people[:2]]
+    assert client_for(boss).post(URL, body, format="json").status_code == 400
+    assert not SantaEvent.objects.exists()
+
+
+def test_second_active_event_conflicts(boss: User, people: list[User]) -> None:
+    assert start(boss, people).status_code == 201
+    assert start(boss, people).status_code == 409
+
+
+# --- update ---
+
+
+def test_update_keeps_the_draw(boss: User, people: list[User], pushes: list) -> None:
+    start(boss, people)
+    before = pairing(people)
+    pushes.clear()
+    new_deadline = deadline(30)
+    resp = client_for(boss).patch(
+        URL, {"deadline": new_deadline, "gift_tiers": [200, 50, 20]}, format="json"
+    )
+    assert resp.status_code == 200
+    assert resp.data["event"]["gift_tiers"] == [200, 50, 20]
+    assert pairing(people) == before
+    assert len(pushes) == 1
+    assert "200 zł, 50 zł, 20 zł" in pushes[0]["body"]
+
+
+def test_update_without_active_event_is_404(boss: User) -> None:
+    assert client_for(boss).patch(URL, {"gift_tiers": [10]}, format="json").status_code == 404
+
+
+# --- end + history ---
+
+
+def test_end_reveals_pairings_in_history(boss: User, people: list[User], events: list) -> None:
+    start(boss, people)
+    drawn = pairing(people)
+    assert client_for(people[0]).get(HISTORY).data["results"] == []
+
+    resp = client_for(boss).delete(URL)
+    assert resp.status_code == 200
+    assert resp.data["active"] is False
+
+    assert not SantaAssignment.objects.exclude(payload="").exists()
+    (event,) = client_for(people[0]).get(HISTORY).data["results"]
+    assert event["gift_tiers"] == [100, 30]
+    shown = {p["giver"]["id"]: p["receiver"]["id"] for p in event["pairings"]}
+    assert shown == drawn
+    assert all([g["amount"] for g in p["gifts"]] == [100, 30] for p in event["pairings"])
+
+
+def test_end_without_active_event_is_404(boss: User) -> None:
+    assert client_for(boss).delete(URL).status_code == 404
+
+
+def test_can_start_again_after_ending(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    client_for(boss).delete(URL)
+    assert start(boss, people).status_code == 201
+    assert SantaEvent.objects.count() == 2
+
+
+# --- notes ---
+
+
+def ended_gift(boss: User, people: list[User], giver: User) -> SantaGift:
+    start(boss, people)
+    client_for(boss).delete(URL)
+    return SantaGift.objects.filter(assignment__giver=giver).first()
+
+
+def test_giver_and_superuser_can_note(boss: User, people: list[User]) -> None:
+    gift = ended_gift(boss, people, people[0])
+    path = f"{URL}gifts/{gift.pk}/"
+    resp = client_for(people[0]).patch(path, {"note": "Książka"}, format="json")
+    assert resp.status_code == 200
+    assert resp.data["note"] == "Książka"
+    assert client_for(boss).patch(path, {"note": "Kubek"}, format="json").status_code == 200
+    gift.refresh_from_db()
+    assert gift.note == "Kubek"
+
+
+def test_others_cannot_note(boss: User, people: list[User]) -> None:
+    gift = ended_gift(boss, people, people[0])
+    resp = client_for(people[1]).patch(f"{URL}gifts/{gift.pk}/", {"note": "x"}, format="json")
+    assert resp.status_code == 403
+
+
+def test_note_rejected_while_active(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    gift = SantaGift.objects.create(assignment=SantaAssignment.objects.first(), amount=5)
+    resp = client_for(boss).patch(f"{URL}gifts/{gift.pk}/", {"note": "x"}, format="json")
+    assert resp.status_code == 400
+
+
+def test_note_length_and_missing_gift(boss: User, people: list[User]) -> None:
+    gift = ended_gift(boss, people, people[0])
+    path = f"{URL}gifts/{gift.pk}/"
+    assert client_for(people[0]).patch(path, {"note": "x" * 301}, format="json").status_code == 400
+    assert (
+        client_for(boss).patch(f"{URL}gifts/99999/", {"note": "x"}, format="json").status_code
+        == 404
+    )

@@ -130,3 +130,50 @@ export interface ReactionEvent {
   emoji: ReactionEmoji
   user_id: number
 }
+
+export interface SantaEvent {
+  id: number
+  deadline: string
+  /** PLN amounts, highest first; each giver gives one gift per tier. */
+  gift_tiers: number[]
+  participants: UserBrief[]
+  is_participant: boolean
+}
+
+export interface SantaState {
+  active: boolean
+  event: SantaEvent | null
+  /** Only ever set for the signed-in giver. */
+  my_victim: UserBrief | null
+}
+
+export interface SantaStartPayload {
+  participant_ids: number[]
+  deadline: string
+  gift_tiers: number[]
+}
+
+export interface SantaUpdatePayload {
+  deadline?: string
+  gift_tiers?: number[]
+}
+
+export interface SantaGift {
+  id: number
+  amount: number
+  note: string
+}
+
+export interface SantaPairing {
+  giver: UserBrief
+  receiver: UserBrief
+  gifts: SantaGift[]
+}
+
+export interface SantaHistoryEvent {
+  id: number
+  deadline: string
+  ended_at: string
+  gift_tiers: number[]
+  pairings: SantaPairing[]
+}

@@ -1,5 +1,8 @@
 /** Add a theme: create `<id>.css` scoped to `[data-theme='<id>']`, import it in index.css, list it here. */
-export const themes = [{ id: 'default', label: 'Default' }] as const
+export const themes = [
+  { id: 'default', label: 'Default' },
+  { id: 'christmas', label: 'Boże Narodzenie' },
+] as const
 
 export type ThemeId = (typeof themes)[number]['id']
 

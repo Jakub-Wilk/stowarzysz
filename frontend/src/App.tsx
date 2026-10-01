@@ -9,6 +9,7 @@ import { RealtimeShell } from '@/features/voting/realtime'
 import { ActivatePage } from '@/pages/ActivatePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ManageIndexPage } from '@/pages/manage/ManageIndexPage'
+import { SantaManagePage } from '@/pages/manage/SantaManagePage'
 import { UserFormPage } from '@/pages/manage/UserFormPage'
 import { UsersPage } from '@/pages/manage/UsersPage'
 import { VoteDetailPage } from '@/pages/VoteDetailPage'
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="users" element={<UsersPage />} />
                 <Route path="users/new" element={<UserFormPage />} />
                 <Route path="users/:id" element={<UserFormPage />} />
+                <Route path="secret-santa" element={<SantaManagePage />} />
               </Route>
             </Route>
           </Route>
