@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
 
 import { Stagger } from '@/components/motion/Stagger'
@@ -9,7 +9,6 @@ import { dayGroup } from '@/features/voting/dates'
 import { useClosedPolls, useOpenPolls } from '@/features/voting/hooks'
 import { PollRow } from '@/features/voting/PollRow'
 import type { PollListItem } from '@/lib/api-types'
-import { cn } from '@/lib/utils'
 
 function groupByDay(polls: PollListItem[]): [string, PollListItem[]][] {
   const groups = new Map<string, PollListItem[]>()
@@ -24,46 +23,9 @@ function Heading({ children }: { children: string }) {
   return <h3 className="mt-8 mb-3 text-base font-semibold tracking-wide uppercase">{children}</h3>
 }
 
-function Scope({ mine, onChange }: { mine: boolean; onChange: (mine: boolean) => void }) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Pokaż"
-      className="relative grid flex-1 grid-cols-2 rounded-lg border p-0.5"
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-md bg-primary transition-transform duration-(--duration-base) ease-(--ease-spring)',
-          mine && 'translate-x-full',
-        )}
-      />
-      {[
-        { label: 'Wszystkie', value: false },
-        { label: 'Moje', value: true },
-      ].map(({ label, value }) => (
-        <button
-          key={label}
-          type="button"
-          role="radio"
-          aria-checked={mine === value}
-          onClick={() => onChange(value)}
-          className={cn(
-            'relative min-h-11 rounded-md px-4 text-base transition-colors',
-            mine === value ? 'text-primary-foreground' : 'hover:bg-accent/60',
-          )}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 export function VotingPage() {
-  const [mine, setMine] = useState(false)
-  const open = useOpenPolls(mine)
-  const closed = useClosedPolls(mine)
+  const open = useOpenPolls()
+  const closed = useClosedPolls()
   const sentinel = useRef<HTMLDivElement>(null)
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = closed
 
@@ -83,19 +45,14 @@ export function VotingPage() {
 
   return (
     <>
-      <h2 className="mb-4 text-2xl font-semibold">Sejmik</h2>
       <div className="flex items-center justify-between gap-3">
-        <Scope mine={mine} onChange={setMine} />
+        <h2 className="text-2xl font-semibold">Sejmik</h2>
         <Button nativeButton={false} render={<Link to="/voting/new" />}>
           <Plus /> Głosowanie
         </Button>
       </div>
 
-      {/* Re-keyed per scope so the list swipes in from the side its switch option is on. */}
-      <div
-        key={String(mine)}
-        className={mine ? 'animate-swipe-from-right' : 'animate-swipe-from-left'}
-      >
+      <div>
         {(open.isError || closed.isError) && (
           <div className="mt-6 flex flex-col items-start gap-2">
             <span role="alert" className="text-base text-destructive">

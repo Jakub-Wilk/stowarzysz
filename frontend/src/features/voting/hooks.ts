@@ -20,8 +20,7 @@ import type {
 const pollsKey = ['polls'] as const
 const detailKey = (id: number) => [...pollsKey, 'detail', id] as const
 
-const listUrl = (status: string, mine: boolean) =>
-  `/api/polls/?status=${status}${mine ? '&participating=1' : ''}`
+const listUrl = (status: string) => `/api/polls/?status=${status}`
 
 /** DRF returns absolute `next` URLs; keep only the path so the dev proxy/same origin is used. */
 function relative(url: string): string {
@@ -30,20 +29,19 @@ function relative(url: string): string {
 }
 
 /** Active votes: few, so returned in one go. */
-export function useOpenPolls(mine: boolean) {
+export function useOpenPolls() {
   return useQuery({
-    queryKey: [...pollsKey, 'open', mine],
-    queryFn: () => apiFetch<PollListItem[]>(listUrl('open', mine)),
+    queryKey: [...pollsKey, 'open'],
+    queryFn: () => apiFetch<PollListItem[]>(listUrl('open')),
   })
 }
 
 /** History: newest first, loaded page by page. */
-export function useClosedPolls(mine: boolean) {
+export function useClosedPolls() {
   return useInfiniteQuery({
-    queryKey: [...pollsKey, 'closed', mine],
+    queryKey: [...pollsKey, 'closed'],
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) =>
-      apiFetch<Paginated<PollListItem>>(pageParam ?? listUrl('closed', mine)),
+    queryFn: ({ pageParam }) => apiFetch<Paginated<PollListItem>>(pageParam ?? listUrl('closed')),
     getNextPageParam: (last) => (last.next ? relative(last.next) : undefined),
   })
 }
