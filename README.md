@@ -178,3 +178,45 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -
 Back up three things: the database, the `media` volume (profile pictures) and `.env.prod`. Never run `docker compose down -v` in production: `-v` deletes the volumes (your data).
 
 Everything runs in a single backend process, which is what the in-memory SSE channels expect. If you ever scale the backend to several processes or replicas, set `EVENTSTREAM_REDIS` first (see [Backend](#backend)).
+
+## Releasing a new version
+
+A release is a git tag on `master` that is then deployed to the server. There is no CI or image registry: the server builds the images itself from the tagged commit. Versions follow [SemVer](https://semver.org/) (`vMAJOR.MINOR.PATCH`); the version fields in `backend/pyproject.toml` and `frontend/package.json` are not used for anything, so the tag is the single source of truth.
+
+### 1. Prepare
+
+On a clean `master`, up to date with `origin`:
+
+```sh
+docker compose up -d db
+uv run --project backend pre-commit run --all-files   # lint, format, types
+(cd backend && uv run pytest)
+(cd backend && uv run python manage.py makemigrations --check --dry-run)   # no model changes without a migration
+(cd frontend && pnpm build)
+```
+
+If the release adds a new setting, add it to `.env.prod.example` and mention it in the [configuration table](#1-configure) so nobody has to find out from a crash on startup.
+
+### 2. Tag
+
+```sh
+git tag -a v1.2.3 -m "v1.2.3"
+git push origin master v1.2.3
+```
+
+### 3. Deploy
+
+On the server (see [Operations](#operations)):
+
+```sh
+git fetch --tags && git checkout v1.2.3
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup-before-v1.2.3.sql
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f backend   # wait for migrations and a clean start
+```
+
+Migrations run automatically when the backend starts. Then open `FRONTEND_URL` and check that you can log in and that a poll loads. The service worker updates in the background, so installed PWAs pick up the new frontend on their next launch or two.
+
+### Rolling back
+
+Check out the previous tag and run the same `up -d --build`. Migrations are **not** reverted automatically: if the release included one, restore the database from the backup taken before deploying (`docker compose ... exec -T db psql -U stowarzysz stowarzysz < backup-before-v1.2.3.sql` on a freshly recreated database) or write a new migration that undoes it. Prefer rolling forward with a fix release when the migration was purely additive.
