@@ -4,13 +4,13 @@ import { BackLink } from '@/components/layout/BackLink'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { UserAvatar } from '@/features/auth/UserAvatar'
-import { DeadlineField, TiersField } from '@/features/secretsanta/SantaFields'
+import { DeadlineField, ModeField, TiersField } from '@/features/secretsanta/SantaFields'
 import { formatAmounts, parseTiers, toLocalInput } from '@/features/secretsanta/format'
 import { useEndSanta, useSanta, useStartSanta, useUpdateSanta } from '@/features/secretsanta/hooks'
 import { ConfirmDialog } from '@/features/voting/ConfirmDialog'
 import { usePeople } from '@/features/voting/hooks'
 import { formErrors } from '@/lib/api-errors'
-import type { SantaEvent } from '@/lib/api-types'
+import type { SantaEvent, SantaMode } from '@/lib/api-types'
 import { PARTICIPANT_FORMS, plural } from '@/lib/plural'
 
 const INVALID_TIERS = 'Podaj dodatnie, całkowite kwoty.'
@@ -22,6 +22,7 @@ function StartForm() {
   const [deadline, setDeadline] = useState('')
   const [tiers, setTiers] = useState<string[]>(['100', '30'])
   const [tiersError, setTiersError] = useState<string>()
+  const [mode, setMode] = useState<SantaMode>('single')
 
   const everyone = people.data ?? []
   const allChosen = everyone.length > 0 && everyone.every((p) => chosen.has(p.id))
@@ -43,6 +44,7 @@ function StartForm() {
       participant_ids: [...chosen],
       deadline: new Date(deadline).toISOString(),
       gift_tiers: amounts,
+      mode,
     })
   }
 
@@ -88,6 +90,7 @@ function StartForm() {
         onChange={setDeadline}
         error={start.isError ? errors.fields.deadline : undefined}
       />
+      <ModeField value={mode} onChange={setMode} />
       <TiersField
         value={tiers}
         onChange={setTiers}
@@ -130,8 +133,11 @@ function ActiveForm({ event }: { event: SantaEvent }) {
       <p className="text-base text-muted-foreground">
         Trwa losowanie: {event.participants.length}{' '}
         {plural(event.participants.length, PARTICIPANT_FORMS)}. Kwoty:{' '}
-        {formatAmounts(event.gift_tiers)}. Zmiana kwot nie zmienia losowania, ale uczestnicy dostaną
-        powiadomienie.
+        {formatAmounts(event.gift_tiers)}.{' '}
+        {event.mode === 'per_tier'
+          ? 'Każda kwota ma innego podopiecznego, więc można zmienić tylko wartości kwot, nie ich liczbę. '
+          : ''}
+        Zmiana kwot nie zmienia losowania, ale uczestnicy dostaną powiadomienie.
       </p>
       <form onSubmit={submit} className="flex flex-col gap-6">
         <DeadlineField
@@ -143,6 +149,7 @@ function ActiveForm({ event }: { event: SantaEvent }) {
           value={tiers}
           onChange={setTiers}
           error={tiersError ?? (update.isError ? errors.fields.gift_tiers : undefined)}
+          fixedCount={event.mode === 'per_tier'}
         />
         {update.isError && errors.general && (
           <span role="alert" className="text-base text-destructive">

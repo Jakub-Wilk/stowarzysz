@@ -10,7 +10,7 @@ import { UserAvatar } from '@/features/auth/UserAvatar'
 import { SantaHistory } from '@/features/secretsanta/SantaHistory'
 import { daysUntil, formatAmount, formatDateTime } from '@/features/secretsanta/format'
 import { useSanta } from '@/features/secretsanta/hooks'
-import type { SantaEvent, UserBrief } from '@/lib/api-types'
+import type { SantaEvent, SantaTierVictim, UserBrief } from '@/lib/api-types'
 import { DAY_FORMS, plural } from '@/lib/plural'
 
 function Waiting({ isSuperuser }: { isSuperuser: boolean }) {
@@ -69,13 +69,44 @@ function Victim({ victim, tiers }: { victim: UserBrief; tiers: number[] }) {
   )
 }
 
+/** `per_tier` mode: a different victim for each amount. */
+function TierVictims({ victims }: { victims: SantaTierVictim[] }) {
+  const [shown, setShown] = useState(false)
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-lg border bg-card px-6 py-8 text-center">
+      <Gift className="size-10" aria-hidden />
+      <p className="text-base text-muted-foreground">Twoi podopieczni</p>
+      {shown ? (
+        <div key="shown" className="animate-pop-in flex flex-col items-center gap-4">
+          <ul className="flex flex-col gap-4">
+            {victims.map(({ amount, victim }) => (
+              <li key={amount} className="flex flex-col items-center gap-2">
+                <UserAvatar username={victim.username} src={victim.avatar_url} size="xl" />
+                <span className="text-metal text-2xl font-bold">{victim.username}</span>
+                <span className="text-lg">Prezent za {formatAmount(amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <Button variant="ghost" onClick={() => setShown(false)}>
+            Ukryj
+          </Button>
+        </div>
+      ) : (
+        <Button onClick={() => setShown(true)}>Pokaż moich podopiecznych</Button>
+      )}
+    </div>
+  )
+}
+
 function Active({
   event,
   victim,
+  tierVictims,
   isSuperuser,
 }: {
   event: SantaEvent
   victim: UserBrief | null
+  tierVictims: SantaTierVictim[]
   isSuperuser: boolean
 }) {
   return (
@@ -91,6 +122,8 @@ function Active({
       <Reveal index={1}>
         {victim ? (
           <Victim victim={victim} tiers={event.gift_tiers} />
+        ) : tierVictims.length > 0 ? (
+          <TierVictims victims={tierVictims} />
         ) : (
           <p className="rounded-lg border bg-card p-4 text-base text-muted-foreground">
             Nie bierzesz udziału w tym losowaniu.
@@ -127,7 +160,12 @@ export function SecretSantaPage() {
       )}
       {data &&
         (data.event ? (
-          <Active event={data.event} victim={data.my_victim} isSuperuser={isSuperuser} />
+          <Active
+            event={data.event}
+            victim={data.my_victim}
+            tierVictims={data.my_tier_victims}
+            isSuperuser={isSuperuser}
+          />
         ) : (
           <Waiting isSuperuser={isSuperuser} />
         ))}

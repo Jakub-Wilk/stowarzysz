@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { SantaMode } from '@/lib/api-types'
 
 export function DeadlineField({
   value,
@@ -41,10 +42,13 @@ export function TiersField({
   value,
   onChange,
   error,
+  fixedCount = false,
 }: {
   value: string[]
   onChange: (value: string[]) => void
   error?: string
+  /** The number of amounts can't change (a per-tier draw already exists). */
+  fixedCount?: boolean
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
@@ -66,23 +70,71 @@ export function TiersField({
             variant="ghost"
             size="icon"
             aria-label={`Usuń kwotę ${i + 1}`}
-            disabled={value.length === 1}
+            disabled={fixedCount || value.length === 1}
             onClick={() => onChange(value.filter((_, j) => j !== i))}
           >
             <X className="size-5" aria-hidden />
           </Button>
         </div>
       ))}
-      <div>
-        <Button type="button" variant="outline" onClick={() => onChange([...value, ''])}>
-          <Plus className="size-5" aria-hidden /> Dodaj kwotę
-        </Button>
-      </div>
+      {!fixedCount && (
+        <div>
+          <Button type="button" variant="outline" onClick={() => onChange([...value, ''])}>
+            <Plus className="size-5" aria-hidden /> Dodaj kwotę
+          </Button>
+        </div>
+      )}
       {error && (
         <span role="alert" className="text-sm text-destructive">
           {error}
         </span>
       )}
+    </fieldset>
+  )
+}
+
+const MODES: { value: SantaMode; title: string; hint: string }[] = [
+  {
+    value: 'single',
+    title: 'Jeden podopieczny',
+    hint: 'Każdy obdarowuje jedną osobę wszystkimi kwotami.',
+  },
+  {
+    value: 'per_tier',
+    title: 'Podopieczny na kwotę',
+    hint: 'Każda kwota to inna osoba, więc każdy obdarowuje tyle osób, ile jest kwot.',
+  },
+]
+
+/** How the draw is split across the gift amounts. */
+export function ModeField({
+  value,
+  onChange,
+}: {
+  value: SantaMode
+  onChange: (value: SantaMode) => void
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-base font-medium">Tryb losowania</legend>
+      {MODES.map((mode) => (
+        <label
+          key={mode.value}
+          className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent has-[:checked]:border-primary"
+        >
+          <input
+            type="radio"
+            name="santa-mode"
+            className="mt-1.5"
+            checked={value === mode.value}
+            onChange={() => onChange(mode.value)}
+          />
+          <span className="flex flex-col">
+            <span className="text-base font-medium">{mode.title}</span>
+            <span className="text-sm text-muted-foreground">{mode.hint}</span>
+          </span>
+        </label>
+      ))}
     </fieldset>
   )
 }

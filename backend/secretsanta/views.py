@@ -47,6 +47,7 @@ class SantaView(APIView):
             participant_ids=data["participant_ids"],
             deadline=data["deadline"],
             tiers=data["gift_tiers"],
+            mode=data["mode"],
         )
         return Response(_state(request), status=status.HTTP_201_CREATED)
 

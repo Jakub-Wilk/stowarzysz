@@ -131,8 +131,12 @@ export interface ReactionEvent {
   user_id: number
 }
 
+/** `single`: one victim gets every tier. `per_tier`: a different victim for each tier. */
+export type SantaMode = 'single' | 'per_tier'
+
 export interface SantaEvent {
   id: number
+  mode: SantaMode
   deadline: string
   /** PLN amounts, highest first; each giver gives one gift per tier. */
   gift_tiers: number[]
@@ -143,14 +147,22 @@ export interface SantaEvent {
 export interface SantaState {
   active: boolean
   event: SantaEvent | null
-  /** Only ever set for the signed-in giver. */
+  /** Only ever set for the signed-in giver, in `single` mode. */
   my_victim: UserBrief | null
+  /** Only ever set for the signed-in giver, in `per_tier` mode; highest amount first. */
+  my_tier_victims: SantaTierVictim[]
+}
+
+export interface SantaTierVictim {
+  amount: number
+  victim: UserBrief
 }
 
 export interface SantaStartPayload {
   participant_ids: number[]
   deadline: string
   gift_tiers: number[]
+  mode: SantaMode
 }
 
 export interface SantaUpdatePayload {
@@ -165,6 +177,7 @@ export interface SantaGift {
 }
 
 export interface SantaPairing {
+  id: number
   giver: UserBrief
   receiver: UserBrief
   gifts: SantaGift[]
@@ -172,6 +185,7 @@ export interface SantaPairing {
 
 export interface SantaHistoryEvent {
   id: number
+  mode: SantaMode
   deadline: string
   ended_at: string
   gift_tiers: number[]

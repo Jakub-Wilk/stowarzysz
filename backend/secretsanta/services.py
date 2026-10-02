@@ -70,8 +70,32 @@ def _draw(user_ids: list[int]) -> dict[int, int]:
     return {giver: order[(i + 1) % len(order)] for i, giver in enumerate(order)}
 
 
+def _per_tier_shifts(size: int) -> list[int]:
+    """Offsets along the shuffled circle that give a valid tier: never yourself (0) and never
+    a swap with the person who draws you (half the circle)."""
+    return [shift for shift in range(1, size) if (2 * shift) % size]
+
+
+def _draw_per_tier(user_ids: list[int], tier_count: int) -> list[dict[int, int]]:
+    """One pairing per tier. Each tier is a different offset around the same shuffled circle,
+    so a giver never gets the same victim twice, nobody draws themselves and nobody swaps."""
+    order = list(user_ids)
+    rng = secrets.SystemRandom()
+    rng.shuffle(order)
+    shifts = rng.sample(_per_tier_shifts(len(order)), tier_count)
+    return [
+        {giver: order[(i + shift) % len(order)] for i, giver in enumerate(order)}
+        for shift in shifts
+    ]
+
+
 def start_event(
-    *, creator: Any, participant_ids: Iterable[int], deadline: datetime, tiers: Iterable[int]
+    *,
+    creator: Any,
+    participant_ids: Iterable[int],
+    deadline: datetime,
+    tiers: Iterable[int],
+    mode: str = SantaEvent.Mode.SINGLE,
 ) -> SantaEvent:
     wanted = set(participant_ids)
     clean_tiers = _clean_tiers(tiers)
@@ -83,29 +107,43 @@ def start_event(
         raise ValidationError(
             {"participant_ids": f"Potrzeba co najmniej {MIN_PARTICIPANTS} uczestników."}
         )
+    per_tier = mode == SantaEvent.Mode.PER_TIER
+    if per_tier and len(clean_tiers) > len(_per_tier_shifts(len(users))):
+        raise ValidationError(
+            {"gift_tiers": "Za mało uczestników, by każda kwota miała innego podopiecznego."}
+        )
 
     try:
         with transaction.atomic():
             if get_active_event() is not None:
                 raise Conflict()
             event = SantaEvent.objects.create(
-                created_by=creator, deadline=deadline, gift_tiers=clean_tiers
+                created_by=creator, deadline=deadline, gift_tiers=clean_tiers, mode=mode
             )
-            pairing = _draw([u.pk for u in users])
+            ids = [u.pk for u in users]
             names = {u.pk: u.username for u in users}
+            # (giver, tier index, receiver); tier index is None when one victim gets every tier.
+            draws: list[tuple[int, int | None, int]]
+            if per_tier:
+                draws = [
+                    (giver, tier, receiver)
+                    for tier, pairing in enumerate(_draw_per_tier(ids, len(clean_tiers)))
+                    for giver, receiver in pairing.items()
+                ]
+            else:
+                draws = [(giver, None, receiver) for giver, receiver in _draw(ids).items()]
             # Insert in a fresh random order so row ids say nothing about the draw.
-            givers = list(pairing)
-            secrets.SystemRandom().shuffle(givers)
+            secrets.SystemRandom().shuffle(draws)
             SantaAssignment.objects.bulk_create(
                 SantaAssignment(
-                    event=event, giver_id=giver, payload=crypto.seal(giver, pairing[giver])
+                    event=event,
+                    giver_id=giver,
+                    tier_index=tier,
+                    payload=crypto.seal(giver, receiver),
                 )
-                for giver in givers
+                for giver, tier, receiver in draws
             )
-            messages = {
-                giver: f"Obdarowujesz: {names[receiver]}. Kwoty: {_amounts(clean_tiers)}."
-                for giver, receiver in pairing.items()
-            }
+            messages = _start_messages(draws, names, clean_tiers)
 
             def announce() -> None:
                 broadcast("santa.updated", {"event_id": event.pk})
@@ -123,6 +161,25 @@ def start_event(
     return event
 
 
+def _start_messages(
+    draws: list[tuple[int, int | None, int]], names: dict[int, str], tiers: list[int]
+) -> dict[int, str]:
+    if all(tier is None for _, tier, _ in draws):
+        return {
+            giver: f"Obdarowujesz: {names[receiver]}. Kwoty: {_amounts(tiers)}."
+            for giver, _, receiver in draws
+        }
+    by_giver: dict[int, list[tuple[int, int]]] = {}
+    for giver, tier, receiver in draws:
+        by_giver.setdefault(giver, []).append((tier or 0, receiver))
+    return {
+        giver: "Twoi podopieczni: "
+        + ", ".join(f"{names[receiver]} ({tiers[tier]} zł)" for tier, receiver in sorted(picks))
+        + "."
+        for giver, picks in by_giver.items()
+    }
+
+
 def update_event(*, deadline: datetime | None, tiers: Iterable[int] | None) -> SantaEvent:
     with transaction.atomic():
         event = _locked_active_event()
@@ -133,12 +190,14 @@ def update_event(*, deadline: datetime | None, tiers: Iterable[int] | None) -> S
             fields.append("deadline")
         if tiers is not None:
             clean = _clean_tiers(tiers)
+            if event.mode == SantaEvent.Mode.PER_TIER and len(clean) != len(event.gift_tiers):
+                raise ValidationError({"gift_tiers": "Po losowaniu nie można zmienić liczby kwot."})
             tiers_changed = clean != event.gift_tiers
             event.gift_tiers = clean
             fields.append("gift_tiers")
         if fields:
             event.save(update_fields=fields)
-        giver_ids = list(event.assignments.values_list("giver_id", flat=True))
+        giver_ids = list(event.assignments.values_list("giver_id", flat=True).distinct())
         tier_text = _amounts(event.gift_tiers)
 
         def announce() -> None:
@@ -164,10 +223,11 @@ def end_event() -> SantaEvent:
             assignment.receiver_id = crypto.open_seal(assignment.giver_id, assignment.payload)
             assignment.payload = ""
         SantaAssignment.objects.bulk_update(assignments, ["receiver", "payload"])
+        tiers = clean_tiers_of(event)
         SantaGift.objects.bulk_create(
             SantaGift(assignment=a, amount=amount)
             for a in assignments
-            for amount in clean_tiers_of(event)
+            for amount in (tiers if a.tier_index is None else [tiers[a.tier_index]])
         )
         event.status = SantaEvent.Status.ENDED
         event.ended_at = timezone.now()
@@ -176,13 +236,15 @@ def end_event() -> SantaEvent:
     return event
 
 
-def get_victim(event: SantaEvent, user: Any) -> Any | None:
-    """The person `user` gives to in an active event, or None if they aren't taking part."""
-    assignment = SantaAssignment.objects.filter(event=event, giver=user).first()
-    if assignment is None:
-        return None
-    receiver_id = crypto.open_seal(user.pk, assignment.payload)
-    return get_user_model()._default_manager.get(pk=receiver_id)
+def get_victims(event: SantaEvent, user: Any) -> list[tuple[int | None, Any]]:
+    """`(tier index, person)` for everyone `user` gives to in an active event; empty if they
+    aren't taking part. The tier index is None when the one victim gets every tier."""
+    assignments = list(
+        SantaAssignment.objects.filter(event=event, giver=user).order_by("tier_index")
+    )
+    receiver_ids = {a.pk: crypto.open_seal(user.pk, a.payload) for a in assignments}
+    people = get_user_model()._default_manager.in_bulk(receiver_ids.values())
+    return [(a.tier_index, people[receiver_ids[a.pk]]) for a in assignments]
 
 
 def set_gift_note(gift_id: int, user: Any, note: str) -> SantaGift:

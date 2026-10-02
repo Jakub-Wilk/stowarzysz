@@ -56,13 +56,14 @@ def deadline(days: int = 10) -> str:
     return (timezone.now() + timedelta(days=days)).isoformat()
 
 
-def start(boss: User, people: list[User], tiers=(100, 30)) -> Any:
+def start(boss: User, people: list[User], tiers=(100, 30), **extra: Any) -> Any:
     return client_for(boss).post(
         URL,
         {
             "participant_ids": [p.pk for p in people],
             "deadline": deadline(),
             "gift_tiers": list(tiers),
+            **extra,
         },
         format="json",
     )
@@ -100,7 +101,7 @@ def test_changes_are_superuser_only(people: list[User], method: str) -> None:
 
 def test_inactive_state(people: list[User]) -> None:
     data = client_for(people[0]).get(URL).data
-    assert data == {"active": False, "event": None, "my_victim": None}
+    assert data == {"active": False, "event": None, "my_victim": None, "my_tier_victims": []}
 
 
 # --- start ---
@@ -188,6 +189,114 @@ def test_start_validation(boss: User, people: list[User], payload: dict) -> None
 def test_second_active_event_conflicts(boss: User, people: list[User]) -> None:
     assert start(boss, people).status_code == 201
     assert start(boss, people).status_code == 409
+
+
+# --- per-tier mode ---
+
+
+def tier_pairing(people: list[User]) -> dict[int, dict[int, int]]:
+    """giver id -> {amount: receiver id}"""
+    return {
+        p.pk: {
+            t["amount"]: t["victim"]["id"] for t in client_for(p).get(URL).data["my_tier_victims"]
+        }
+        for p in people
+    }
+
+
+def test_per_tier_gives_a_different_victim_per_tier(boss: User, people: list[User]) -> None:
+    assert start(boss, people, tiers=(100, 50, 30), mode="per_tier").status_code == 201
+    drawn = tier_pairing(people)
+    for giver, victims in drawn.items():
+        assert set(victims) == {100, 50, 30}
+        assert len(set(victims.values())) == 3  # a different victim for every tier
+        assert giver not in victims.values()
+    for amount in (100, 50, 30):
+        receivers = [victims[amount] for victims in drawn.values()]
+        assert sorted(receivers) == sorted(p.pk for p in people)  # everyone receives each tier
+        assert all(drawn[drawn[g][amount]][amount] != g for g in drawn)  # no swaps
+    assert all(client_for(p).get(URL).data["my_victim"] is None for p in people)
+
+
+def test_per_tier_state_for_the_event_and_outsiders(boss: User, people: list[User]) -> None:
+    start(boss, people[:4], tiers=(100, 30), mode="per_tier")
+    outsider = client_for(people[4]).get(URL).data
+    assert outsider["event"]["mode"] == "per_tier"
+    assert outsider["my_tier_victims"] == []
+    assert len(outsider["event"]["participants"]) == 4  # listed once, not once per tier
+    assert client_for(boss).get(URL).data["my_tier_victims"] == []
+
+
+def test_single_mode_is_the_default(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    data = client_for(people[0]).get(URL).data
+    assert data["event"]["mode"] == "single"
+    assert data["my_victim"] is not None
+    assert data["my_tier_victims"] == []
+
+
+def test_per_tier_push_lists_each_victim(
+    boss: User, people: list[User], pushes: list[dict[str, Any]]
+) -> None:
+    start(boss, people, tiers=(100, 30), mode="per_tier")
+    assert len(pushes) == len(people)
+    drawn = tier_pairing(people)
+    names = {p.pk: p.username for p in people}
+    for push in pushes:
+        (giver,) = push["user_ids"]
+        assert (
+            f"{names[drawn[giver][100]]} (100 zł), {names[drawn[giver][30]]} (30 zł)"
+            in push["body"]
+        )
+
+
+def test_per_tier_needs_enough_participants(boss: User, people: list[User]) -> None:
+    # Three people: two valid offsets, so at most two tiers.
+    assert start(boss, people[:3], tiers=(100, 50, 30), mode="per_tier").status_code == 400
+    assert not SantaEvent.objects.exists()
+    assert start(boss, people[:3], tiers=(100, 50), mode="per_tier").status_code == 201
+
+
+def test_unknown_mode_is_rejected(boss: User, people: list[User]) -> None:
+    assert start(boss, people, mode="nope").status_code == 400
+
+
+def test_draw_per_tier_is_always_valid() -> None:
+    for size in range(3, 12):
+        ids = list(range(size))
+        for tiers in range(1, len(services._per_tier_shifts(size)) + 1):
+            for _ in range(20):
+                drawn = services._draw_per_tier(ids, tiers)
+                for pairing in drawn:
+                    assert sorted(pairing.values()) == ids
+                    assert all(g != r and pairing[r] != g for g, r in pairing.items())
+                for giver in ids:
+                    assert len({pairing[giver] for pairing in drawn}) == tiers
+
+
+def test_per_tier_update_changes_amounts_not_the_draw(boss: User, people: list[User]) -> None:
+    start(boss, people, tiers=(100, 30), mode="per_tier")
+    resp = client_for(boss).patch(URL, {"gift_tiers": [80, 20]}, format="json")
+    assert resp.status_code == 200
+    drawn = tier_pairing(people)
+    assert all(set(victims) == {80, 20} for victims in drawn.values())
+    assert client_for(boss).patch(URL, {"gift_tiers": [80]}, format="json").status_code == 400
+    assert (
+        client_for(boss).patch(URL, {"gift_tiers": [80, 20, 5]}, format="json").status_code == 400
+    )
+
+
+def test_per_tier_end_gives_one_gift_per_pairing(boss: User, people: list[User]) -> None:
+    start(boss, people, tiers=(100, 30), mode="per_tier")
+    drawn = tier_pairing(people)
+    assert client_for(boss).delete(URL).status_code == 200
+    (event,) = client_for(people[0]).get(HISTORY).data["results"]
+    assert event["mode"] == "per_tier"
+    assert len(event["pairings"]) == len(people) * 2
+    for pairing in event["pairings"]:
+        (gift,) = pairing["gifts"]
+        assert drawn[pairing["giver"]["id"]][gift["amount"]] == pairing["receiver"]["id"]
+    assert SantaGift.objects.count() == len(people) * 2
 
 
 # --- update ---

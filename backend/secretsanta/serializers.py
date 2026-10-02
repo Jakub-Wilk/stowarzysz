@@ -14,16 +14,21 @@ class ActiveEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SantaEvent
-        fields = ("id", "deadline", "gift_tiers", "participants", "is_participant")
+        fields = ("id", "mode", "deadline", "gift_tiers", "participants", "is_participant")
         read_only_fields = fields
 
     @extend_schema_field(PersonSerializer(many=True))
     def get_participants(self, obj: SantaEvent) -> Any:
-        givers = [a.giver for a in obj.assignments.select_related("giver")]
+        givers = {a.giver_id: a.giver for a in obj.assignments.select_related("giver")}.values()
         return PersonSerializer(givers, many=True).data
 
     def get_is_participant(self, obj: SantaEvent) -> bool:
         return obj.assignments.filter(giver=self.context["request"].user).exists()
+
+
+class TierVictimSerializer(serializers.Serializer):
+    amount = serializers.IntegerField()
+    victim = PersonSerializer()
 
 
 class SantaStateSerializer(serializers.Serializer):
@@ -33,6 +38,7 @@ class SantaStateSerializer(serializers.Serializer):
     active = serializers.SerializerMethodField()
     event = serializers.SerializerMethodField()
     my_victim = serializers.SerializerMethodField()
+    my_tier_victims = serializers.SerializerMethodField()
 
     def get_active(self, obj: dict[str, Any]) -> bool:
         return obj["event"] is not None
@@ -45,16 +51,33 @@ class SantaStateSerializer(serializers.Serializer):
 
     @extend_schema_field(PersonSerializer(allow_null=True))
     def get_my_victim(self, obj: dict[str, Any]) -> Any:
+        """The one victim who gets every tier (`single` mode)."""
+        for tier, victim in self._victims(obj):
+            if tier is None:
+                return PersonSerializer(victim).data
+        return None
+
+    @extend_schema_field(TierVictimSerializer(many=True))
+    def get_my_tier_victims(self, obj: dict[str, Any]) -> Any:
+        """One victim per tier, highest amount first (`per_tier` mode)."""
+        event = obj["event"]
+        return [
+            {"amount": event.gift_tiers[tier], "victim": PersonSerializer(victim).data}
+            for tier, victim in self._victims(obj)
+            if tier is not None
+        ]
+
+    def _victims(self, obj: dict[str, Any]) -> list[tuple[int | None, Any]]:
         if obj["event"] is None:
-            return None
-        victim = services.get_victim(obj["event"], self.context["request"].user)
-        return None if victim is None else PersonSerializer(victim).data
+            return []
+        return services.get_victims(obj["event"], self.context["request"].user)
 
 
 class StartRequestSerializer(serializers.Serializer):
     participant_ids = serializers.ListField(child=serializers.IntegerField())
     deadline = serializers.DateTimeField()
     gift_tiers = serializers.ListField(child=serializers.IntegerField())
+    mode = serializers.ChoiceField(choices=SantaEvent.Mode.choices, default=SantaEvent.Mode.SINGLE)
 
 
 class UpdateRequestSerializer(serializers.Serializer):
@@ -80,7 +103,7 @@ class PairingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SantaAssignment
-        fields = ("giver", "receiver", "gifts")
+        fields = ("id", "giver", "receiver", "gifts")
         read_only_fields = fields
 
 
@@ -89,5 +112,5 @@ class HistoryEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SantaEvent
-        fields = ("id", "deadline", "ended_at", "gift_tiers", "pairings")
+        fields = ("id", "mode", "deadline", "ended_at", "gift_tiers", "pairings")
         read_only_fields = fields

@@ -9,7 +9,7 @@ import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { formatAmount, formatAmounts, formatDate } from '@/features/secretsanta/format'
 import { useSantaHistory, useSetGiftNote } from '@/features/secretsanta/hooks'
-import type { SantaGift, SantaHistoryEvent } from '@/lib/api-types'
+import type { SantaGift, SantaHistoryEvent, SantaPairing, UserBrief } from '@/lib/api-types'
 import { cn } from '@/lib/utils'
 
 function GiftNote({ gift, canEdit }: { gift: SantaGift; canEdit: boolean }) {
@@ -63,6 +63,17 @@ function GiftNote({ gift, canEdit }: { gift: SantaGift; canEdit: boolean }) {
   )
 }
 
+/** Pairings grouped under their giver (a giver has several in `per_tier` mode), in first-seen order. */
+function groupByGiver(pairings: SantaPairing[]) {
+  const groups = new Map<number, { giver: UserBrief; pairings: SantaPairing[] }>()
+  for (const pairing of pairings) {
+    const group = groups.get(pairing.giver.id)
+    if (group) group.pairings.push(pairing)
+    else groups.set(pairing.giver.id, { giver: pairing.giver, pairings: [pairing] })
+  }
+  return [...groups.values()]
+}
+
 function HistoryCard({ event }: { event: SantaHistoryEvent }) {
   const { data: me } = useMe()
   const [open, setOpen] = useState(false)
@@ -90,38 +101,42 @@ function HistoryCard({ event }: { event: SantaHistoryEvent }) {
       </button>
       {open && (
         <Stagger as="ul" className="flex flex-col gap-4 border-t p-4">
-          {event.pairings.map((pairing) => {
-            const canEdit = me !== undefined && (me.is_superuser || me.id === pairing.giver.id)
+          {groupByGiver(event.pairings).map(({ giver, pairings }) => {
+            const canEdit = me !== undefined && (me.is_superuser || me.id === giver.id)
             return (
-              <div key={pairing.giver.id} className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <UserAvatar
-                    username={pairing.giver.username}
-                    src={pairing.giver.avatar_url}
-                    size="sm"
-                  />
-                  <span className="text-metal text-base font-medium">{pairing.giver.username}</span>
-                  <span aria-label="obdarował">→</span>
-                  <UserAvatar
-                    username={pairing.receiver.username}
-                    src={pairing.receiver.avatar_url}
-                    size="sm"
-                  />
-                  <span className="text-metal text-base font-medium">
-                    {pairing.receiver.username}
-                  </span>
+              <li key={giver.id} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <UserAvatar username={giver.username} src={giver.avatar_url} size="sm" />
+                  <span className="text-metal text-base font-semibold">{giver.username}</span>
+                  <span className="text-sm text-muted-foreground">obdarował:</span>
                 </div>
-                <ul className="flex flex-col gap-1 pl-2">
-                  {pairing.gifts.map((gift) => (
-                    <li key={gift.id} className="flex flex-col gap-1">
-                      <span className="text-sm font-semibold text-muted-foreground">
-                        {formatAmount(gift.amount)}
-                      </span>
-                      <GiftNote gift={gift} canEdit={canEdit} />
+                <ul className="flex flex-col gap-3 border-l pl-4">
+                  {pairings.map((pairing) => (
+                    <li key={pairing.id} className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <UserAvatar
+                          username={pairing.receiver.username}
+                          src={pairing.receiver.avatar_url}
+                          size="sm"
+                        />
+                        <span className="text-metal text-base font-medium">
+                          {pairing.receiver.username}
+                        </span>
+                      </div>
+                      <ul className="flex flex-col gap-1 pl-2">
+                        {pairing.gifts.map((gift) => (
+                          <li key={gift.id} className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-muted-foreground">
+                              {formatAmount(gift.amount)}
+                            </span>
+                            <GiftNote gift={gift} canEdit={canEdit} />
+                          </li>
+                        ))}
+                      </ul>
                     </li>
                   ))}
                 </ul>
-              </div>
+              </li>
             )
           })}
         </Stagger>
