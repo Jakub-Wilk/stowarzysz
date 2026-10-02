@@ -10,7 +10,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import ActivationToken, User
 from accounts.permissions import IsSuperuser
@@ -24,7 +23,6 @@ from accounts.serializers import (
     ManagedUserSerializer,
     MeSerializer,
     PersonSerializer,
-    TokenPairSerializer,
 )
 from voting.stats import annotate_voting_stats
 
@@ -154,7 +152,7 @@ class ActivationValidateView(PublicActivationView):
 
 
 class ActivationCompleteView(PublicActivationView):
-    @extend_schema(request=ActivationCompleteSerializer, responses={200: TokenPairSerializer})
+    @extend_schema(request=ActivationCompleteSerializer, responses={204: None})
     def post(self, request: Request) -> Response:
         serializer = ActivationCompleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -175,5 +173,4 @@ class ActivationCompleteView(PublicActivationView):
             token.used_at = timezone.now()
             token.save(update_fields=["used_at"])
 
-        refresh = RefreshToken.for_user(user)
-        return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
+        return Response(status=status.HTTP_204_NO_CONTENT)

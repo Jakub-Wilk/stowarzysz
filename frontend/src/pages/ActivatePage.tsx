@@ -17,7 +17,6 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
   const submit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!password || mismatch || activate.isPending) return
-    // Signs the user in with the returned tokens, then enter the app.
     activate.mutate({ token, password }, { onSuccess: () => navigate('/', { replace: true }) })
   }
 
@@ -58,7 +57,7 @@ function SetPasswordForm({ token, username }: { token: string; username: string 
         className="h-14 w-full text-lg"
         disabled={!password || mismatch || activate.isPending}
       >
-        Ustaw hasło i zaloguj
+        Ustaw hasło
       </Button>
     </form>
   )

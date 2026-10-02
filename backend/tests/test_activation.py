@@ -84,20 +84,18 @@ def test_validate_returns_username(
     assert resp.json() == {"username": "bob"}
 
 
-def test_complete_sets_password_and_logs_in(
+def test_complete_sets_password_without_logging_in(
     admin_client: APIClient, api_client: APIClient, pending_user: User
 ) -> None:
     raw = issue_link(admin_client, pending_user)
     resp = api_client.post(
         "/api/auth/activation/complete/", {"token": raw, "password": STRONG_PASSWORD}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 204
+    assert not resp.content
     pending_user.refresh_from_db()
     assert pending_user.check_password(STRONG_PASSWORD)
     assert ActivationToken.objects.get(user=pending_user).used_at is not None
-
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.json()['access']}")
-    assert api_client.get("/api/auth/me/").json()["username"] == "bob"
 
     login = APIClient().post("/api/auth/token/", {"username": "bob", "password": STRONG_PASSWORD})
     assert login.status_code == 200
@@ -108,7 +106,7 @@ def test_complete_rejects_reuse(
 ) -> None:
     raw = issue_link(admin_client, pending_user)
     payload = {"token": raw, "password": STRONG_PASSWORD}
-    assert api_client.post("/api/auth/activation/complete/", payload).status_code == 200
+    assert api_client.post("/api/auth/activation/complete/", payload).status_code == 204
     assert api_client.post("/api/auth/activation/complete/", payload).status_code == 400
 
 

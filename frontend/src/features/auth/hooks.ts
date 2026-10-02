@@ -88,20 +88,15 @@ export function useValidateActivation(token: string) {
   })
 }
 
-/** Sets the password and signs the user in with the returned token pair. */
+/** Sets the password; the user still has to sign in afterwards. */
 export function useActivate() {
-  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: ActivationCompletePayload) =>
-      apiFetch<TokenPair>('/api/auth/activation/complete/', {
+      apiFetch<void>('/api/auth/activation/complete/', {
         method: 'POST',
         json: payload,
         auth: false,
       }),
-    onSuccess: (pair) => {
-      setTokens(pair)
-      return queryClient.invalidateQueries({ queryKey: meQueryKey })
-    },
   })
 }
 
