@@ -52,6 +52,24 @@ uv run pytest                            # needs the Postgres container running
   - Listeners live in process memory. To publish from other processes (workers, shell) or run several server processes, set `EVENTSTREAM_REDIS`.
 - **Config:** read from environment or `backend/.env` (see `.env.example`).
 
+### Database shell (development)
+
+With the Postgres container running (`docker compose up -d db`), open a `psql` shell inside it:
+
+```sh
+docker compose exec db psql -U postgres stowarzysz
+```
+
+Or, from `backend/`, let Django pick up `DATABASE_URL` for you (needs `psql` installed locally):
+
+```sh
+uv run python manage.py dbshell
+```
+
+Or connect from the host with any client: `postgres://postgres:postgres@localhost:5434/stowarzysz`. Handy `psql` commands: `\dt` (list tables), `\d voting_poll` (describe a table), `\q` (quit).
+
+For production, see [Operations](#operations).
+
 ## Frontend
 
 ```sh
@@ -174,6 +192,14 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f backend  
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build      # update after git pull (migrations run on start)
 docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup.sql   # database backup
 ```
+
+Database shell (`psql`) in production:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec db psql -U stowarzysz stowarzysz
+```
+
+Be careful: this is the live data. Prefer read-only queries, and take a backup first before changing anything.
 
 Back up three things: the database, the `media` volume (profile pictures) and `.env.prod`. Never run `docker compose down -v` in production: `-v` deletes the volumes (your data).
 
