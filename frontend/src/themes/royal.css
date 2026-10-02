@@ -1,24 +1,22 @@
 /*
- * Theme: default (deep red, black & gold; a red clone of `royal`).
+ * Theme: royal (royal black, purple & gold).
  * A theme is one block that defines the full set of semantic tokens below, scoped to
- * [data-theme='<id>']. Register it in src/themes/index.ts. The first theme also applies
- * to :root so the app is styled even before the attribute is set.
+ * [data-theme='<id>']. Register it in src/themes/index.ts. The fallback :root styling lives in default.css.
  */
-:root,
-[data-theme='default'] {
-  --background: oklch(0.16 0.02 22);
+[data-theme='royal'] {
+  --background: oklch(0.16 0.02 300);
   --foreground: oklch(0.82 0.15 87);
-  --card: oklch(0.26 0.15 22);
+  --card: oklch(0.26 0.15 298);
   --card-foreground: oklch(0.82 0.15 87);
-  --popover: oklch(0.18 0.07 22);
+  --popover: oklch(0.18 0.07 298);
   --popover-foreground: oklch(0.82 0.15 87);
   --primary: oklch(0.84 0.17 86);
-  --primary-foreground: oklch(0.18 0.04 22);
-  --secondary: oklch(0.32 0.16 22);
+  --primary-foreground: oklch(0.18 0.04 300);
+  --secondary: oklch(0.32 0.16 298);
   --secondary-foreground: oklch(0.84 0.16 87);
-  --muted: oklch(0.2 0.07 22);
+  --muted: oklch(0.2 0.07 298);
   --muted-foreground: oklch(0.68 0.12 82);
-  --accent: oklch(0.36 0.18 22);
+  --accent: oklch(0.36 0.18 298);
   --accent-foreground: oklch(0.88 0.15 88);
   --destructive: oklch(0.7 0.22 30);
   --border: oklch(0.65 0.12 82 / 55%);
@@ -26,9 +24,9 @@
   --ring: oklch(0.84 0.17 86);
   --chart-1: oklch(0.85 0.15 88);
   --chart-2: oklch(0.75 0.15 80);
-  --chart-3: oklch(0.6 0.2 22);
-  --chart-4: oklch(0.5 0.2 22);
-  --chart-5: oklch(0.4 0.16 22);
+  --chart-3: oklch(0.6 0.2 300);
+  --chart-4: oklch(0.5 0.2 300);
+  --chart-5: oklch(0.4 0.16 300);
   --radius: 0.375rem;
   /* Vote outcomes: shared by any theme that wants to restyle them. */
   --positive: oklch(0.74 0.18 150);
@@ -48,19 +46,19 @@
     var(--metal-4) 66%,
     var(--metal-5) 100%
   );
-  --sidebar: oklch(0.18 0.07 22);
+  --sidebar: oklch(0.18 0.07 298);
   --sidebar-foreground: oklch(0.82 0.15 87);
   --sidebar-primary: oklch(0.84 0.17 86);
-  --sidebar-primary-foreground: oklch(0.18 0.04 22);
-  --sidebar-accent: oklch(0.36 0.18 22);
+  --sidebar-primary-foreground: oklch(0.18 0.04 300);
+  --sidebar-accent: oklch(0.36 0.18 298);
   --sidebar-accent-foreground: oklch(0.88 0.15 88);
   --sidebar-border: oklch(0.65 0.12 82 / 55%);
   --sidebar-ring: oklch(0.84 0.17 86);
 }
 
-/* Depth: a deep red glow rising from the top over the black base. */
-[data-theme='default'] body {
-  background-image: radial-gradient(120% 60% at 50% 0%, oklch(0.24 0.14 22), transparent 70%);
+/* Depth: a purple glow rising from the top over the black base. */
+[data-theme='royal'] body {
+  background-image: radial-gradient(120% 60% at 50% 0%, oklch(0.24 0.14 298), transparent 70%);
   background-attachment: fixed;
 }
 
@@ -76,7 +74,7 @@
  * destructive buttons (those stay red). `.text-metal` opts in other text, e.g. spans in cards.
  */
 @supports (background-clip: text) {
-  [data-theme='default']
+  [data-theme='royal']
     :is(
       h1,
       h2,
@@ -100,26 +98,26 @@
   }
 
   /* Text colour is transparent, so the caret needs its own. */
-  [data-theme='default'] :is(input, textarea) {
+  [data-theme='royal'] :is(input, textarea) {
     caret-color: var(--foreground);
   }
 }
 
 /* Golden buttons get the metallic fill; dark text stays flat for contrast. */
-[data-theme='default'] .bg-primary {
+[data-theme='royal'] .bg-primary {
   background-image: var(--metal);
 }
 
-[data-theme='default'] [data-slot='button'].bg-primary:hover:not(:disabled) {
+[data-theme='royal'] [data-slot='button'].bg-primary:hover:not(:disabled) {
   filter: brightness(1.12);
 }
 
 /* Icons: stroke with the same gradient, defined once in <MetalDefs /> (SVG can't use CSS gradients). */
-[data-theme='default'] .lucide {
+[data-theme='royal'] .lucide {
   stroke: url(#metal);
 }
 
 /* ...except on a metallic fill (primary buttons), where a gold icon would vanish. */
-[data-theme='default'] .bg-primary .lucide {
+[data-theme='royal'] .bg-primary .lucide {
   stroke: currentColor;
 }

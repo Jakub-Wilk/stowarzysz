@@ -4,6 +4,7 @@
 @import '@fontsource-variable/manrope';
 @import '@fontsource/cinzel-decorative/700.css';
 @import './themes/default.css';
+@import './themes/royal.css';
 @import './themes/christmas.css';
 
 /* Themes are arbitrary (src/themes/); there is no light/dark mode, so keep `dark:` utilities inert. */
