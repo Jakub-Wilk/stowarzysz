@@ -7,10 +7,11 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from secretsanta import services
-from secretsanta.models import SantaAssignment, SantaEvent, SantaGift
+from secretsanta.models import SantaAssignment, SantaEvent, SantaGift, SantaHelpRequest
 
 URL = "/api/secret-santa/"
 HISTORY = f"{URL}history/"
+HELP = f"{URL}help/"
 
 
 @pytest.fixture(autouse=True)
@@ -21,7 +22,12 @@ def _run_on_commit_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def events(monkeypatch: pytest.MonkeyPatch) -> list[tuple[int, str, Any]]:
     sent: list[tuple[int, str, Any]] = []
-    monkeypatch.setattr("core.events.notify_user", lambda uid, t, d: sent.append((uid, t, d)))
+
+    def record(uid: int, t: str, d: Any) -> None:
+        sent.append((uid, t, d))
+
+    monkeypatch.setattr("core.events.notify_user", record)
+    monkeypatch.setattr("secretsanta.services.notify_user", record)
     return sent
 
 
@@ -85,6 +91,8 @@ def pairing(people: list[User]) -> dict[int, int]:
         ("delete", URL),
         ("get", HISTORY),
         ("patch", f"{URL}gifts/1/"),
+        ("post", HELP),
+        ("put", f"{HELP}1/"),
     ],
 )
 def test_requires_authentication(api_client: APIClient, method: str, path: str) -> None:
@@ -101,7 +109,14 @@ def test_changes_are_superuser_only(people: list[User], method: str) -> None:
 
 def test_inactive_state(people: list[User]) -> None:
     data = client_for(people[0]).get(URL).data
-    assert data == {"active": False, "event": None, "my_victim": None, "my_tier_victims": []}
+    assert data == {
+        "active": False,
+        "event": None,
+        "my_victim": None,
+        "my_tier_victims": [],
+        "my_help_requests": [],
+        "help_requests_for_me": [],
+    }
 
 
 # --- start ---
@@ -393,3 +408,159 @@ def test_note_length_and_missing_gift(boss: User, people: list[User]) -> None:
         client_for(boss).patch(f"{URL}gifts/99999/", {"note": "x"}, format="json").status_code
         == 404
     )
+
+
+# --- help requests ---
+
+
+def by_id(people: list[User]) -> dict[int, User]:
+    return {p.pk: p for p in people}
+
+
+def ask(giver: User, victim_id: int) -> Any:
+    return client_for(giver).post(HELP, {"victim_id": victim_id}, format="json")
+
+
+def answer(victim: User, request_id: int, ideas: list[str]) -> Any:
+    return client_for(victim).put(f"{HELP}{request_id}/", {"ideas": ideas}, format="json")
+
+
+def test_help_reaches_the_victim_anonymously(
+    boss: User, people: list[User], pushes: list[dict[str, Any]], events: list
+) -> None:
+    start(boss, people)
+    giver = people[0]
+    victim = by_id(people)[pairing(people)[giver.pk]]
+    pushes.clear()
+    events.clear()
+
+    resp = ask(giver, victim.pk)
+    assert resp.status_code == 201
+    assert resp.data["my_help_requests"] == [
+        {"victim_id": victim.pk, "amount": None, "pending": True, "ideas": []}
+    ]
+    assert [p["user_ids"] for p in pushes] == [[victim.pk]]
+    assert giver.username not in pushes[0]["body"]
+    assert [uid for uid, _, _ in events] == [victim.pk]
+
+    mine = client_for(victim).get(URL).data["help_requests_for_me"]
+    assert len(mine) == 1
+    assert set(mine[0]) == {"id", "amount", "pending", "ideas"}  # nothing about the giver
+    assert mine[0]["pending"] is True
+    # Nobody else sees it, superuser included.
+    for other in [boss, *(p for p in people if p not in (giver, victim))]:
+        data = client_for(other).get(URL).data
+        assert data["help_requests_for_me"] == []
+        assert all(r["victim_id"] != victim.pk for r in data["my_help_requests"])
+
+
+def test_help_row_does_not_name_the_giver(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    giver = people[0]
+    ask(giver, pairing(people)[giver.pk])
+    row = SantaHelpRequest.objects.values().get()
+    assert "giver_id" not in row and "assignment_id" not in row
+    assert row["receiver_id"] != giver.pk
+
+
+def test_victim_answers_and_giver_is_told(
+    boss: User, people: list[User], pushes: list[dict[str, Any]], events: list
+) -> None:
+    start(boss, people)
+    giver = people[0]
+    victim = by_id(people)[pairing(people)[giver.pk]]
+    ask(giver, victim.pk)
+    request_id = client_for(victim).get(URL).data["help_requests_for_me"][0]["id"]
+    pushes.clear()
+    events.clear()
+
+    resp = answer(victim, request_id, [" Książka ", "", "Kubek"])
+    assert resp.status_code == 200
+    assert resp.data["help_requests_for_me"][0]["ideas"] == ["Książka", "Kubek"]
+    assert [p["user_ids"] for p in pushes] == [[giver.pk]]
+    assert victim.username in pushes[0]["body"]
+    assert [uid for uid, _, _ in events] == [giver.pk]
+    assert client_for(giver).get(URL).data["my_help_requests"] == [
+        {"victim_id": victim.pk, "amount": None, "pending": False, "ideas": ["Książka", "Kubek"]}
+    ]
+
+
+def test_ask_again_only_after_an_answer(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    giver = people[0]
+    victim = by_id(people)[pairing(people)[giver.pk]]
+    assert ask(giver, victim.pk).status_code == 201
+    assert ask(giver, victim.pk).status_code == 400  # still waiting
+    request_id = SantaHelpRequest.objects.get().pk
+    answer(victim, request_id, ["Skarpetki"])
+    resp = ask(giver, victim.pk)
+    assert resp.status_code == 201
+    assert resp.data["my_help_requests"][0]["pending"] is True
+    assert resp.data["my_help_requests"][0]["ideas"] == ["Skarpetki"]  # earlier ideas stay
+    assert SantaHelpRequest.objects.count() == 1
+
+
+def test_cannot_ask_about_someone_else(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    giver = people[0]
+    drawn = pairing(people)
+    not_mine = next(p for p in people if p.pk not in (giver.pk, drawn[giver.pk]))
+    assert ask(giver, not_mine.pk).status_code == 400
+    assert ask(boss, drawn[giver.pk]).status_code == 400  # not taking part
+    assert ask(giver, 99999).status_code == 400
+
+
+def test_only_the_victim_can_answer(boss: User, people: list[User]) -> None:
+    start(boss, people)
+    giver = people[0]
+    ask(giver, pairing(people)[giver.pk])
+    request_id = SantaHelpRequest.objects.get().pk
+    assert answer(giver, request_id, ["x"]).status_code == 404
+    assert answer(boss, request_id, ["x"]).status_code == 404
+    assert answer(giver, 99999, ["x"]).status_code == 404
+
+
+@pytest.mark.parametrize("ideas", [[], ["", "  "], ["x"] * 6, ["x" * 201]])
+def test_answer_validation(boss: User, people: list[User], ideas: list[str]) -> None:
+    start(boss, people)
+    giver = people[0]
+    victim = by_id(people)[pairing(people)[giver.pk]]
+    ask(giver, victim.pk)
+    assert answer(victim, SantaHelpRequest.objects.get().pk, ideas).status_code == 400
+
+
+def test_help_needs_an_active_event(boss: User, people: list[User]) -> None:
+    assert ask(people[0], people[1].pk).status_code == 404
+    start(boss, people)
+    giver = people[0]
+    victim = by_id(people)[pairing(people)[giver.pk]]
+    ask(giver, victim.pk)
+    request_id = SantaHelpRequest.objects.get().pk
+    client_for(boss).delete(URL)
+    assert answer(victim, request_id, ["x"]).status_code == 404
+
+
+def test_per_tier_help_is_per_pairing(
+    boss: User, people: list[User], pushes: list[dict[str, Any]]
+) -> None:
+    start(boss, people, tiers=(100, 30), mode="per_tier")
+    giver = people[0]
+    victims = client_for(giver).get(URL).data["my_tier_victims"]
+    for v in victims:
+        assert ask(giver, v["victim"]["id"]).status_code == 201
+    state = client_for(giver).get(URL).data
+    assert sorted(r["amount"] for r in state["my_help_requests"]) == [30, 100]
+    assert any("100 zł" in p["body"] for p in pushes)
+
+    # The 100 zł victim answers; only their giver for that tier hears about it.
+    top = next(v for v in victims if v["amount"] == 100)
+    victim = by_id(people)[top["victim"]["id"]]
+    request = next(
+        r for r in client_for(victim).get(URL).data["help_requests_for_me"] if r["amount"] == 100
+    )
+    pushes.clear()
+    answer(victim, request["id"], ["Gra"])
+    assert [p["user_ids"] for p in pushes] == [[giver.pk]]
+    mine = {r["amount"]: r for r in client_for(giver).get(URL).data["my_help_requests"]}
+    assert mine[100]["ideas"] == ["Gra"]
+    assert mine[30]["pending"] is True

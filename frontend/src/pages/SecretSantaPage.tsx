@@ -10,7 +10,8 @@ import { UserAvatar } from '@/features/auth/UserAvatar'
 import { SantaHistory } from '@/features/secretsanta/SantaHistory'
 import { daysUntil, formatAmount, formatDateTime } from '@/features/secretsanta/format'
 import { useSanta } from '@/features/secretsanta/hooks'
-import type { SantaEvent, SantaTierVictim, UserBrief } from '@/lib/api-types'
+import { GiverHelp, HelpRequestsForMe } from '@/features/secretsanta/SantaHelp'
+import type { SantaGiverHelp, SantaState, SantaTierVictim, UserBrief } from '@/lib/api-types'
 import { DAY_FORMS, plural } from '@/lib/plural'
 
 function Waiting({ isSuperuser }: { isSuperuser: boolean }) {
@@ -42,8 +43,19 @@ function Deadline({ iso }: { iso: string }) {
   )
 }
 
+const helpFor = (help: SantaGiverHelp[], victim: UserBrief) =>
+  help.find((h) => h.victim_id === victim.id)
+
 /** The pairing is hidden until tapped, so it isn't read over a shoulder. */
-function Victim({ victim, tiers }: { victim: UserBrief; tiers: number[] }) {
+function Victim({
+  victim,
+  tiers,
+  help,
+}: {
+  victim: UserBrief
+  tiers: number[]
+  help: SantaGiverHelp[]
+}) {
   const [shown, setShown] = useState(false)
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg border bg-card px-6 py-8 text-center">
@@ -58,6 +70,7 @@ function Victim({ victim, tiers }: { victim: UserBrief; tiers: number[] }) {
               <li key={amount}>Prezent za {formatAmount(amount)}</li>
             ))}
           </ul>
+          <GiverHelp victimId={victim.id} help={helpFor(help, victim)} />
           <Button variant="ghost" onClick={() => setShown(false)}>
             Ukryj
           </Button>
@@ -70,7 +83,7 @@ function Victim({ victim, tiers }: { victim: UserBrief; tiers: number[] }) {
 }
 
 /** `per_tier` mode: a different victim for each amount. */
-function TierVictims({ victims }: { victims: SantaTierVictim[] }) {
+function TierVictims({ victims, help }: { victims: SantaTierVictim[]; help: SantaGiverHelp[] }) {
   const [shown, setShown] = useState(false)
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg border bg-card px-6 py-8 text-center">
@@ -84,6 +97,7 @@ function TierVictims({ victims }: { victims: SantaTierVictim[] }) {
                 <UserAvatar username={victim.username} src={victim.avatar_url} size="xl" />
                 <span className="text-metal text-2xl font-bold">{victim.username}</span>
                 <span className="text-lg">Prezent za {formatAmount(amount)}</span>
+                <GiverHelp victimId={victim.id} help={helpFor(help, victim)} />
               </li>
             ))}
           </ul>
@@ -98,17 +112,9 @@ function TierVictims({ victims }: { victims: SantaTierVictim[] }) {
   )
 }
 
-function Active({
-  event,
-  victim,
-  tierVictims,
-  isSuperuser,
-}: {
-  event: SantaEvent
-  victim: UserBrief | null
-  tierVictims: SantaTierVictim[]
-  isSuperuser: boolean
-}) {
+function Active({ state, isSuperuser }: { state: SantaState; isSuperuser: boolean }) {
+  const { event, my_victim: victim, my_tier_victims: tierVictims, my_help_requests: help } = state
+  if (!event) return null
   return (
     <>
       <Reveal className="flex flex-col gap-2">
@@ -119,11 +125,16 @@ function Active({
           <span className="font-semibold">{event.gift_tiers.map(formatAmount).join(', ')}</span>
         </p>
       </Reveal>
+      {state.help_requests_for_me.length > 0 && (
+        <Reveal index={1}>
+          <HelpRequestsForMe requests={state.help_requests_for_me} />
+        </Reveal>
+      )}
       <Reveal index={1}>
         {victim ? (
-          <Victim victim={victim} tiers={event.gift_tiers} />
+          <Victim victim={victim} tiers={event.gift_tiers} help={help} />
         ) : tierVictims.length > 0 ? (
-          <TierVictims victims={tierVictims} />
+          <TierVictims victims={tierVictims} help={help} />
         ) : (
           <p className="rounded-lg border bg-card p-4 text-base text-muted-foreground">
             Nie bierzesz udziału w tym losowaniu.
@@ -160,12 +171,7 @@ export function SecretSantaPage() {
       )}
       {data &&
         (data.event ? (
-          <Active
-            event={data.event}
-            victim={data.my_victim}
-            tierVictims={data.my_tier_victims}
-            isSuperuser={isSuperuser}
-          />
+          <Active state={data} isSuperuser={isSuperuser} />
         ) : (
           <Waiting isSuperuser={isSuperuser} />
         ))}

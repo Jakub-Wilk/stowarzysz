@@ -86,3 +86,41 @@ class SantaGift(models.Model):
         constraints = [  # noqa: RUF012
             models.UniqueConstraint(fields=["assignment", "amount"], name="unique_santa_gift")
         ]
+
+
+class SantaHelpRequest(models.Model):
+    """A giver asking their victim, anonymously, for gift ideas while an event is active.
+
+    It names the receiver and tier, never the giver: each receiver has exactly one giver per
+    tier (or one overall in `single` mode), so that pair identifies the pairing without
+    putting it in plain text next to the sealed draw.
+    """
+
+    event = models.ForeignKey(SantaEvent, on_delete=models.CASCADE, related_name="help_requests")
+    receiver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
+    )
+    tier_index = models.PositiveSmallIntegerField(null=True)  # as on `SantaAssignment`
+    ideas = models.JSONField(default=list)  # the receiver's latest answer
+    asked_at = models.DateTimeField()
+    answered_at = models.DateTimeField(null=True)  # cleared when the giver asks again
+
+    objects = models.Manager()
+
+    class Meta:
+        constraints = [  # noqa: RUF012
+            models.UniqueConstraint(
+                fields=["event", "receiver"],
+                condition=models.Q(tier_index__isnull=True),
+                name="unique_santa_help",
+            ),
+            models.UniqueConstraint(
+                fields=["event", "receiver", "tier_index"],
+                condition=models.Q(tier_index__isnull=False),
+                name="unique_santa_help_tier",
+            ),
+        ]
+
+    @property
+    def pending(self) -> bool:
+        return self.answered_at is None

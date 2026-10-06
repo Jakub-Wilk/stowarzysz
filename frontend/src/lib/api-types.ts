@@ -151,6 +151,28 @@ export interface SantaState {
   my_victim: UserBrief | null
   /** Only ever set for the signed-in giver, in `per_tier` mode; highest amount first. */
   my_tier_victims: SantaTierVictim[]
+  /** Help the signed-in giver asked their victims for. */
+  my_help_requests: SantaGiverHelp[]
+  /** Anonymous requests for gift ideas about the signed-in user; never says who asked. */
+  help_requests_for_me: SantaReceiverHelp[]
+}
+
+/** A help request as its giver sees it. `amount` is null in `single` mode (every tier). */
+export interface SantaGiverHelp {
+  victim_id: number
+  amount: number | null
+  /** Waiting for the victim to answer. */
+  pending: boolean
+  /** The victim's latest ideas (kept while a repeated request is pending). */
+  ideas: string[]
+}
+
+/** A help request as its victim sees it: which gift, never who asked. */
+export interface SantaReceiverHelp {
+  id: number
+  amount: number | null
+  pending: boolean
+  ideas: string[]
 }
 
 export interface SantaTierVictim {

@@ -73,6 +73,21 @@ export function useEndSanta() {
   return useStateMutation(() => apiFetch<SantaState>('/api/secret-santa/', { method: 'DELETE' }))
 }
 
+export function useAskForHelp() {
+  return useStateMutation((victimId: number) =>
+    apiFetch<SantaState>('/api/secret-santa/help/', {
+      method: 'POST',
+      json: { victim_id: victimId },
+    }),
+  )
+}
+
+export function useAnswerHelp() {
+  return useStateMutation(({ id, ideas }: { id: number; ideas: string[] }) =>
+    apiFetch<SantaState>(`/api/secret-santa/help/${id}/`, { method: 'PUT', json: { ideas } }),
+  )
+}
+
 export function useSetGiftNote() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -10,14 +10,16 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
-from core.events import broadcast
+from core.events import broadcast, notify_user
 from push.sender import send_push
 from secretsanta import crypto
-from secretsanta.models import SantaAssignment, SantaEvent, SantaGift
+from secretsanta.models import SantaAssignment, SantaEvent, SantaGift, SantaHelpRequest
 
 MIN_PARTICIPANTS = 3
 MAX_TIERS = 10
 MAX_AMOUNT = 100_000
+MAX_IDEAS = 5
+MAX_IDEA_LENGTH = 200
 
 
 class Conflict(APIException):
@@ -266,3 +268,116 @@ def set_gift_note(gift_id: int, user: Any, note: str) -> SantaGift:
         event_id = gift.assignment.event_id
         transaction.on_commit(lambda: broadcast("santa.updated", {"event_id": event_id}))
     return gift
+
+
+def _help_target(user: Any, victim_id: int) -> tuple[SantaEvent, int | None]:
+    """The locked active event and tier index of `user`'s pairing with `victim_id`. A giver
+    never draws the same victim twice, so the victim picks the pairing in either mode."""
+    event = _locked_active_event()
+    for tier, victim in get_victims(event, user):
+        if victim.pk == victim_id:
+            return event, tier
+    raise ValidationError({"victim_id": "To nie jest Twój podopieczny."})
+
+
+def ask_for_help(user: Any, victim_id: int) -> SantaHelpRequest:
+    """Ask a victim, anonymously, for gift ideas. Asking again is allowed once they answered."""
+    with transaction.atomic():
+        event, tier = _help_target(user, victim_id)
+        now = timezone.now()
+        request, created = SantaHelpRequest.objects.select_for_update().get_or_create(
+            event=event, receiver_id=victim_id, tier_index=tier, defaults={"asked_at": now}
+        )
+        if not created:
+            if request.pending:
+                raise ValidationError("Prośba o pomoc już czeka na odpowiedź.")
+            request.asked_at = now
+            request.answered_at = None
+            request.save(update_fields=["asked_at", "answered_at"])
+        tiers = clean_tiers_of(event)
+        gift = "prezentem" if tier is None else f"prezentem za {tiers[tier]} zł"
+
+        def announce() -> None:
+            notify_user(victim_id, "santa.help", {"event_id": event.pk})
+            send_push(
+                [victim_id],
+                title="Secret Santa — prośba o pomoc",
+                body=f"Twój Secret Santa nie wie, co Ci kupić, i prosi o pomoc z {gift}. "
+                "Podsuń kilka pomysłów!",
+                url="/secret-santa",
+            )
+
+        transaction.on_commit(announce)
+    return request
+
+
+def _clean_ideas(ideas: Iterable[str]) -> list[str]:
+    clean = [idea.strip() for idea in ideas if idea.strip()]
+    if not clean:
+        raise ValidationError({"ideas": "Podaj przynajmniej jeden pomysł."})
+    if len(clean) > MAX_IDEAS:
+        raise ValidationError({"ideas": f"Maksymalnie {MAX_IDEAS} pomysłów."})
+    if any(len(idea) > MAX_IDEA_LENGTH for idea in clean):
+        raise ValidationError({"ideas": f"Pomysł może mieć najwyżej {MAX_IDEA_LENGTH} znaków."})
+    return clean
+
+
+def _giver_of(event: SantaEvent, receiver_id: int, tier: int | None) -> int:
+    """Open the seals of one tier to find who gives to `receiver_id`; used only to notify."""
+    for assignment in SantaAssignment.objects.filter(event=event, tier_index=tier):
+        if crypto.open_seal(assignment.giver_id, assignment.payload) == receiver_id:
+            return assignment.giver_id
+    raise NotFound()
+
+
+def answer_help(request_id: int, user: Any, ideas: Iterable[str]) -> SantaHelpRequest:
+    """The victim's gift ideas for an open (or already answered) request about them."""
+    clean = _clean_ideas(ideas)
+    with transaction.atomic():
+        event = _locked_active_event()
+        request = (
+            SantaHelpRequest.objects.select_for_update()
+            .filter(pk=request_id, event=event, receiver=user)
+            .first()
+        )
+        if request is None:  # someone else's request looks the same as a missing one
+            raise NotFound()
+        request.ideas = clean
+        request.answered_at = timezone.now()
+        request.save(update_fields=["ideas", "answered_at"])
+        giver_id = _giver_of(event, user.pk, request.tier_index)
+        name = user.username
+
+        def announce() -> None:
+            notify_user(giver_id, "santa.help", {"event_id": event.pk})
+            send_push(
+                [giver_id],
+                title="Secret Santa — są podpowiedzi",
+                body=f"Masz nowe pomysły na prezent dla: {name}.",
+                url="/secret-santa",
+            )
+
+        transaction.on_commit(announce)
+    return request
+
+
+def help_for_giver(event: SantaEvent, user: Any) -> list[tuple[Any, SantaHelpRequest]]:
+    """`(victim, request)` for each of `user`'s pairings they have asked about."""
+    victims = get_victims(event, user)
+    if not victims:
+        return []
+    by_key = {
+        (r.receiver_id, r.tier_index): r
+        for r in SantaHelpRequest.objects.filter(
+            event=event, receiver_id__in=[victim.pk for _, victim in victims]
+        )
+    }
+    return [
+        (victim, by_key[(victim.pk, tier)])
+        for tier, victim in victims
+        if (victim.pk, tier) in by_key
+    ]
+
+
+def help_for_receiver(event: SantaEvent, user: Any) -> list[SantaHelpRequest]:
+    return list(SantaHelpRequest.objects.filter(event=event, receiver=user).order_by("tier_index"))

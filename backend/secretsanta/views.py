@@ -12,6 +12,8 @@ from secretsanta.models import SantaEvent
 from secretsanta.serializers import (
     GiftNoteRequestSerializer,
     GiftSerializer,
+    HelpAnswerSerializer,
+    HelpRequestSerializer,
     HistoryEventSerializer,
     SantaStateSerializer,
     StartRequestSerializer,
@@ -93,3 +95,25 @@ class SantaGiftView(APIView):
         serializer.is_valid(raise_exception=True)
         gift = services.set_gift_note(gift_id, request.user, serializer.validated_data["note"])
         return Response(GiftSerializer(gift).data)
+
+
+class SantaHelpView(APIView):
+    """A giver asks one of their victims for gift ideas, without revealing who is asking."""
+
+    @extend_schema(request=HelpRequestSerializer, responses={201: SantaStateSerializer})
+    def post(self, request: Request) -> Response:
+        serializer = HelpRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.ask_for_help(request.user, serializer.validated_data["victim_id"])
+        return Response(_state(request), status=status.HTTP_201_CREATED)
+
+
+class SantaHelpAnswerView(APIView):
+    """The victim answers a request about them with a few ideas."""
+
+    @extend_schema(request=HelpAnswerSerializer, responses={200: SantaStateSerializer})
+    def put(self, request: Request, request_id: int) -> Response:
+        serializer = HelpAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.answer_help(request_id, request.user, serializer.validated_data["ideas"])
+        return Response(_state(request))
