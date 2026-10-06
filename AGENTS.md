@@ -64,7 +64,7 @@ All checks at once: `uv run --project backend pre-commit run --all-files`.
 - **UI:** Tailwind v4 (CSS-first, config lives in `src/index.css`, no `tailwind.config.js`). Add components with `pnpm dlx shadcn@latest add <name>`; they land in `src/components/ui/` and are excluded from oxlint. Prefer composing them over editing them. Use `cn()` from `@/lib/utils` for conditional classes.
 - **Data fetching:** TanStack Query for all server state. No fetching in `useEffect`. Routing is React Router (`src/App.tsx`).
 - **Auth/SSE:** send `Authorization: Bearer <access token>` on API calls. Native `EventSource` can't set headers, so use a fetch-based SSE client for `/api/events/`.
-- **PWA:** configured in `vite.config.ts` (vite-plugin-pwa). The icons in `public/` are placeholders. Dev proxies `/api` to `localhost:8000`, so use relative `/api/...` URLs.
+- **PWA:** configured in `vite.config.ts` (vite-plugin-pwa). Icons in `public/` are generated from the root `logo.png` (`pwa-*`, `maskable-512x512.png` padded on the theme color, `apple-touch-icon.png`, `favicon.png`). Dev proxies `/api` to `localhost:8000`, so use relative `/api/...` URLs.
 - **Motion:** use the shared system in `src/components/motion/` (read its `README.md`): tokens and `animate-*` utilities in `src/index.css`, `Stagger` / `Reveal` / `PageTransition` / `Skeleton` / `useCountUp` / `useFlashOnChange`. Animate transform/opacity only, take colors from theme tokens, and don't add a second animation approach. Reduced motion is handled globally in `index.css`.
 - Format with oxfmt and lint with oxlint (config in `frontend/.oxfmtrc.json` and `.oxlintrc.json`). Don't add ESLint or Prettier.
 
