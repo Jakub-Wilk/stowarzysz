@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
-import { applyBaseColor, getStoredHue } from '@/themes/color'
+import { applyBaseChroma, applyBaseColor, getStoredChroma, getStoredHue } from '@/themes/color'
 import { applyTheme, getStoredTheme, themes, type ThemeId } from '@/themes'
 import { ThemeContext, type ThemeContextValue } from '@/themes/context'
 
@@ -8,6 +8,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeId>(() => {
     const initial = getStoredTheme()
     applyBaseColor(getStoredHue(), false)
+    applyBaseChroma(getStoredChroma(), false)
     applyTheme(initial) // before first paint, so there is no flash of the wrong theme
     return initial
   })

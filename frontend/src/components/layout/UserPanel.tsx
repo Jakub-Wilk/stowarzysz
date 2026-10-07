@@ -16,18 +16,24 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { selectableThemes, type ThemeId } from '@/themes'
+import { MAX_CHROMA } from '@/themes/color'
 import { useTheme } from '@/themes/context'
-import { useBaseHue } from '@/themes/useBaseHue'
+import { useBaseChroma, useBaseHue } from '@/themes/useBaseHue'
 
 const HUE_GRADIENT = `linear-gradient(to right, ${Array.from(
   { length: 13 },
   (_, i) => `oklch(0.7 0.15 ${i * 30})`,
 ).join(', ')})`
 
-/** Theme picker and base hue slider. Both are remembered per browser. */
+/** Grey to vivid in the current base hue (the track follows the hue slider via inheritance). */
+const CHROMA_GRADIENT =
+  'linear-gradient(to right, oklch(0.7 0 var(--base-hue)), oklch(0.7 0.22 var(--base-hue)))'
+
+/** Theme picker and base color sliders. All are remembered per browser. */
 function AppearanceSettings() {
   const { theme, setTheme } = useTheme()
   const { hue, custom, setHue, reset: resetHue } = useBaseHue()
+  const saturation = useBaseChroma()
 
   return (
     <div className="flex w-full flex-col gap-3 text-left">
@@ -69,6 +75,26 @@ function AppearanceSettings() {
           value={hue}
           onValueChange={(v) => setHue(Array.isArray(v) ? v[0] : v)}
           style={{ '--hue-gradient': HUE_GRADIENT } as React.CSSProperties}
+          className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Nasycenie</Label>
+          {saturation.custom && (
+            <Button variant="ghost" size="xs" onClick={saturation.reset}>
+              Domyślne
+            </Button>
+          )}
+        </div>
+        <Slider
+          aria-label="Nasycenie"
+          min={0}
+          max={MAX_CHROMA * 100}
+          step={1}
+          value={Math.round(saturation.chroma * 100)}
+          onValueChange={(v) => saturation.setChroma((Array.isArray(v) ? v[0] : v) / 100)}
+          style={{ '--hue-gradient': CHROMA_GRADIENT } as React.CSSProperties}
           className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
         />
       </div>

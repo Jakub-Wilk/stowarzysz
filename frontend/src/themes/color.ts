@@ -1,10 +1,14 @@
 /**
  * The base color: one oklch hue (0-360) that themes derive their palette from via `--base-hue`
  * (see royal.css / claymorphic.css). Unset, each theme falls back to its own default hue in CSS.
- * There is no UI for it yet; change it from the console with `setBaseColor(150)` or
- * `setBaseColor('#2a9d8f')`, and reset with `setBaseColor()`.
+ * Alongside it, `--base-chroma` is a multiplier on every derived color's chroma
+ * (1 = as designed, 0 = grey). The user picks both in the account panel; from the console use
+ * `setBaseColor(150)` or `setBaseColor('#2a9d8f')`, and reset with `setBaseColor()`.
  */
 const STORAGE_KEY = 'base-hue'
+const CHROMA_KEY = 'base-chroma'
+
+export const MAX_CHROMA = 1.5
 
 export function normalizeHue(hue: number): number {
   return ((hue % 360) + 360) % 360
@@ -51,6 +55,25 @@ export function storeHue(hue: number | null): void {
   }
 }
 
+export function getStoredChroma(): number | null {
+  try {
+    const stored = localStorage.getItem(CHROMA_KEY)
+    const chroma = stored === null ? NaN : Number(stored)
+    return Number.isFinite(chroma) ? Math.min(Math.max(chroma, 0), MAX_CHROMA) : null
+  } catch {
+    return null
+  }
+}
+
+export function storeChroma(chroma: number | null): void {
+  try {
+    if (chroma === null) localStorage.removeItem(CHROMA_KEY)
+    else localStorage.setItem(CHROMA_KEY, String(chroma))
+  } catch {
+    // Storage unavailable; the saturation still applies for this session.
+  }
+}
+
 /** Keeps the browser chrome (address bar, PWA window) in step with the active theme and hue. */
 export function syncThemeColor(): void {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
@@ -64,6 +87,15 @@ export function applyBaseColor(hue: number | null, persist = true): void {
   if (hue === null) root.style.removeProperty('--base-hue')
   else root.style.setProperty('--base-hue', String(hue))
   if (persist) storeHue(hue)
+  syncThemeColor()
+}
+
+/** Applies the chroma multiplier (or `null` for the default of 1) and remembers it. */
+export function applyBaseChroma(chroma: number | null, persist = true): void {
+  const root = document.documentElement
+  if (chroma === null) root.style.removeProperty('--base-chroma')
+  else root.style.setProperty('--base-chroma', String(chroma))
+  if (persist) storeChroma(chroma)
   syncThemeColor()
 }
 

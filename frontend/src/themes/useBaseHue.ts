@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { applyBaseColor, getStoredHue } from '@/themes/color'
+import { applyBaseChroma, applyBaseColor, getStoredChroma, getStoredHue } from '@/themes/color'
 import { useTheme } from '@/themes/context'
 
 /** The hue the active theme paints with when the user hasn't picked one (its `--base-hue`). */
@@ -32,4 +32,19 @@ export function useBaseHue() {
     setHue,
     reset,
   }
+}
+
+/** The saturation multiplier (1 = as designed), kept in sync with `<html>` and localStorage. */
+export function useBaseChroma() {
+  const [stored, setStored] = useState<number | null>(getStoredChroma)
+
+  const setChroma = (next: number) => {
+    applyBaseChroma(next)
+    setStored(next)
+  }
+  const reset = () => {
+    applyBaseChroma(null)
+    setStored(null)
+  }
+  return { chroma: stored ?? 1, custom: stored !== null, setChroma, reset }
 }

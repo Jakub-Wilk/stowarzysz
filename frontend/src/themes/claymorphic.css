@@ -12,54 +12,57 @@
 }
 
 [data-theme='claymorphic'] {
-  --background: oklch(0.94 0.025 var(--base-hue));
-  --foreground: oklch(0.3 0.04 var(--base-hue));
-  --card: oklch(0.965 0.02 var(--base-hue));
-  --card-foreground: oklch(0.3 0.04 var(--base-hue));
-  --popover: oklch(0.975 0.015 var(--base-hue));
-  --popover-foreground: oklch(0.3 0.04 var(--base-hue));
-  --primary: oklch(0.55 0.19 var(--base-hue));
-  --primary-foreground: oklch(0.98 0.01 var(--base-hue));
-  --secondary: oklch(0.9 0.05 calc(var(--base-hue) + 45));
-  --secondary-foreground: oklch(0.35 0.08 calc(var(--base-hue) + 45));
-  --muted: oklch(0.91 0.03 var(--base-hue));
-  --muted-foreground: oklch(0.47 0.05 var(--base-hue));
-  --accent: oklch(0.89 0.06 var(--base-hue));
-  --accent-foreground: oklch(0.3 0.06 var(--base-hue));
+  --background: oklch(0.94 calc(0.025 * var(--base-chroma)) var(--base-hue));
+  --foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
+  --card: oklch(0.965 calc(0.02 * var(--base-chroma)) var(--base-hue));
+  --card-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
+  --popover: oklch(0.975 calc(0.015 * var(--base-chroma)) var(--base-hue));
+  --popover-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
+  --primary: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --primary-foreground: oklch(0.98 calc(0.01 * var(--base-chroma)) var(--base-hue));
+  --secondary: oklch(0.9 calc(0.05 * var(--base-chroma)) calc(var(--base-hue) + 45));
+  --secondary-foreground: oklch(0.35 calc(0.08 * var(--base-chroma)) calc(var(--base-hue) + 45));
+  --muted: oklch(0.91 calc(0.03 * var(--base-chroma)) var(--base-hue));
+  --muted-foreground: oklch(0.47 calc(0.05 * var(--base-chroma)) var(--base-hue));
+  --accent: oklch(0.89 calc(0.06 * var(--base-chroma)) var(--base-hue));
+  --accent-foreground: oklch(0.3 calc(0.06 * var(--base-chroma)) var(--base-hue));
   --destructive: oklch(0.52 0.2 20);
   --border: transparent;
   --input: transparent;
-  --ring: oklch(0.6 0.18 var(--base-hue));
-  --chart-1: oklch(0.6 0.18 var(--base-hue));
-  --chart-2: oklch(0.7 0.14 calc(var(--base-hue) + 45));
-  --chart-3: oklch(0.72 0.12 calc(var(--base-hue) - 85));
-  --chart-4: oklch(0.78 0.13 calc(var(--base-hue) + 165));
-  --chart-5: oklch(0.7 0.14 calc(var(--base-hue) + 225));
+  --ring: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
+  --chart-1: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
+  --chart-2: oklch(0.7 calc(0.14 * var(--base-chroma)) calc(var(--base-hue) + 45));
+  --chart-3: oklch(0.72 calc(0.12 * var(--base-chroma)) calc(var(--base-hue) - 85));
+  --chart-4: oklch(0.78 calc(0.13 * var(--base-chroma)) calc(var(--base-hue) + 165));
+  --chart-5: oklch(0.7 calc(0.14 * var(--base-chroma)) calc(var(--base-hue) + 225));
   --radius: 1.5rem;
   /* Used as `text-background` on these fills, so they stay mid-dark for contrast. */
   --positive: oklch(0.52 0.15 155);
   --negative: oklch(0.55 0.19 25);
-  --neutral: oklch(0.55 0.04 var(--base-hue));
+  --neutral: oklch(0.55 calc(0.04 * var(--base-chroma)) var(--base-hue));
   /* Avatars and other `bg-(image:--metal)` fills: a plain soft violet. */
-  --metal-1: oklch(0.55 0.19 var(--base-hue));
-  --metal-2: oklch(0.55 0.19 var(--base-hue));
-  --metal-3: oklch(0.55 0.19 var(--base-hue));
-  --metal-4: oklch(0.55 0.19 var(--base-hue));
-  --metal-5: oklch(0.55 0.19 var(--base-hue));
-  --metal: linear-gradient(oklch(0.55 0.19 var(--base-hue)), oklch(0.55 0.19 var(--base-hue)));
-  --sidebar: oklch(0.965 0.02 var(--base-hue));
-  --sidebar-foreground: oklch(0.3 0.04 var(--base-hue));
-  --sidebar-primary: oklch(0.55 0.19 var(--base-hue));
-  --sidebar-primary-foreground: oklch(0.98 0.01 var(--base-hue));
-  --sidebar-accent: oklch(0.89 0.06 var(--base-hue));
-  --sidebar-accent-foreground: oklch(0.3 0.06 var(--base-hue));
+  --metal-1: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal-2: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal-3: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal-4: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal-5: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal: linear-gradient(
+    oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue)),
+    oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue))
+  );
+  --sidebar: oklch(0.965 calc(0.02 * var(--base-chroma)) var(--base-hue));
+  --sidebar-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
+  --sidebar-primary: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --sidebar-primary-foreground: oklch(0.98 calc(0.01 * var(--base-chroma)) var(--base-hue));
+  --sidebar-accent: oklch(0.89 calc(0.06 * var(--base-chroma)) var(--base-hue));
+  --sidebar-accent-foreground: oklch(0.3 calc(0.06 * var(--base-chroma)) var(--base-hue));
   --sidebar-border: transparent;
-  --sidebar-ring: oklch(0.6 0.18 var(--base-hue));
+  --sidebar-ring: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
 
   /* Clay shadows: tinted drop shadow + light top-left / dark bottom-right inner bevel. */
-  --clay-shade: oklch(0.45 0.08 var(--base-hue) / 28%);
+  --clay-shade: oklch(0.45 calc(0.08 * var(--base-chroma)) var(--base-hue) / 28%);
   --clay-light: oklch(1 0 0 / 85%);
-  --clay-dark: oklch(0.5 0.1 var(--base-hue) / 18%);
+  --clay-dark: oklch(0.5 calc(0.1 * var(--base-chroma)) var(--base-hue) / 18%);
   --clay-raised:
     8px 8px 18px var(--clay-shade), inset 4px 4px 8px var(--clay-light),
     inset -4px -4px 8px var(--clay-dark);
@@ -79,8 +82,16 @@
  */
 [data-theme='claymorphic'] body {
   background-image:
-    radial-gradient(90% 50% at 15% 0%, oklch(0.98 0.02 var(--base-hue) / 70%), transparent 70%),
-    radial-gradient(90% 50% at 90% 10%, oklch(0.92 0.04 var(--base-hue) / 50%), transparent 70%);
+    radial-gradient(
+      90% 50% at 15% 0%,
+      oklch(0.98 calc(0.02 * var(--base-chroma)) var(--base-hue) / 70%),
+      transparent 70%
+    ),
+    radial-gradient(
+      90% 50% at 90% 10%,
+      oklch(0.92 calc(0.04 * var(--base-chroma)) var(--base-hue) / 50%),
+      transparent 70%
+    );
   background-attachment: fixed;
 }
 
@@ -215,7 +226,7 @@
 
 [data-theme='claymorphic'] [data-slot='dialog-overlay'],
 [data-theme='claymorphic'] [data-slot='alert-dialog-overlay'] {
-  background-color: oklch(0.4 0.06 var(--base-hue) / 30%);
+  background-color: oklch(0.4 calc(0.06 * var(--base-chroma)) var(--base-hue) / 30%);
 }
 
 /* Cards (poll rows, user rows, score panels): raised, borderless. */
