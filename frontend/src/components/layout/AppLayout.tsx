@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from 'react-router'
 
 import { AppHeader } from '@/components/layout/AppHeader'
-import { useBackToRefresh } from '@/components/layout/backButton'
 import { BottomTabs } from '@/components/layout/BottomTabs'
 import { SwipePager } from '@/components/layout/SwipePager'
 import { tabs } from '@/components/layout/tabs'
@@ -9,7 +8,6 @@ import { tabs } from '@/components/layout/tabs'
 export function AppLayout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  useBackToRefresh()
   const index = Math.max(
     tabs.findIndex((t) => t.path === pathname),
     0,

@@ -4,7 +4,6 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 
 import App from './App.tsx'
-import { insertParentEntry } from './components/layout/backButton.ts'
 import { AuthProvider } from './features/auth/AuthProvider.tsx'
 import './index.css'
 import { setBaseColor } from './themes/color.ts'
@@ -18,9 +17,6 @@ window.setBaseColor = setBaseColor
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 0, gcTime: 0 } },
 })
-
-// Before the router reads history: a sub page opened from outside gets its tab underneath.
-insertParentEntry()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
