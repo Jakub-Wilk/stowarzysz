@@ -1,22 +1,31 @@
 /*
- * Theme: royal (royal black, purple & gold).
+ * Theme: royal (black & gold metal). Styling only: the surface colors are derived from the base
+ * hue (`--base-hue`, see color.ts), so the same theme is deep red (22), purple (300), and so on.
+ * Gold, vote tones and the metal gradient are part of the theme and do not follow the hue.
  * A theme is one block that defines the full set of semantic tokens below, scoped to
- * [data-theme='<id>']. Register it in src/themes/index.ts. The fallback :root styling lives in default.css.
+ * [data-theme='<id>']. Register it in src/themes/index.ts. The first theme also applies
+ * to :root so the app is styled even before the attribute is set.
  */
+/* Fallback hue (red); themes may override it, and color.ts sets it inline when the user picks one. */
+:root {
+  --base-hue: 22;
+}
+
+:root,
 [data-theme='royal'] {
-  --background: oklch(0.16 0.02 300);
+  --background: oklch(0.16 0.02 var(--base-hue));
   --foreground: oklch(0.82 0.15 87);
-  --card: oklch(0.26 0.15 298);
+  --card: oklch(0.26 0.15 var(--base-hue));
   --card-foreground: oklch(0.82 0.15 87);
-  --popover: oklch(0.18 0.07 298);
+  --popover: oklch(0.18 0.07 var(--base-hue));
   --popover-foreground: oklch(0.82 0.15 87);
   --primary: oklch(0.84 0.17 86);
-  --primary-foreground: oklch(0.18 0.04 300);
-  --secondary: oklch(0.32 0.16 298);
+  --primary-foreground: oklch(0.18 0.04 var(--base-hue));
+  --secondary: oklch(0.32 0.16 var(--base-hue));
   --secondary-foreground: oklch(0.84 0.16 87);
-  --muted: oklch(0.2 0.07 298);
+  --muted: oklch(0.2 0.07 var(--base-hue));
   --muted-foreground: oklch(0.68 0.12 82);
-  --accent: oklch(0.36 0.18 298);
+  --accent: oklch(0.36 0.18 var(--base-hue));
   --accent-foreground: oklch(0.88 0.15 88);
   --destructive: oklch(0.7 0.22 30);
   --border: oklch(0.65 0.12 82 / 55%);
@@ -24,9 +33,9 @@
   --ring: oklch(0.84 0.17 86);
   --chart-1: oklch(0.85 0.15 88);
   --chart-2: oklch(0.75 0.15 80);
-  --chart-3: oklch(0.6 0.2 300);
-  --chart-4: oklch(0.5 0.2 300);
-  --chart-5: oklch(0.4 0.16 300);
+  --chart-3: oklch(0.6 0.2 var(--base-hue));
+  --chart-4: oklch(0.5 0.2 var(--base-hue));
+  --chart-5: oklch(0.4 0.16 var(--base-hue));
   --radius: 0.375rem;
   /* Vote outcomes: shared by any theme that wants to restyle them. */
   --positive: oklch(0.74 0.18 150);
@@ -46,19 +55,23 @@
     var(--metal-4) 66%,
     var(--metal-5) 100%
   );
-  --sidebar: oklch(0.18 0.07 298);
+  --sidebar: oklch(0.18 0.07 var(--base-hue));
   --sidebar-foreground: oklch(0.82 0.15 87);
   --sidebar-primary: oklch(0.84 0.17 86);
-  --sidebar-primary-foreground: oklch(0.18 0.04 300);
-  --sidebar-accent: oklch(0.36 0.18 298);
+  --sidebar-primary-foreground: oklch(0.18 0.04 var(--base-hue));
+  --sidebar-accent: oklch(0.36 0.18 var(--base-hue));
   --sidebar-accent-foreground: oklch(0.88 0.15 88);
   --sidebar-border: oklch(0.65 0.12 82 / 55%);
   --sidebar-ring: oklch(0.84 0.17 86);
 }
 
-/* Depth: a purple glow rising from the top over the black base. */
+/* Depth: a glow in the base hue rising from the top over the black base. */
 [data-theme='royal'] body {
-  background-image: radial-gradient(120% 60% at 50% 0%, oklch(0.24 0.14 298), transparent 70%);
+  background-image: radial-gradient(
+    120% 60% at 50% 0%,
+    oklch(0.24 0.14 var(--base-hue)),
+    transparent 70%
+  );
   background-attachment: fixed;
 }
 

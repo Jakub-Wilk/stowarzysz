@@ -6,7 +6,11 @@ import { BrowserRouter } from 'react-router'
 import App from './App.tsx'
 import { AuthProvider } from './features/auth/AuthProvider.tsx'
 import './index.css'
+import { setBaseColor } from './themes/color.ts'
 import { ThemeProvider } from './themes/ThemeProvider.tsx'
+
+// No UI for the base color yet; change it from the console, e.g. `setBaseColor(150)`.
+window.setBaseColor = setBaseColor
 
 const queryClient = new QueryClient()
 
