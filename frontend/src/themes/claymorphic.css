@@ -2,7 +2,7 @@
  * Theme: claymorphic (soft tinted background, puffy raised surfaces, pressed-in inputs). Light and
  * flat in colour: depth comes only from the `--clay-*` shadows, so there is no metallic text. Every
  * colour is derived from the base hue (`--base-hue`, see color.ts; lavender by default), with
- * secondary/accent/chart hues at fixed offsets. Not selectable in the UI; set it by hand with
+ * secondary/chart hues at fixed offsets (accent stays on the base hue: it is the hover highlight). Not selectable in the UI; set it by hand with
  * `localStorage.theme = 'claymorphic'` and reload.
  * Shadows are static: only transform/opacity are animated (see components/motion/README.md).
  */
@@ -24,8 +24,8 @@
   --secondary-foreground: oklch(0.35 0.08 calc(var(--base-hue) + 45));
   --muted: oklch(0.91 0.03 var(--base-hue));
   --muted-foreground: oklch(0.47 0.05 var(--base-hue));
-  --accent: oklch(0.9 0.06 calc(var(--base-hue) - 85));
-  --accent-foreground: oklch(0.32 0.07 calc(var(--base-hue) - 70));
+  --accent: oklch(0.89 0.06 var(--base-hue));
+  --accent-foreground: oklch(0.3 0.06 var(--base-hue));
   --destructive: oklch(0.52 0.2 20);
   --border: transparent;
   --input: transparent;
@@ -51,8 +51,8 @@
   --sidebar-foreground: oklch(0.3 0.04 var(--base-hue));
   --sidebar-primary: oklch(0.55 0.19 var(--base-hue));
   --sidebar-primary-foreground: oklch(0.98 0.01 var(--base-hue));
-  --sidebar-accent: oklch(0.9 0.06 calc(var(--base-hue) - 85));
-  --sidebar-accent-foreground: oklch(0.32 0.07 calc(var(--base-hue) - 70));
+  --sidebar-accent: oklch(0.89 0.06 var(--base-hue));
+  --sidebar-accent-foreground: oklch(0.3 0.06 var(--base-hue));
   --sidebar-border: transparent;
   --sidebar-ring: oklch(0.6 0.18 var(--base-hue));
 
@@ -131,7 +131,14 @@
   box-shadow: var(--clay-pressed);
 }
 
+/* Unlayered, so the unchecked `background-color` above would otherwise beat `data-checked:bg-primary`. */
 [data-theme='claymorphic'] [data-slot='checkbox'][data-checked] {
+  background-color: var(--primary);
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--primary) 85%, white),
+    var(--primary) 60%
+  );
   box-shadow: var(--clay-raised-sm);
 }
 
