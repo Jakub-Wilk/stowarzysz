@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatAmount } from '@/features/secretsanta/format'
 import { useAnswerHelp, useAskForHelp } from '@/features/secretsanta/hooks'
+import { ConfirmDialog } from '@/features/voting/ConfirmDialog'
 import { formErrors } from '@/lib/api-errors'
 import type { SantaGiverHelp, SantaReceiverHelp } from '@/lib/api-types'
 
@@ -24,6 +25,7 @@ function IdeaList({ ideas }: { ideas: string[] }) {
 /** Under a revealed victim: ask them, anonymously, for gift ideas and read the answer. */
 export function GiverHelp({ victimId, help }: { victimId: number; help?: SantaGiverHelp }) {
   const ask = useAskForHelp()
+  const [confirming, setConfirming] = useState(false)
   const error = ask.error ? formErrors(ask.error).general : null
 
   const askButton = (label: string, variant: 'outline' | 'ghost') => (
@@ -32,7 +34,7 @@ export function GiverHelp({ victimId, help }: { victimId: number; help?: SantaGi
       variant={variant}
       size="sm"
       disabled={ask.isPending}
-      onClick={() => ask.mutate(victimId)}
+      onClick={() => setConfirming(true)}
     >
       <Lightbulb aria-hidden />
       {label}
@@ -64,6 +66,16 @@ export function GiverHelp({ victimId, help }: { victimId: number; help?: SantaGi
           {error}
         </span>
       )}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Poprosić o podpowiedzi?"
+        description="Poprosimy osobę, którą obdarowujesz, o kilka pomysłów na prezent. Nie dowie się, kto pyta, ale zobaczy, że jej Secret Santa szuka pomocy."
+        confirmLabel="Poproś"
+        destructive={false}
+        pending={ask.isPending}
+        onConfirm={() => ask.mutate(victimId, { onSettled: () => setConfirming(false) })}
+      />
     </div>
   )
 }

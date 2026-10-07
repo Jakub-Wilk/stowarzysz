@@ -19,9 +19,11 @@ interface ConfirmDialogProps {
   confirmLabel: string
   pending: boolean
   onConfirm: () => void
+  /** Style the confirm button as dangerous; off for harmless actions. */
+  destructive?: boolean
 }
 
-/** Plain "are you sure?" for actions that can't be undone. */
+/** Plain "are you sure?", mostly for actions that can't be undone. */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -30,6 +32,7 @@ export function ConfirmDialog({
   confirmLabel,
   pending,
   onConfirm,
+  destructive = true,
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -40,7 +43,11 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Anuluj</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" disabled={pending} onClick={onConfirm}>
+          <AlertDialogAction
+            variant={destructive ? 'destructive' : 'default'}
+            disabled={pending}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
