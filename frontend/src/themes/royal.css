@@ -1,6 +1,6 @@
 /*
  * Theme: royal (black & gold metal). Styling only: the surface colors are derived from the base
- * hue (`--base-hue`, see color.ts), so the same theme is deep red (22), purple (300), and so on.
+ * hue (`--base-hue`, see color.ts), so the same theme is deep red (357), purple (265), and so on.
  * Gold, vote tones and the metal gradient are part of the theme and do not follow the hue.
  * A theme is one block that defines the full set of semantic tokens below, scoped to
  * [data-theme='<id>']. Register it in src/themes/index.ts. The first theme also applies
@@ -11,25 +11,25 @@
  * hue, and color.ts sets either inline when the user picks one.
  */
 :root {
-  --base-hue: 22;
+  --base-hue: 357;
   --base-chroma: 1;
 }
 
 :root,
 [data-theme='royal'] {
-  --background: oklch(0.16 calc(0.02 * var(--base-chroma)) var(--base-hue));
+  --background: hsl(var(--base-hue) calc(38% * var(--base-chroma)) 6%);
   --foreground: oklch(0.82 0.15 87);
-  --card: oklch(0.26 calc(0.15 * var(--base-chroma)) var(--base-hue));
+  --card: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 17%);
   --card-foreground: oklch(0.82 0.15 87);
-  --popover: oklch(0.18 calc(0.07 * var(--base-chroma)) var(--base-hue));
+  --popover: hsl(var(--base-hue) calc(96% * var(--base-chroma)) 8%);
   --popover-foreground: oklch(0.82 0.15 87);
   --primary: oklch(0.84 0.17 86);
-  --primary-foreground: oklch(0.18 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --secondary: oklch(0.32 calc(0.16 * var(--base-chroma)) var(--base-hue));
+  --primary-foreground: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 8%);
+  --secondary: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 22%);
   --secondary-foreground: oklch(0.84 0.16 87);
-  --muted: oklch(0.2 calc(0.07 * var(--base-chroma)) var(--base-hue));
+  --muted: hsl(var(--base-hue) calc(84% * var(--base-chroma)) 10%);
   --muted-foreground: oklch(0.68 0.12 82);
-  --accent: oklch(0.36 calc(0.18 * var(--base-chroma)) var(--base-hue));
+  --accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 26%);
   --accent-foreground: oklch(0.88 0.15 88);
   --destructive: oklch(0.7 0.22 30);
   --border: oklch(0.65 0.12 82 / 55%);
@@ -37,9 +37,9 @@
   --ring: oklch(0.84 0.17 86);
   --chart-1: oklch(0.85 0.15 88);
   --chart-2: oklch(0.75 0.15 80);
-  --chart-3: oklch(0.6 calc(0.2 * var(--base-chroma)) var(--base-hue));
-  --chart-4: oklch(0.5 calc(0.2 * var(--base-chroma)) var(--base-hue));
-  --chart-5: oklch(0.4 calc(0.16 * var(--base-chroma)) var(--base-hue));
+  --chart-3: hsl(var(--base-hue) calc(72% * var(--base-chroma)) 55%);
+  --chart-4: hsl(var(--base-hue) calc(96% * var(--base-chroma)) 37%);
+  --chart-5: hsl(var(--base-hue) calc(98% * var(--base-chroma)) 27%);
   --radius: 0.375rem;
   /* Vote outcomes: shared by any theme that wants to restyle them. */
   --positive: oklch(0.74 0.18 150);
@@ -59,11 +59,11 @@
     var(--metal-4) 66%,
     var(--metal-5) 100%
   );
-  --sidebar: oklch(0.18 calc(0.07 * var(--base-chroma)) var(--base-hue));
+  --sidebar: hsl(var(--base-hue) calc(96% * var(--base-chroma)) 8%);
   --sidebar-foreground: oklch(0.82 0.15 87);
   --sidebar-primary: oklch(0.84 0.17 86);
-  --sidebar-primary-foreground: oklch(0.18 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --sidebar-accent: oklch(0.36 calc(0.18 * var(--base-chroma)) var(--base-hue));
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 8%);
+  --sidebar-accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 26%);
   --sidebar-accent-foreground: oklch(0.88 0.15 88);
   --sidebar-border: oklch(0.65 0.12 82 / 55%);
   --sidebar-ring: oklch(0.84 0.17 86);
@@ -73,7 +73,7 @@
 [data-theme='royal'] body {
   background-image: radial-gradient(
     120% 60% at 50% 0%,
-    oklch(0.24 calc(0.14 * var(--base-chroma)) var(--base-hue)),
+    hsl(var(--base-hue) calc(100% * var(--base-chroma)) 15%),
     transparent 70%
   );
   background-attachment: fixed;

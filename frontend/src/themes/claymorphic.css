@@ -8,61 +8,61 @@
  */
 /* Lavender unless the user picked a hue; `:root[...]` beats the royal fallback `:root` rule. */
 :root[data-theme='claymorphic'] {
-  --base-hue: 285;
+  --base-hue: 248;
 }
 
 [data-theme='claymorphic'] {
-  --background: oklch(0.94 calc(0.025 * var(--base-chroma)) var(--base-hue));
-  --foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --card: oklch(0.965 calc(0.02 * var(--base-chroma)) var(--base-hue));
-  --card-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --popover: oklch(0.975 calc(0.015 * var(--base-chroma)) var(--base-hue));
-  --popover-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --primary: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --primary-foreground: oklch(0.98 calc(0.01 * var(--base-chroma)) var(--base-hue));
-  --secondary: oklch(0.9 calc(0.05 * var(--base-chroma)) calc(var(--base-hue) + 45));
-  --secondary-foreground: oklch(0.35 calc(0.08 * var(--base-chroma)) calc(var(--base-hue) + 45));
-  --muted: oklch(0.91 calc(0.03 * var(--base-chroma)) var(--base-hue));
-  --muted-foreground: oklch(0.47 calc(0.05 * var(--base-chroma)) var(--base-hue));
-  --accent: oklch(0.89 calc(0.06 * var(--base-chroma)) var(--base-hue));
-  --accent-foreground: oklch(0.3 calc(0.06 * var(--base-chroma)) var(--base-hue));
+  --background: hsl(var(--base-hue) calc(75% * var(--base-chroma)) 95%);
+  --foreground: hsl(var(--base-hue) calc(21% * var(--base-chroma)) 21%);
+  --card: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 97%);
+  --card-foreground: hsl(var(--base-hue) calc(21% * var(--base-chroma)) 21%);
+  --popover: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 98%);
+  --popover-foreground: hsl(var(--base-hue) calc(21% * var(--base-chroma)) 21%);
+  --primary: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --primary-foreground: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 99%);
+  --secondary: hsl(calc(var(--base-hue) + 59) calc(54% * var(--base-chroma)) 89%);
+  --secondary-foreground: hsl(calc(var(--base-hue) + 57) calc(32% * var(--base-chroma)) 24%);
+  --muted: hsl(var(--base-hue) calc(53% * var(--base-chroma)) 92%);
+  --muted-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 40%);
+  --accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 92%);
+  --accent-foreground: hsl(var(--base-hue) calc(29% * var(--base-chroma)) 23%);
   --destructive: oklch(0.52 0.2 20);
   --border: transparent;
   --input: transparent;
-  --ring: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
-  --chart-1: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
-  --chart-2: oklch(0.7 calc(0.14 * var(--base-chroma)) calc(var(--base-hue) + 45));
-  --chart-3: oklch(0.72 calc(0.12 * var(--base-chroma)) calc(var(--base-hue) - 85));
-  --chart-4: oklch(0.78 calc(0.13 * var(--base-chroma)) calc(var(--base-hue) + 165));
-  --chart-5: oklch(0.7 calc(0.14 * var(--base-chroma)) calc(var(--base-hue) + 225));
+  --ring: hsl(var(--base-hue) calc(71% * var(--base-chroma)) 66%);
+  --chart-1: hsl(var(--base-hue) calc(71% * var(--base-chroma)) 66%);
+  --chart-2: hsl(calc(var(--base-hue) + 57) calc(46% * var(--base-chroma)) 65%);
+  --chart-3: hsl(calc(var(--base-hue) - 65) calc(82% * var(--base-chroma)) 42%);
+  --chart-4: hsl(calc(var(--base-hue) + 157) calc(64% * var(--base-chroma)) 57%);
+  --chart-5: hsl(calc(var(--base-hue) - 112) calc(40% * var(--base-chroma)) 52%);
   --radius: 1.5rem;
   /* Used as `text-background` on these fills, so they stay mid-dark for contrast. */
   --positive: oklch(0.52 0.15 155);
   --negative: oklch(0.55 0.19 25);
-  --neutral: oklch(0.55 calc(0.04 * var(--base-chroma)) var(--base-hue));
+  --neutral: hsl(var(--base-hue) calc(10% * var(--base-chroma)) 48%);
   /* Avatars and other `bg-(image:--metal)` fills: a plain soft violet. */
-  --metal-1: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --metal-2: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --metal-3: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --metal-4: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --metal-5: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
+  --metal-1: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --metal-2: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --metal-3: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --metal-4: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --metal-5: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
   --metal: linear-gradient(
-    oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue)),
-    oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue))
+    hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%),
+    hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%)
   );
-  --sidebar: oklch(0.965 calc(0.02 * var(--base-chroma)) var(--base-hue));
-  --sidebar-foreground: oklch(0.3 calc(0.04 * var(--base-chroma)) var(--base-hue));
-  --sidebar-primary: oklch(0.55 calc(0.19 * var(--base-chroma)) var(--base-hue));
-  --sidebar-primary-foreground: oklch(0.98 calc(0.01 * var(--base-chroma)) var(--base-hue));
-  --sidebar-accent: oklch(0.89 calc(0.06 * var(--base-chroma)) var(--base-hue));
-  --sidebar-accent-foreground: oklch(0.3 calc(0.06 * var(--base-chroma)) var(--base-hue));
+  --sidebar: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 97%);
+  --sidebar-foreground: hsl(var(--base-hue) calc(21% * var(--base-chroma)) 21%);
+  --sidebar-primary: hsl(var(--base-hue) calc(63% * var(--base-chroma)) 60%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 99%);
+  --sidebar-accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 92%);
+  --sidebar-accent-foreground: hsl(var(--base-hue) calc(29% * var(--base-chroma)) 23%);
   --sidebar-border: transparent;
-  --sidebar-ring: oklch(0.6 calc(0.18 * var(--base-chroma)) var(--base-hue));
+  --sidebar-ring: hsl(var(--base-hue) calc(71% * var(--base-chroma)) 66%);
 
   /* Clay shadows: tinted drop shadow + light top-left / dark bottom-right inner bevel. */
-  --clay-shade: oklch(0.45 calc(0.08 * var(--base-chroma)) var(--base-hue) / 28%);
+  --clay-shade: hsl(var(--base-hue) calc(24% * var(--base-chroma)) 40% / 28%);
   --clay-light: oklch(1 0 0 / 85%);
-  --clay-dark: oklch(0.5 calc(0.1 * var(--base-chroma)) var(--base-hue) / 18%);
+  --clay-dark: hsl(var(--base-hue) calc(26% * var(--base-chroma)) 48% / 18%);
   --clay-raised:
     8px 8px 18px var(--clay-shade), inset 4px 4px 8px var(--clay-light),
     inset -4px -4px 8px var(--clay-dark);
@@ -84,12 +84,12 @@
   background-image:
     radial-gradient(
       90% 50% at 15% 0%,
-      oklch(0.98 calc(0.02 * var(--base-chroma)) var(--base-hue) / 70%),
+      hsl(var(--base-hue) calc(100% * var(--base-chroma)) 98% / 70%),
       transparent 70%
     ),
     radial-gradient(
       90% 50% at 90% 10%,
-      oklch(0.92 calc(0.04 * var(--base-chroma)) var(--base-hue) / 50%),
+      hsl(var(--base-hue) calc(100% * var(--base-chroma)) 94% / 50%),
       transparent 70%
     );
   background-attachment: fixed;
@@ -226,7 +226,7 @@
 
 [data-theme='claymorphic'] [data-slot='dialog-overlay'],
 [data-theme='claymorphic'] [data-slot='alert-dialog-overlay'] {
-  background-color: oklch(0.4 calc(0.06 * var(--base-chroma)) var(--base-hue) / 30%);
+  background-color: hsl(var(--base-hue) calc(21% * var(--base-chroma)) 33% / 30%);
 }
 
 /* Cards (poll rows, user rows, score panels): raised, borderless. */

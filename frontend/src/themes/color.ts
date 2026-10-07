@@ -1,5 +1,5 @@
 /**
- * The base color: one oklch hue (0-360) that themes derive their palette from via `--base-hue`
+ * The base color: one HSL hue (0-360) that themes derive their palette from via `--base-hue`
  * (see royal.css / claymorphic.css). Unset, each theme falls back to its own default hue in CSS.
  * Alongside it, `--base-chroma` is a multiplier on every derived color's chroma
  * (1 = as designed, 0 = grey). The user picks both in the account panel; from the console use
@@ -14,7 +14,7 @@ export function normalizeHue(hue: number): number {
   return ((hue % 360) + 360) % 360
 }
 
-/** A hue angle, or a `#rgb` / `#rrggbb` color converted to its oklch hue. */
+/** A hue angle, or a `#rgb` / `#rrggbb` color converted to its HSL hue. */
 export function parseBaseColor(input: number | string): number {
   if (typeof input === 'number') {
     if (!Number.isFinite(input)) throw new RangeError('Hue must be a finite number')
@@ -25,15 +25,13 @@ export function parseBaseColor(input: number | string): number {
   let hex = match[1]
   if (hex.length === 3) hex = [...hex].map((c) => c + c).join('')
   const [r, g, b] = [0, 2, 4].map((i) => {
-    const c = parseInt(hex.slice(i, i + 2), 16) / 255
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    return parseInt(hex.slice(i, i + 2), 16) / 255
   })
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
-  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
-  return normalizeHue((Math.atan2(bb, a) * 180) / Math.PI)
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  if (d === 0) return 0
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return normalizeHue(h * 60)
 }
 
 export function getStoredHue(): number | null {

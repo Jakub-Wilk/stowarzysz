@@ -22,10 +22,10 @@ function isThemeId(value: string | null): value is ThemeId {
   return themes.some((t) => t.id === value)
 }
 
-/** `default` and `royal` used to be two themes; they are now royal at hue 22 and 300. Runs once. */
+/** `default` and `royal` used to be two themes; they are now royal at its default hue and hue 265. Runs once. */
 function migrateLegacyTheme(): void {
   if (localStorage.getItem(MIGRATED_KEY)) return
-  if (localStorage.getItem(STORAGE_KEY) === 'royal' && getStoredHue() === null) storeHue(300)
+  if (localStorage.getItem(STORAGE_KEY) === 'royal' && getStoredHue() === null) storeHue(265)
   localStorage.setItem(MIGRATED_KEY, '1')
 }
 

@@ -22,12 +22,12 @@ import { useBaseChroma, useBaseHue } from '@/themes/useBaseHue'
 
 const HUE_GRADIENT = `linear-gradient(to right, ${Array.from(
   { length: 13 },
-  (_, i) => `oklch(0.7 0.15 ${i * 30})`,
+  (_, i) => `hsl(${i * 30} 100% 50%)`,
 ).join(', ')})`
 
 /** Grey to vivid in the current base hue (the track follows the hue slider via inheritance). */
 const CHROMA_GRADIENT =
-  'linear-gradient(to right, oklch(0.7 0 var(--base-hue)), oklch(0.7 0.22 var(--base-hue)))'
+  'linear-gradient(to right, hsl(var(--base-hue) 0% 50%), hsl(var(--base-hue) 100% 50%))'
 
 /** Theme picker and base color sliders. All are remembered per browser. */
 function AppearanceSettings() {
