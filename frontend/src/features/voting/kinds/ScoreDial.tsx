@@ -9,8 +9,8 @@ export const MIN = -5
 export const MAX = 5
 
 const WORDS: Record<number, string> = {
-  [-5]: 'Skandal',
-  [-4]: 'Hańba',
+  [-5]: 'Hańba',
+  [-4]: 'Zdrada',
   [-3]: 'Sprzeciw',
   [-2]: 'Niezbyt',
   [-1]: 'Raczej nie',
