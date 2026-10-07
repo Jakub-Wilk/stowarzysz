@@ -9,9 +9,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.files.base import ContentFile
 from rest_framework import serializers
+
+if TYPE_CHECKING:
+    from voting.models import Poll
 
 
 @dataclass(frozen=True)
@@ -24,6 +30,10 @@ class Entry:
 
 class PollKind(ABC):
     key: ClassVar[str]
+    allows_veto: ClassVar[bool] = True  # may participants veto?
+    allows_early_close: ClassVar[bool] = True  # may the creator end it before everyone voted?
+    everyone_participates: ClassVar[bool] = False  # ignore the chosen participants, take all
+    accepts_image: ClassVar[bool] = False  # may the proposal carry an uploaded picture?
 
     @abstractmethod
     def validate_config(self, config: Any) -> dict[str, Any]:
@@ -40,6 +50,19 @@ class PollKind(ABC):
     @abstractmethod
     def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
         """Final result from the ballots cast. Include `tone` (positive/neutral/negative) if any."""
+
+    def validate_proposal(  # noqa: B027 (optional hook)
+        self, config: dict[str, Any], *, creator: Any, has_image: bool
+    ) -> None:
+        """Checks that need to know who is calling the vote. Raise a `ValidationError`."""
+
+    def generate_title(self, config: dict[str, Any]) -> str | None:
+        """A fixed title for kinds whose title follows from the config (else the caller's)."""
+        return None
+
+    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
+        """Runs once when the poll is resolved, in its transaction. Returned keys join `result`."""
+        return {}
 
 
 class ScoreKind(PollKind):
@@ -92,6 +115,138 @@ class ScoreKind(PollKind):
         return result
 
 
+def _username_error(user: Any, username: str) -> str | None:
+    """Why `user` can't be called `username` (validators and uniqueness), or None."""
+    user.username = username
+    try:
+        user.full_clean(exclude=[f.name for f in user._meta.fields if f.name != "username"])
+    except DjangoValidationError as exc:
+        return " ".join(exc.messages)
+    return None
+
+
+class ProfileChangeKind(ScoreKind):
+    """Base for votes to change another member's profile: everyone votes, nobody can cut it short.
+
+    Passes when the average score is at least 1; there is no veto. The change is applied in
+    `on_close`, so it also happens when the poll expires.
+    """
+
+    allows_veto = False
+    allows_early_close = False
+    everyone_participates = True
+    APPROVAL_SCORE = 1
+
+    def _target(self, config: Any) -> Any:
+        """The active member the vote is about, or a `ValidationError`."""
+        target_id = config.get("target_user_id") if isinstance(config, dict) else None
+        target = None
+        if isinstance(target_id, int) and not isinstance(target_id, bool):
+            target = get_user_model().objects.members().filter(pk=target_id).first()
+        if target is None:
+            raise serializers.ValidationError({"target_user_id": "Nieznany lub nieaktywny poseł."})
+        return target
+
+    def validate_proposal(self, config: dict[str, Any], *, creator: Any, has_image: bool) -> None:
+        if config["target_user_id"] == creator.pk:
+            raise serializers.ValidationError("Nie możesz głosować nad własnym profilem.")
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        result = super().compute_result(config, entries)
+        # `sum >= n` is the exact form of `average >= 1`
+        approved = bool(entries) and (
+            sum(e.ballot["value"] for e in entries) >= self.APPROVAL_SCORE * len(entries)
+        )
+        result["approved"] = approved
+        result["tone"] = "positive" if approved else "negative"
+        return result
+
+    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
+        if not result.get("approved"):
+            return {"applied": False}
+        target = get_user_model().objects.members().filter(pk=poll.config["target_user_id"]).first()
+        if target is None:
+            return {"applied": False, "apply_error": "Ten poseł już nie istnieje."}
+        error = self.apply(poll, target)
+        return {"applied": error is None} | ({"apply_error": error} if error else {})
+
+    def apply(self, poll: Poll, target: Any) -> str | None:
+        """Make the change; return a Polish reason if it can't be made any more."""
+        raise NotImplementedError
+
+
+class NicknameKind(ProfileChangeKind):
+    """Change another member's username."""
+
+    key = "nickname"
+
+    def validate_config(self, config: Any) -> dict[str, Any]:
+        target = self._target(config)
+        new_username = get_user_model().normalize_username(str(config.get("new_username", "")))
+        new_username = new_username.strip()
+        current_username = target.username
+        if new_username == current_username:
+            raise serializers.ValidationError({"new_username": "To już jest ten nick."})
+        error = _username_error(target, new_username)
+        if error:
+            raise serializers.ValidationError({"new_username": error})
+        return {
+            "target_user_id": target.pk,
+            "target_username": current_username,
+            "new_username": new_username,
+        }
+
+    def generate_title(self, config: dict[str, Any]) -> str:
+        return f"Zmiana nicku: {config['target_username']} → {config['new_username']}"
+
+    def apply(self, poll: Poll, target: Any) -> str | None:
+        new_username = poll.config["new_username"]
+        error = _username_error(target, new_username)
+        if error:  # e.g. someone took the name while the vote was running
+            return error
+        target.save(update_fields=["username"])
+        return None
+
+
+class AvatarKind(ProfileChangeKind):
+    """Change (or remove) another member's profile picture."""
+
+    key = "avatar"
+    accepts_image = True
+
+    def validate_config(self, config: Any) -> dict[str, Any]:
+        target = self._target(config)
+        remove = config.get("remove", False)
+        if not isinstance(remove, bool):
+            raise serializers.ValidationError({"remove": "Wartość musi być prawdą lub fałszem."})
+        return {"target_user_id": target.pk, "target_username": target.username, "remove": remove}
+
+    def validate_proposal(self, config: dict[str, Any], *, creator: Any, has_image: bool) -> None:
+        super().validate_proposal(config, creator=creator, has_image=has_image)
+        if config["remove"] and has_image:
+            raise serializers.ValidationError("Usuwanie zdjęcia nie przyjmuje nowego obrazu.")
+        if not config["remove"] and not has_image:
+            raise serializers.ValidationError("Dołącz zdjęcie albo zaproponuj jego usunięcie.")
+
+    def generate_title(self, config: dict[str, Any]) -> str:
+        action = "Usunięcie zdjęcia" if config["remove"] else "Zmiana zdjęcia"
+        return f"{action}: {config['target_username']}"
+
+    def apply(self, poll: Poll, target: Any) -> str | None:
+        if poll.config["remove"]:
+            target.clear_avatar()
+        else:
+            with poll.proposed_avatar_file.open("rb") as image:
+                target.set_avatar(ContentFile(image.read()))
+        return None
+
+    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return super().on_close(poll, result)
+        finally:
+            poll.discard_proposed_avatar()  # the pending picture is never needed after this
+
+
 KINDS: dict[str, PollKind] = {}
 
 
@@ -108,3 +263,5 @@ def get_kind(key: str) -> PollKind:
 
 
 register(ScoreKind())
+register(NicknameKind())
+register(AvatarKind())

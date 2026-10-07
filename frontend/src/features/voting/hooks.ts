@@ -76,9 +76,19 @@ function useRefreshingPollMutation<V>(request: (variables: V) => Promise<PollDet
 const invalidateLists = (queryClient: QueryClient) =>
   queryClient.invalidateQueries({ queryKey: pollsKey })
 
+/** JSON, except when a picture comes along: then multipart with `config` as a JSON string. */
+function createRequest({ image, ...payload }: PollCreatePayload) {
+  if (!image) return { json: payload }
+  const form = new FormData()
+  form.append('kind', payload.kind)
+  form.append('config', JSON.stringify(payload.config))
+  form.append('image', image)
+  return { form }
+}
+
 export function useCreatePoll() {
   return useRefreshingPollMutation((payload: PollCreatePayload) =>
-    apiFetch<PollDetail>('/api/polls/', { method: 'POST', json: payload }),
+    apiFetch<PollDetail>('/api/polls/', { method: 'POST', ...createRequest(payload) }),
   )
 }
 

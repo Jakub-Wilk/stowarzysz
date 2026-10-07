@@ -61,11 +61,7 @@ class PeopleListView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return (
-            User.objects.filter(is_active=True)
-            .exclude(password__startswith="!")
-            .order_by("username")
-        )
+        return User.objects.members().order_by("username")
 
 
 class UserListCreateView(generics.ListCreateAPIView):

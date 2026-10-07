@@ -9,14 +9,26 @@ import { Label } from '@/components/ui/label'
 import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { useCreatePoll, usePeople } from '@/features/voting/hooks'
+import { getKindUI } from '@/features/voting/kinds'
 import { formErrors } from '@/lib/api-errors'
+import { cn } from '@/lib/utils'
 
-/** Call a vote: a title and who takes part (the caller always does). */
+const KIND_CHOICES = [
+  { key: 'score', label: 'Zwykłe' },
+  { key: 'nickname', label: 'Zmiana nicku' },
+  { key: 'avatar', label: 'Zmiana zdjęcia' },
+] as const
+
+/**
+ * Call a vote: pick the kind, then either a title and who takes part (the caller always does) or,
+ * for a nickname / profile-picture vote, whose profile it is about and the proposed change.
+ */
 export function VoteNewPage() {
   const navigate = useNavigate()
   const { data: me } = useMe()
   const people = usePeople()
   const create = useCreatePoll()
+  const [kindKey, setKindKey] = useState<string>('score')
   const [title, setTitle] = useState('')
   const [chosen, setChosen] = useState<ReadonlySet<number>>(new Set())
 
@@ -35,87 +47,122 @@ export function VoteNewPage() {
     if (!title.trim() || create.isPending) return
     create.mutate(
       { title: title.trim(), kind: 'score', config: {}, participant_ids: [...chosen] },
-      { onSuccess: (poll) => navigate(`/voting/${poll.id}`, { replace: true }) },
+      { onSuccess },
     )
   }
 
   const errors = formErrors(create.error)
+  const CreateForm = getKindUI(kindKey)?.CreateForm
+  const onSuccess = (poll: { id: number }) => navigate(`/voting/${poll.id}`, { replace: true })
 
   return (
     <>
       <BackLink to="/voting">Sejmik</BackLink>
       <h2 className="mb-6 text-2xl font-semibold">Nowe głosowanie</h2>
-      <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="title">Przedmiot głosowania</Label>
-          <Input
-            id="title"
-            value={title}
-            maxLength={200}
-            aria-invalid={errors.fields.title !== undefined}
-            onChange={(e) => setTitle(e.target.value)}
-            autoFocus
+      <div className="mb-6 flex max-w-md gap-2" role="group" aria-label="Rodzaj głosowania">
+        {KIND_CHOICES.map(({ key, label }) => (
+          <Button
+            key={key}
+            type="button"
+            variant={kindKey === key ? 'default' : 'outline'}
+            className={cn('flex-1')}
+            aria-pressed={kindKey === key}
+            onClick={() => {
+              setKindKey(key)
+              create.reset()
+            }}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      {CreateForm ? (
+        <div className="max-w-md">
+          <CreateForm
+            key={kindKey}
+            people={others}
+            pending={create.isPending}
+            error={create.isError ? create.error : null}
+            onSubmit={(payload) => create.mutate(payload, { onSuccess })}
           />
-          {errors.fields.title && create.isError && (
-            <span role="alert" className="text-base text-destructive">
-              {errors.fields.title}
-            </span>
-          )}
         </div>
-
-        <fieldset className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <legend className="text-base font-medium">Którzy posłowie głosują?</legend>
-            {others.length > 0 && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setChosen(allChosen ? new Set() : new Set(others.map((p) => p.id)))}
-              >
-                {allChosen ? 'Odznacz wszystkich' : 'Zaznacz wszystkich'}
-              </Button>
+      ) : (
+        <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="title">Przedmiot głosowania</Label>
+            <Input
+              id="title"
+              value={title}
+              maxLength={200}
+              aria-invalid={errors.fields.title !== undefined}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+            />
+            {errors.fields.title && create.isError && (
+              <span role="alert" className="text-base text-destructive">
+                {errors.fields.title}
+              </span>
             )}
           </div>
-          {me && (
-            <div className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 opacity-80">
-              <Checkbox checked disabled aria-label="Wnioskodawca" />
-              <UserAvatar username={me.username} src={me.avatar_url} size="md" />
-              <span className="text-metal text-lg font-medium">{me.username} (wnioskodawca)</span>
+
+          <fieldset className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <legend className="text-base font-medium">Którzy posłowie głosują?</legend>
+              {others.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    setChosen(allChosen ? new Set() : new Set(others.map((p) => p.id)))
+                  }
+                >
+                  {allChosen ? 'Odznacz wszystkich' : 'Zaznacz wszystkich'}
+                </Button>
+              )}
             </div>
-          )}
-          {people.isPending && <span className="text-base text-muted-foreground">Ładowanie…</span>}
-          {others.map((person) => (
-            <label
-              key={person.id}
-              className="flex cursor-pointer items-center gap-4 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent"
-            >
-              <Checkbox
-                checked={chosen.has(person.id)}
-                onCheckedChange={() => toggle(person.id)}
-                aria-label={person.username}
-              />
-              <UserAvatar username={person.username} src={person.avatar_url} size="md" />
-              <span className="text-metal text-lg font-medium">{person.username}</span>
-            </label>
-          ))}
-          {errors.fields.participant_ids && create.isError && (
+            {me && (
+              <div className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 opacity-80">
+                <Checkbox checked disabled aria-label="Wnioskodawca" />
+                <UserAvatar username={me.username} src={me.avatar_url} size="md" />
+                <span className="text-metal text-lg font-medium">{me.username} (wnioskodawca)</span>
+              </div>
+            )}
+            {people.isPending && (
+              <span className="text-base text-muted-foreground">Ładowanie…</span>
+            )}
+            {others.map((person) => (
+              <label
+                key={person.id}
+                className="flex cursor-pointer items-center gap-4 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent"
+              >
+                <Checkbox
+                  checked={chosen.has(person.id)}
+                  onCheckedChange={() => toggle(person.id)}
+                  aria-label={person.username}
+                />
+                <UserAvatar username={person.username} src={person.avatar_url} size="md" />
+                <span className="text-metal text-lg font-medium">{person.username}</span>
+              </label>
+            ))}
+            {errors.fields.participant_ids && create.isError && (
+              <span role="alert" className="text-base text-destructive">
+                {errors.fields.participant_ids}
+              </span>
+            )}
+          </fieldset>
+
+          {create.isError && errors.general && (
             <span role="alert" className="text-base text-destructive">
-              {errors.fields.participant_ids}
+              {errors.general}
             </span>
           )}
-        </fieldset>
-
-        {create.isError && errors.general && (
-          <span role="alert" className="text-base text-destructive">
-            {errors.general}
-          </span>
-        )}
-        <div>
-          <Button type="submit" disabled={!title.trim() || create.isPending}>
-            Zarządź głosowanie
-          </Button>
-        </div>
-      </form>
+          <div>
+            <Button type="submit" disabled={!title.trim() || create.isPending}>
+              Zarządź głosowanie
+            </Button>
+          </div>
+        </form>
+      )}
     </>
   )
 }

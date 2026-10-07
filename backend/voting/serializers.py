@@ -3,6 +3,7 @@ from typing import Any
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from accounts.avatars import process_avatar
 from accounts.serializers import PersonSerializer as UserBriefSerializer
 from voting.kinds import get_kind
 from voting.models import Poll, PollParticipant
@@ -79,6 +80,8 @@ class PollDetailSerializer(PollSerializer):
     my_ballot = serializers.SerializerMethodField()
     can_vote = serializers.SerializerMethodField()
     can_close = serializers.SerializerMethodField()
+    can_veto = serializers.SerializerMethodField()
+    proposed_avatar_url = serializers.SerializerMethodField()
 
     class Meta(PollSerializer.Meta):
         fields = (
@@ -89,6 +92,8 @@ class PollDetailSerializer(PollSerializer):
             "my_ballot",
             "can_vote",
             "can_close",
+            "can_veto",
+            "proposed_avatar_url",
         )
         read_only_fields = fields
 
@@ -115,19 +120,34 @@ class PollDetailSerializer(PollSerializer):
     def get_can_vote(self, poll: Poll) -> bool:
         return poll.status == Poll.Status.OPEN and self._mine(poll) is not None
 
+    def get_can_veto(self, poll: Poll) -> bool:
+        return self.get_can_vote(poll) and get_kind(poll.kind).allows_veto
+
     def get_can_close(self, poll: Poll) -> bool:
         return (
-            poll.status == Poll.Status.OPEN and poll.creator_id == self.context["request"].user.pk
+            poll.status == Poll.Status.OPEN
+            and poll.creator_id == self.context["request"].user.pk
+            and get_kind(poll.kind).allows_early_close
         )
+
+    def get_proposed_avatar_url(self, poll: Poll) -> str | None:
+        return poll.proposed_avatar.url if poll.proposed_avatar else None
 
 
 class PollCreateSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=200)
+    """JSON, or multipart (`config` as a JSON string plus `image`) for profile-picture votes."""
+
+    title = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
     kind = serializers.CharField(default="score")  # validated against the live registry
     config = serializers.JSONField(default=dict)
     participant_ids = serializers.ListField(
         child=serializers.IntegerField(), allow_empty=True, default=list
     )
+
+    image = serializers.ImageField(required=False, write_only=True)
+
+    def validate_image(self, value: Any) -> Any:
+        return process_avatar(value)  # the validated value is the normalised image, ready to store
 
     def validate_kind(self, value: str) -> str:
         get_kind(value)  # raises a ValidationError for unknown kinds

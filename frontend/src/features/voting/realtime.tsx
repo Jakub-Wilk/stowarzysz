@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Outlet } from 'react-router'
 
+import { meQueryKey } from '@/features/auth/hooks'
 import { SantaThemeSync } from '@/features/secretsanta/SantaThemeSync'
 import { santaKey } from '@/features/secretsanta/hooks'
 import { emitReaction } from '@/features/voting/reactionBus'
@@ -31,6 +32,11 @@ export function RealtimeShell() {
     }
     if (!type.startsWith('poll.')) return
     void queryClient.invalidateQueries({ queryKey: ['polls'] })
+    if (type === 'poll.closed') {
+      // a nickname or picture vote may just have changed someone's profile
+      void queryClient.invalidateQueries({ queryKey: ['people'] })
+      void queryClient.invalidateQueries({ queryKey: meQueryKey })
+    }
     if (type === 'poll.reaction' && isReactionEvent(data)) emitReaction(data)
   })
 

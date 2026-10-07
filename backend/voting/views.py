@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.pagination import CursorPagination
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -36,6 +37,7 @@ class PollListCreateView(APIView):
     """Every signed-in user can read every poll; ballots stay hidden until a poll ends."""
 
     pagination_class = HistoryPagination
+    parser_classes = (JSONParser, MultiPartParser)  # multipart: profile-picture votes
 
     @extend_schema(
         parameters=[
@@ -71,6 +73,7 @@ class PollListCreateView(APIView):
             kind_key=data["kind"],
             config=data["config"],
             participant_ids=data["participant_ids"],
+            image=data.get("image"),
         )
         return Response(_detail(poll.pk, request), status=status.HTTP_201_CREATED)
 

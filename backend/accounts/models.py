@@ -7,13 +7,14 @@ from uuid import uuid4
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
-from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models.fields.files import FieldFile
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+
+from accounts.validators import UsernameValidator
 
 
 class UserManager(BaseUserManager["User"]):
@@ -25,6 +26,10 @@ class UserManager(BaseUserManager["User"]):
         user.set_password(password)
         user.save(using=self._db)
         return user
+
+    def members(self) -> models.QuerySet:
+        """Active, activated accounts: the people who can take part in things."""
+        return self.filter(is_active=True).exclude(password__startswith="!")
 
     def create_superuser(self, username: str, password: str | None = None, **extra: Any) -> User:
         extra.setdefault("is_superuser", True)
@@ -40,7 +45,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(
         max_length=150,
         unique=True,
-        validators=[UnicodeUsernameValidator()],
+        validators=[UsernameValidator()],
         error_messages={"unique": "Użytkownik o takiej nazwie już istnieje."},
     )
     is_active = models.BooleanField(default=True)

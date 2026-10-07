@@ -4,6 +4,8 @@ import { Link } from 'react-router'
 import { useFlashOnChange } from '@/components/motion/useFlashOnChange'
 
 import { UserAvatar } from '@/features/auth/UserAvatar'
+import { timeLeft } from '@/features/voting/dates'
+import { useNow } from '@/features/voting/useNow'
 import { getKindUI } from '@/features/voting/kinds'
 import type { PollListItem } from '@/lib/api-types'
 import { cn } from '@/lib/utils'
@@ -13,6 +15,7 @@ export function PollRow({ poll }: { poll: PollListItem }) {
   const isOpen = poll.status === 'open'
   const ResultChip = getKindUI(poll.kind)?.ResultChip
   const needsYou = isOpen && poll.my.participating && !poll.my.has_voted
+  const now = useNow(isOpen)
   const flashing = useFlashOnChange(`${poll.status}:${poll.voted_count}`)
 
   return (
@@ -38,6 +41,7 @@ export function PollRow({ poll }: { poll: PollListItem }) {
               <span>
                 Zagłosowało {poll.voted_count}/{poll.participant_count} posłów
               </span>
+              <span>Zostało {timeLeft(poll.created_at, now)}</span>
               {needsYou && (
                 <span className="font-semibold text-foreground">Izba czeka na Twój głos</span>
               )}

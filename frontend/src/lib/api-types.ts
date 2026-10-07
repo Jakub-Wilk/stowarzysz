@@ -102,11 +102,14 @@ export interface PollParticipant {
 
 export interface PollDetail extends PollListItem {
   config: Record<string, unknown>
-  close_reason: 'auto' | 'creator' | null
+  close_reason: 'auto' | 'creator' | 'expired' | null
   participants: PollParticipant[]
   my_ballot: Ballot | null
   can_vote: boolean
   can_close: boolean
+  can_veto: boolean
+  /** Picture proposed by a profile-picture vote, while it is pending. */
+  proposed_avatar_url: string | null
 }
 
 export interface Paginated<T> {
@@ -116,10 +119,14 @@ export interface Paginated<T> {
 }
 
 export interface PollCreatePayload {
-  title: string
+  /** Omitted for votes whose title the server generates (nickname, profile picture). */
+  title?: string
   kind: string
   config: Record<string, unknown>
-  participant_ids: number[]
+  /** Omitted when everyone takes part. */
+  participant_ids?: number[]
+  /** Proposed profile picture (sent as multipart). */
+  image?: File
 }
 
 export const REACTION_EMOJI = ['❤️', '🔥', '😭', '👎', '🤣'] as const

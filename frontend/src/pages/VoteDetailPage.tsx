@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { ConfirmDialog } from '@/features/voting/ConfirmDialog'
-import { formatWhen } from '@/features/voting/dates'
+import { formatWhen, pollDeadline } from '@/features/voting/dates'
 import {
   useCastBallot,
   useClosePoll,
@@ -80,9 +80,11 @@ function OpenVote({ poll }: { poll: PollDetail }) {
 
   const error = [cast, veto, close].find((m) => m.isError)?.error
   const BallotInput = kind?.BallotInput
+  const Proposal = kind?.Proposal
 
   return (
     <div className="flex flex-col gap-6">
+      {Proposal && <Proposal poll={poll} />}
       <Progress poll={poll} />
 
       {poll.can_vote && BallotInput && (
@@ -101,7 +103,7 @@ function OpenVote({ poll }: { poll: PollDetail }) {
               onSubmit={(ballot) => cast.mutate(ballot)}
             />
           )}
-          {!poll.my.vetoed && (
+          {!poll.my.vetoed && poll.can_veto && (
             <Button variant="destructive" className="w-full" onClick={() => setConfirm('veto')}>
               Weto
             </Button>
@@ -158,6 +160,7 @@ function OpenVote({ poll }: { poll: PollDetail }) {
 function ClosedVote({ poll }: { poll: PollDetail }) {
   const { data: me } = useMe()
   const ResultDisplay = getKindUI(poll.kind)?.ResultDisplay
+  const Proposal = getKindUI(poll.kind)?.Proposal
   const react = useSendReaction(poll.id)
   const { spawn, layer } = useSmoke()
   const myId = me?.id
@@ -173,6 +176,7 @@ function ClosedVote({ poll }: { poll: PollDetail }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {Proposal && <Proposal poll={poll} />}
       {ResultDisplay && <ResultDisplay poll={poll} />}
       <div
         className="mx-auto grid w-full max-w-md grid-cols-5 gap-2"
@@ -247,6 +251,14 @@ export function VoteDetailPage() {
                 </span>
               )}
             </div>
+            {poll.status === 'open' && (
+              <span className="text-sm text-muted-foreground">
+                Głosowanie kończy się najpóźniej {formatWhen(pollDeadline(poll.created_at))}
+              </span>
+            )}
+            {poll.close_reason === 'expired' && (
+              <span className="text-sm text-muted-foreground">Zakończone po upływie 72 godzin</span>
+            )}
           </header>
           {poll.status === 'open' ? <OpenVote poll={poll} /> : <ClosedVote poll={poll} />}
         </div>

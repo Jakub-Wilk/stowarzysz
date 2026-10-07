@@ -193,6 +193,14 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build    
 docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup.sql   # database backup
 ```
 
+Votes end automatically 72 hours after they are called, with push reminders at 24, 48 and 69 hours. Nothing schedules that by itself, so run this every few minutes from the host's cron (it is safe to run as often as you like):
+
+```sh
+*/5 * * * * cd /path/to/stowarzysz && docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend python manage.py process_poll_deadlines
+```
+
+In development, run `uv run python manage.py process_poll_deadlines` from `backend/` by hand.
+
 Database shell (`psql`) in production:
 
 ```sh
