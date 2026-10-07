@@ -7,7 +7,7 @@ import { useTheme } from '@/themes/context'
 /**
  * The whole app wears the Christmas theme while a Secret Santa event is active. The theme is
  * remembered by `applyTheme`, so a reload paints it before the status has been fetched. Any other
- * theme (e.g. claymorphic, set by hand in localStorage) is left alone.
+ * theme (e.g. claymorphic, picked by the user) is left alone.
  */
 export function SantaThemeSync() {
   const { data } = useSanta()

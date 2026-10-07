@@ -150,6 +150,40 @@
   box-shadow: var(--clay-raised-sm);
 }
 
+/* Select: the trigger is a raised pill like an outline button, the list floats, items are soft pills. */
+[data-theme='claymorphic'] [data-slot='select-trigger'] {
+  border-color: transparent;
+  border-radius: 9999px;
+  background-color: var(--background);
+  box-shadow: var(--clay-raised-sm);
+}
+
+[data-theme='claymorphic'] [data-slot='select-trigger']:active {
+  box-shadow: var(--clay-pressed);
+}
+
+[data-theme='claymorphic'] [data-slot='select-content'] {
+  padding: 0.375rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--clay-raised-sm);
+}
+
+[data-theme='claymorphic'] [data-slot='select-item'] {
+  padding-block: 0.375rem;
+  padding-left: 0.625rem;
+  border-radius: var(--radius-lg);
+}
+
+/* Slider: pressed track, raised thumb. */
+[data-theme='claymorphic'] [data-slot='slider-track'] {
+  box-shadow: var(--clay-pressed);
+}
+
+[data-theme='claymorphic'] [data-slot='slider-thumb'] {
+  border-color: transparent;
+  box-shadow: var(--clay-raised-sm);
+}
+
 /* Avatars: raised, and no darkening blend over the image. */
 [data-theme='claymorphic'] [data-slot='avatar'] {
   box-shadow: var(--clay-raised-sm);

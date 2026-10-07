@@ -6,9 +6,9 @@ import { getStoredHue, storeHue, syncThemeColor } from '@/themes/color'
  * of its identity (christmas).
  */
 export const themes = [
-  { id: 'royal', label: 'Royal' },
+  { id: 'royal', label: 'Królewski' },
   { id: 'christmas', label: 'Boże Narodzenie' },
-  { id: 'claymorphic', label: 'Glina' },
+  { id: 'claymorphic', label: 'Miękki' },
 ] as const
 
 export type ThemeId = (typeof themes)[number]['id']
@@ -48,3 +48,6 @@ export function applyTheme(id: ThemeId): void {
     // Storage unavailable; the theme still applies for this session.
   }
 }
+
+/** Themes the user can pick. Christmas is applied automatically during a Secret Santa event. */
+export const selectableThemes = themes.filter((t) => t.id !== 'christmas')

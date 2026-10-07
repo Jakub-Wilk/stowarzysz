@@ -6,6 +6,75 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useLogout, useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { usePush } from '@/features/push/usePush'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import { selectableThemes, type ThemeId } from '@/themes'
+import { useTheme } from '@/themes/context'
+import { useBaseHue } from '@/themes/useBaseHue'
+
+const HUE_GRADIENT = `linear-gradient(to right, ${Array.from(
+  { length: 13 },
+  (_, i) => `oklch(0.7 0.15 ${i * 30})`,
+).join(', ')})`
+
+/** Theme picker and base hue slider. Both are remembered per browser. */
+function AppearanceSettings() {
+  const { theme, setTheme } = useTheme()
+  const { hue, custom, setHue, reset: resetHue } = useBaseHue()
+
+  return (
+    <div className="flex w-full flex-col gap-3 text-left">
+      <div className="flex flex-col gap-1.5">
+        <Label>Motyw</Label>
+        <Select
+          value={theme === 'christmas' ? 'royal' : theme}
+          onValueChange={(id) => {
+            setTheme(id as ThemeId)
+          }}
+          items={selectableThemes.map((t) => ({ value: t.id, label: t.label }))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false}>
+            {selectableThemes.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <Label>Kolor</Label>
+          {custom && (
+            <Button variant="ghost" size="xs" onClick={resetHue}>
+              Domyślny
+            </Button>
+          )}
+        </div>
+        <Slider
+          aria-label="Kolor"
+          min={0}
+          max={360}
+          step={1}
+          value={hue}
+          onValueChange={(v) => setHue(Array.isArray(v) ? v[0] : v)}
+          style={{ '--hue-gradient': HUE_GRADIENT } as React.CSSProperties}
+          className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
+        />
+      </div>
+    </div>
+  )
+}
 
 /** Opt this browser in or out of vote notifications. Hidden where it can't work. */
 function NotificationsToggle() {
@@ -56,6 +125,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
       <PopoverContent align="end" className="w-64 items-center gap-3 p-4 text-center">
         <UserAvatar username={me.username} src={me.avatar_url} size="lg" />
         <span className="text-base font-semibold">{me.username}</span>
+        <AppearanceSettings />
         <NotificationsToggle />
         <Button
           variant="outline"
