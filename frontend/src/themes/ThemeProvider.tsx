@@ -1,28 +1,41 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { applyBaseChroma, applyBaseColor, getStoredChroma, getStoredHue } from '@/themes/color'
-import { applyTheme, getStoredTheme, themes, type ThemeId } from '@/themes'
+import {
+  applyTheme,
+  getStoredOverride,
+  getStoredTheme,
+  storeOverride,
+  storeTheme,
+  themes,
+  type ThemeId,
+} from '@/themes'
 import { ThemeContext, type ThemeContextValue } from '@/themes/context'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId>(() => {
-    const initial = getStoredTheme()
+  const [selected, setSelected] = useState<ThemeId>(() => {
     applyBaseColor(getStoredHue(), false)
     applyBaseChroma(getStoredChroma(), false)
-    applyTheme(initial) // before first paint, so there is no flash of the wrong theme
-    return initial
+    return getStoredTheme()
   })
+  const [override, setOverrideState] = useState<ThemeId | null>(getStoredOverride)
+  const theme = override ?? selected
+
+  // Layout effect: runs before first paint, so there is no flash of the wrong theme.
+  useLayoutEffect(() => applyTheme(theme), [theme])
+
+  const setTheme = useCallback((id: ThemeId) => {
+    storeTheme(id)
+    setSelected(id)
+  }, [])
+  const setOverride = useCallback((id: ThemeId | null) => {
+    storeOverride(id)
+    setOverrideState(id)
+  }, [])
 
   const value = useMemo<ThemeContextValue>(
-    () => ({
-      theme,
-      themes,
-      setTheme: (id) => {
-        applyTheme(id)
-        setThemeState(id)
-      },
-    }),
-    [theme],
+    () => ({ theme, selected, themes, setTheme, setOverride }),
+    [theme, selected, setTheme, setOverride],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

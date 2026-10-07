@@ -31,7 +31,7 @@ const CHROMA_GRADIENT =
 
 /** Theme picker and base color sliders. All are remembered per browser. */
 function AppearanceSettings() {
-  const { theme, setTheme } = useTheme()
+  const { selected, setTheme } = useTheme()
   const { hue, custom, setHue, reset: resetHue } = useBaseHue()
   const saturation = useBaseChroma()
 
@@ -40,7 +40,7 @@ function AppearanceSettings() {
       <div className="flex flex-col gap-1.5">
         <Label>Motyw</Label>
         <Select
-          value={theme === 'christmas' ? 'royal' : theme}
+          value={selected}
           onValueChange={(id) => {
             setTheme(id as ThemeId)
           }}

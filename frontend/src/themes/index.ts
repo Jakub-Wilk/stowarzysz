@@ -16,6 +16,7 @@ export type ThemeId = (typeof themes)[number]['id']
 export const DEFAULT_THEME: ThemeId = 'royal'
 
 const STORAGE_KEY = 'theme'
+const OVERRIDE_KEY = 'theme-override'
 const MIGRATED_KEY = 'theme-v2'
 
 function isThemeId(value: string | null): value is ThemeId {
@@ -29,9 +30,18 @@ function migrateLegacyTheme(): void {
   localStorage.setItem(MIGRATED_KEY, '1')
 }
 
+/** Christmas used to be saved as if the user had picked it; it is an override now. */
+function migrateChristmas(): void {
+  if (localStorage.getItem(STORAGE_KEY) !== 'christmas') return
+  localStorage.setItem(STORAGE_KEY, DEFAULT_THEME)
+  localStorage.setItem(OVERRIDE_KEY, 'christmas')
+}
+
+/** The theme the user picked. */
 export function getStoredTheme(): ThemeId {
   try {
     migrateLegacyTheme()
+    migrateChristmas()
     const stored = localStorage.getItem(STORAGE_KEY)
     return isThemeId(stored) ? stored : DEFAULT_THEME
   } catch {
@@ -39,14 +49,35 @@ export function getStoredTheme(): ThemeId {
   }
 }
 
-export function applyTheme(id: ThemeId): void {
-  document.documentElement.dataset.theme = id
-  syncThemeColor()
+/**
+ * A theme forced over the user's pick (christmas during Secret Santa). Remembered so a reload
+ * paints it before the app knows whether it still applies.
+ */
+export function getStoredOverride(): ThemeId | null {
   try {
-    localStorage.setItem(STORAGE_KEY, id)
+    migrateChristmas()
+    const stored = localStorage.getItem(OVERRIDE_KEY)
+    return isThemeId(stored) ? stored : null
+  } catch {
+    return null
+  }
+}
+
+function store(key: string, value: string | null): void {
+  try {
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, value)
   } catch {
     // Storage unavailable; the theme still applies for this session.
   }
+}
+
+export const storeTheme = (id: ThemeId): void => store(STORAGE_KEY, id)
+export const storeOverride = (id: ThemeId | null): void => store(OVERRIDE_KEY, id)
+
+export function applyTheme(id: ThemeId): void {
+  document.documentElement.dataset.theme = id
+  syncThemeColor()
 }
 
 /** Themes the user can pick. Christmas is applied automatically during a Secret Santa event. */
