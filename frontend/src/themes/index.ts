@@ -50,8 +50,8 @@ export function getStoredTheme(): ThemeId {
 }
 
 /**
- * A theme forced over the user's pick (christmas during Secret Santa). Remembered so a reload
- * paints it before the app knows whether it still applies.
+ * A theme forced over the user's pick by a running event (christmas during Secret Santa; see
+ * `EventThemeSync`). Remembered so a reload paints it before the app knows whether it still applies.
  */
 export function getStoredOverride(): ThemeId | null {
   try {
@@ -80,5 +80,13 @@ export function applyTheme(id: ThemeId): void {
   syncThemeColor()
 }
 
-/** Themes the user can pick. Christmas is applied automatically during a Secret Santa event. */
+/**
+ * A theme forced by the calendar: christmas all of December (local time), otherwise none. Takes
+ * priority over an event override (`getStoredOverride`), so add new seasons here.
+ */
+export function getSeasonalTheme(now: Date = new Date()): ThemeId | null {
+  return now.getMonth() === 11 ? 'christmas' : null
+}
+
+/** Themes the user can pick. Christmas applies by itself in December and during Secret Santa. */
 export const selectableThemes = themes.filter((t) => t.id !== 'christmas')

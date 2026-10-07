@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from 
 import { applyBaseChroma, applyBaseColor, getStoredChroma, getStoredHue } from '@/themes/color'
 import {
   applyTheme,
+  getSeasonalTheme,
   getStoredOverride,
   getStoredTheme,
   storeOverride,
@@ -19,7 +20,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return getStoredTheme()
   })
   const [override, setOverrideState] = useState<ThemeId | null>(getStoredOverride)
-  const theme = override ?? selected
+  // A seasonal theme beats an event override (a Secret Santa in October stays Halloween).
+  // Checked on every render, so a long-open tab picks up a new season on its next update.
+  const theme = getSeasonalTheme() ?? override ?? selected
 
   // Layout effect: runs before first paint, so there is no flash of the wrong theme.
   useLayoutEffect(() => applyTheme(theme), [theme])

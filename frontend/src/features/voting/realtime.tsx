@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Outlet } from 'react-router'
 
 import { meQueryKey } from '@/features/auth/hooks'
-import { SantaThemeSync } from '@/features/secretsanta/SantaThemeSync'
+import { EventThemeSync } from '@/features/events/EventThemeSync'
 import { santaKey } from '@/features/secretsanta/hooks'
 import { emitReaction } from '@/features/voting/reactionBus'
 import { REACTION_EMOJI, type ReactionEmoji, type ReactionEvent } from '@/lib/api-types'
@@ -42,7 +42,7 @@ export function RealtimeShell() {
 
   return (
     <>
-      <SantaThemeSync />
+      <EventThemeSync />
       <Outlet />
     </>
   )

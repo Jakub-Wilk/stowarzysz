@@ -1,0 +1,46 @@
+import { useEffect } from 'react'
+
+import { useSanta } from '@/features/secretsanta/hooks'
+import type { ThemeId } from '@/themes'
+import { useTheme } from '@/themes/context'
+import { SnowLayer } from '@/themes/SnowLayer'
+
+/** Whether an event is running, or `undefined` while that isn't known yet. */
+type EventStatus = boolean | undefined
+
+/**
+ * Events that dress the whole app in a theme while they run, highest priority first. To add one,
+ * read its active flag here. A seasonal theme still beats all of them (see `getSeasonalTheme`).
+ */
+function useEventThemes(): [EventStatus, ThemeId][] {
+  const santa = useSanta().data?.active
+  return [[santa, 'christmas']]
+}
+
+/**
+ * The theme of the first running event, `null` if none runs, or `undefined` while an event that
+ * could still win is loading (keep the remembered override until then, so nothing flashes).
+ */
+function pickEventTheme(events: [EventStatus, ThemeId][]): ThemeId | null | undefined {
+  for (const [active, theme] of events) {
+    if (active === undefined) return undefined
+    if (active) return theme
+  }
+  return null
+}
+
+/**
+ * Forces the running event's theme over whatever the user picked; their pick comes back when the
+ * event ends. The override is remembered, so a reload paints it before the status has been fetched.
+ * Also renders the effective theme's decorations (snow for christmas).
+ */
+export function EventThemeSync() {
+  const { theme, setOverride } = useTheme()
+  const eventTheme = pickEventTheme(useEventThemes())
+
+  useEffect(() => {
+    if (eventTheme !== undefined) setOverride(eventTheme)
+  }, [eventTheme, setOverride])
+
+  return theme === 'christmas' ? <SnowLayer /> : null
+}
