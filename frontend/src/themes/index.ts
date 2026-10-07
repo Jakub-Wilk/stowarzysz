@@ -3,6 +3,7 @@ export const themes = [
   { id: 'default', label: 'Default' },
   { id: 'royal', label: 'Royal' },
   { id: 'christmas', label: 'Boże Narodzenie' },
+  { id: 'claymorphic', label: 'Glina' },
 ] as const
 
 export type ThemeId = (typeof themes)[number]['id']
