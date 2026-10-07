@@ -38,3 +38,9 @@ coverage/
 
 # Uploads
 backend/media/
+
+# Deploy (scripts/deploy.sh)
+backups/
+logs/
+.deploy.lock
+.deadlines.lock

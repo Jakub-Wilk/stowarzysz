@@ -10,6 +10,12 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        files: ^scripts/
+
   - repo: local
     hooks:
       # Backend (Astral tooling via uv)

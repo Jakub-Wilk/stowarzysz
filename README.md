@@ -193,7 +193,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build    
 docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup.sql   # database backup
 ```
 
-Votes end automatically 72 hours after they are called, with push reminders at 24, 48 and 69 hours. Nothing schedules that by itself, so run this every few minutes from the host's cron (it is safe to run as often as you like):
+Votes end automatically 72 hours after they are called, with push reminders at 24, 48 and 69 hours. `scripts/deploy.sh` installs the host cron entry that runs this every 5 minutes; by hand (it is safe to run as often as you like) it is:
 
 ```sh
 */5 * * * * cd /path/to/stowarzysz && docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend python manage.py process_poll_deadlines
@@ -213,13 +213,26 @@ Back up three things: the database, the `media` volume (profile pictures) and `.
 
 Everything runs in a single backend process, which is what the in-memory SSE channels expect. If you ever scale the backend to several processes or replicas, set `EVENTSTREAM_REDIS` first (see [Backend](#backend)).
 
-## Releasing a new version
+## Deploying
 
-A release is a git tag on `master` that is then deployed to the server. There is no CI or image registry: the server builds the images itself from the tagged commit. Versions follow [SemVer](https://semver.org/) (`vMAJOR.MINOR.PATCH`); the version fields in `backend/pyproject.toml` and `frontend/package.json` are not used for anything, so the tag is the single source of truth.
+`master` is production: there are no tags or release branches, and there is no CI or image registry. The server builds the images itself. After pushing to `master`, run this on the server:
 
-### 1. Prepare
+```sh
+scripts/deploy.sh             # --dry-run prints the plan and changes nothing
+```
 
-On a clean `master`, up to date with `origin`:
+It runs these steps and aborts at the first failure:
+
+1. **Preflight**: tools, `.env.prod` (mode 600, required keys), a valid compose file, enough disk, a clean working tree on `master`. A second deploy can't run at the same time (lock).
+2. **Pull**: `git fetch` and `git merge --ff-only origin/master` (never a hard reset).
+3. **Back up the database** to `backups/db-<UTC time>-<previous commit>.dump` (`pg_dump -Fc`). The dump is checked with `pg_restore --list` first, and only a verified dump replaces an old one, so there are never more than **3** snapshots and a failed backup aborts the deploy before anything changes. The `media` volume and `.env.prod` are not included (see [Operations](#operations)).
+4. **Build** the images while the old version keeps serving.
+5. **Launch** with `up -d --wait`, then check `/api/health/` through nginx. Migrations run on backend start.
+6. **Cron**: make sure the cron daemon is running, install the `process_poll_deadlines` entry in your crontab (one line, safe to repeat), and run it once to prove it works.
+
+Logs go to `logs/deploy-*.log` (the last 20 are kept) and the cron job logs to `logs/deadlines.log`. `scripts/deploy.sh --cron-only` repeats just the last step.
+
+Before pushing, check that the release is sound:
 
 ```sh
 docker compose up -d db
@@ -229,28 +242,8 @@ uv run --project backend pre-commit run --all-files   # lint, format, types
 (cd frontend && pnpm build)
 ```
 
-If the release adds a new setting, add it to `.env.prod.example` and mention it in the [configuration table](#1-configure) so nobody has to find out from a crash on startup.
-
-### 2. Tag
-
-```sh
-git tag -a v1.2.3 -m "v1.2.3"
-git push origin master v1.2.3
-```
-
-### 3. Deploy
-
-On the server (see [Operations](#operations)):
-
-```sh
-git fetch --tags && git checkout v1.2.3
-docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup-before-v1.2.3.sql
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f backend   # wait for migrations and a clean start
-```
-
-Migrations run automatically when the backend starts. Then open `FRONTEND_URL` and check that you can log in and that a poll loads. The service worker updates in the background, so installed PWAs pick up the new frontend on their next launch or two.
+If the release adds a new setting, add it to `.env.prod.example`, mention it in the [configuration table](#1-configure) and add it to the server's `.env.prod` first, so nobody has to find out from a crash on startup. After a deploy, open `FRONTEND_URL` and check that you can log in and that a poll loads. The service worker updates in the background, so installed PWAs pick up the new frontend on their next launch or two.
 
 ### Rolling back
 
-Check out the previous tag and run the same `up -d --build`. Migrations are **not** reverted automatically: if the release included one, restore the database from the backup taken before deploying (`docker compose ... exec -T db psql -U stowarzysz stowarzysz < backup-before-v1.2.3.sql` on a freshly recreated database) or write a new migration that undoes it. Prefer rolling forward with a fix release when the migration was purely additive.
+If the launch fails, the script puts the code back on the previous commit, rebuilds and checks it. It never restores the database by itself, because that would discard everything written since the snapshot. If the old version won't start because a migration already ran, the script prints the commands to restore the newest snapshot. To undo a release that already went out, push a revert to `master` and deploy again (the script only ever fast-forwards). Prefer rolling forward with a fix when the migration was purely additive.

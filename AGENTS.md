@@ -70,6 +70,10 @@ All checks at once: `uv run --project backend pre-commit run --all-files`.
 - **Motion:** use the shared system in `src/components/motion/` (read its `README.md`): tokens and `animate-*` utilities in `src/index.css`, `Stagger` / `Reveal` / `PageTransition` / `Skeleton` / `useCountUp` / `useFlashOnChange`. Animate transform/opacity only, take colors from theme tokens, and don't add a second animation approach. Reduced motion is handled globally in `index.css`.
 - Format with oxfmt and lint with oxlint (config in `frontend/.oxfmtrc.json` and `.oxlintrc.json`). Don't add ESLint or Prettier.
 
+## Deploying
+
+`scripts/deploy.sh` (see [README.md](README.md#deploying)) is the only supported way to deploy: `master` is production, no tags. It keeps at most 3 DB snapshots in `backups/`, rolls back code (never the DB) on a failed launch and installs the `process_poll_deadlines` cron job. Keep it shellcheck-clean and idempotent, and don't add a second deploy path.
+
 ## Gotchas
 
 - Local Postgres is on host port **5434** (5432/5433 are commonly taken).
