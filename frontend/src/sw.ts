@@ -1,29 +1,23 @@
 /// <reference lib="webworker" />
-// Service worker: offline shell (same as the generated one used to do) plus Web Push.
-import { clientsClaim } from 'workbox-core'
-import {
-  cleanupOutdatedCaches,
-  createHandlerBoundToURL,
-  precacheAndRoute,
-} from 'workbox-precaching'
-import { NavigationRoute, registerRoute } from 'workbox-routing'
+// Service worker: Web Push only. It deliberately has no fetch handler and caches nothing, so
+// every load comes from the server (index.html is revalidated, /assets/ are content-hashed).
 
 declare const self: ServiceWorkerGlobalScope
 
-void self.skipWaiting()
-clientsClaim()
+self.addEventListener('install', () => {
+  void self.skipWaiting()
+})
 
-precacheAndRoute(self.__WB_MANIFEST)
-cleanupOutdatedCaches()
-// Single-page app navigation, but never for the API or the SSE stream. In dev the precache
-// manifest is empty, so index.html isn't precached and there is no shell to serve.
-try {
-  registerRoute(
-    new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api/] }),
+// Earlier versions precached the app shell; drop those caches so nobody stays on an old build.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((key) => caches.delete(key)))
+      await self.clients.claim()
+    })(),
   )
-} catch {
-  // no precached shell (dev server): navigations go to the network
-}
+})
 
 interface PushPayload {
   title?: string

@@ -57,7 +57,6 @@ export function usePeople() {
   return useQuery({
     queryKey: ['people'],
     queryFn: () => apiFetch<UserBrief[]>('/api/auth/people/'),
-    staleTime: 60_000,
   })
 }
 

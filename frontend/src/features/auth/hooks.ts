@@ -31,7 +31,6 @@ export function useMe() {
     queryKey: meQueryKey,
     queryFn: () => apiFetch<Me>('/api/auth/me/'),
     enabled,
-    staleTime: 60_000,
   })
 }
 
@@ -40,7 +39,6 @@ export function useLoginUsers() {
   return useQuery({
     queryKey: ['login-users'],
     queryFn: () => apiFetch<LoginUser[]>('/api/auth/login-users/', { auth: false }),
-    staleTime: 60_000,
   })
 }
 
@@ -84,7 +82,6 @@ export function useValidateActivation(token: string) {
         auth: false,
       }),
     retry: false,
-    staleTime: Infinity,
   })
 }
 

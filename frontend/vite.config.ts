@@ -12,10 +12,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Custom service worker (src/sw.ts) so it can also handle Web Push.
+      // Custom service worker (src/sw.ts), only for Web Push: no precache manifest, no caching.
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      injectManifest: { injectionPoint: undefined },
       manifest: {
         name: 'stowarzysz',
         short_name: 'stowarzysz',

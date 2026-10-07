@@ -242,7 +242,7 @@ uv run --project backend pre-commit run --all-files   # lint, format, types
 (cd frontend && pnpm build)
 ```
 
-If the release adds a new setting, add it to `.env.prod.example`, mention it in the [configuration table](#1-configure) and add it to the server's `.env.prod` first, so nobody has to find out from a crash on startup. After a deploy, open `FRONTEND_URL` and check that you can log in and that a poll loads. The service worker updates in the background, so installed PWAs pick up the new frontend on their next launch or two.
+If the release adds a new setting, add it to `.env.prod.example`, mention it in the [configuration table](#1-configure) and add it to the server's `.env.prod` first, so nobody has to find out from a crash on startup. After a deploy, open `FRONTEND_URL` and check that you can log in and that a poll loads. The service worker only handles push and caches nothing (`index.html` is served `no-cache`, `/assets/` are hashed), so browsers and installed PWAs get the new frontend on their next page load.
 
 ### Rolling back
 

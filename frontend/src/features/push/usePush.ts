@@ -36,7 +36,6 @@ export function usePush() {
     queryKey: ['push', 'key'],
     queryFn: () => apiFetch<{ public_key: string | null }>('/api/push/public-key/'),
     enabled: isSupported,
-    staleTime: Infinity,
   })
   const subscription = useQuery({
     queryKey: ['push', 'subscription'],

@@ -12,7 +12,11 @@ import { ThemeProvider } from './themes/ThemeProvider.tsx'
 // No UI for the base color yet; change it from the console, e.g. `setBaseColor(150)`.
 window.setBaseColor = setBaseColor
 
-const queryClient = new QueryClient()
+// No client-side caching: data is always stale (refetched on mount, focus and reconnect) and
+// dropped as soon as no screen uses it, so a revisited screen loads fresh instead of showing old data.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 0, gcTime: 0 } },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
