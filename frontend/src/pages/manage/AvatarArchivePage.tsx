@@ -11,6 +11,8 @@ import { apiFetch } from '@/lib/api'
 import { formErrors } from '@/lib/api-errors'
 import type { PollDetail } from '@/lib/api-types'
 
+type Field = 'previous' | 'proposed'
+
 const key = ['admin', 'avatar-archive'] as const
 
 function useArchive() {
@@ -23,17 +25,10 @@ function useArchive() {
 function useUploadPicture() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      id,
-      field,
-      file,
-    }: {
-      id: number
-      field: 'previous' | 'proposed'
-      file: File
-    }) => {
+    mutationFn: ({ id, field, file }: { id: number; field: Field; file?: File }) => {
       const form = new FormData()
-      form.append(field, file)
+      if (file) form.append(field, file)
+      else form.append('copy_current', field)
       return apiFetch<PollDetail>(`/api/polls/${id}/archive-pictures/`, { method: 'PUT', form })
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
@@ -46,12 +41,14 @@ function Slot({
   src,
   disabled,
   onFile,
+  onCopy,
 }: {
   label: string
   username: string
   src: string | null
   disabled: boolean
   onFile: (file: File) => void
+  onCopy: () => void
 }) {
   const input = useRef<HTMLInputElement>(null)
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -83,6 +80,9 @@ function Slot({
       >
         {src ? 'Zamień' : 'Wgraj'}
       </Button>
+      <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={onCopy}>
+        Skopiuj obecne
+      </Button>
     </div>
   )
 }
@@ -106,7 +106,8 @@ export function AvatarArchivePage() {
       )}
       {uploadError && (
         <span role="alert" className="mb-4 block text-sm text-destructive">
-          {uploadError.fields.previous ??
+          {uploadError.fields.copy_current ??
+            uploadError.fields.previous ??
             uploadError.fields.proposed ??
             uploadError.general ??
             'Nie udało się wgrać zdjęcia.'}
@@ -136,6 +137,7 @@ export function AvatarArchivePage() {
                   src={poll.previous_avatar_url}
                   disabled={upload.isPending}
                   onFile={(file) => upload.mutate({ id: poll.id, field: 'previous', file })}
+                  onCopy={() => upload.mutate({ id: poll.id, field: 'previous' })}
                 />
                 {removing ? (
                   <span className="self-center text-base font-semibold">usunięcie zdjęcia</span>
@@ -146,6 +148,7 @@ export function AvatarArchivePage() {
                     src={poll.proposed_avatar_url}
                     disabled={upload.isPending}
                     onFile={(file) => upload.mutate({ id: poll.id, field: 'proposed', file })}
+                    onCopy={() => upload.mutate({ id: poll.id, field: 'proposed' })}
                   />
                 )}
               </div>

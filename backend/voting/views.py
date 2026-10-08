@@ -1,15 +1,17 @@
 from uuid import uuid4
 
+from django.core.files.base import ContentFile
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.pagination import CursorPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import User
 from accounts.permissions import IsSuperuser
 from voting import services
 from voting.models import Poll
@@ -156,8 +158,17 @@ class AvatarArchiveView(APIView):
         poll = get_object_or_404(Poll, pk=poll_id, kind="avatar", status=Poll.Status.CLOSED)
         serializer = ArchivePicturesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        for name in ("previous", "proposed"):
-            image = serializer.validated_data.get(name)
+        images = {n: serializer.validated_data.get(n) for n in ("previous", "proposed")}
+        copy_to = serializer.validated_data.get("copy_current")
+        if copy_to:
+            target = User.objects.filter(pk=poll.config.get("target_user_id")).first()
+            if target is None or not target.avatar:
+                raise serializers.ValidationError(
+                    {"copy_current": "Ten poseł nie ma teraz zdjęcia."}
+                )
+            with target.avatar_file.open("rb") as current:
+                images[copy_to] = ContentFile(current.read())
+        for name, image in images.items():
             if image is None:
                 continue
             field = getattr(poll, f"{name}_avatar_file")

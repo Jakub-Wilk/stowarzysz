@@ -234,11 +234,9 @@ export function AvatarProposal({ poll }: { poll: PollDetail }) {
   const live = people?.find((p) => p.id === targetId)?.avatar_url ?? null
   const removing = poll.config.remove === true
   const applied = poll.result?.applied === true
-  // Once applied, the live picture is the new one: use the stored copies instead. Votes closed
-  // before copies were kept have neither, so fall back to what we can know.
-  const legacy = applied && poll.proposed_avatar_url === null && !removing
-  const current = applied ? (legacy ? null : poll.previous_avatar_url) : live
-  const proposed = poll.proposed_avatar_url ?? (legacy ? live : null)
+  // Once applied, the live picture is the new one, so use the stored copies.
+  const current = applied ? poll.previous_avatar_url : live
+  const proposed = poll.proposed_avatar_url
   return (
     <div className="flex items-center justify-center gap-5 rounded-2xl border bg-card p-5">
       <UserAvatar username={username} src={current} size="xl" />

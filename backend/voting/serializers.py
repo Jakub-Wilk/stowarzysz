@@ -172,6 +172,12 @@ class ArchivePicturesSerializer(serializers.Serializer):
 
     previous = serializers.ImageField(write_only=True, required=False)
     proposed = serializers.ImageField(write_only=True, required=False)
+    copy_current = serializers.ChoiceField(
+        choices=["previous", "proposed"],
+        write_only=True,
+        required=False,
+        help_text="Copy the target's current picture into this slot instead of uploading one.",
+    )
 
     def validate_previous(self, value: Any) -> Any:
         return process_avatar(value)

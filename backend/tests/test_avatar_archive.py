@@ -67,3 +67,21 @@ def test_archive_rejects_open_polls(admin_client: APIClient, alice: User, bob: U
         f"{POLLS}{poll_id}/archive-pictures/", {"previous": make_image()}, format="multipart"
     )
     assert resp.status_code == 404
+
+
+def test_archive_copies_the_current_picture_into_a_slot(
+    admin_client: APIClient, alice: User, bob: User, carol: User
+) -> None:
+    from django.core.files.base import ContentFile
+
+    poll_id = closed_avatar_poll(alice, bob, carol)
+    url = f"{POLLS}{poll_id}/archive-pictures/"
+    bob.refresh_from_db()
+    resp = admin_client.put(url, {"copy_current": "previous"}, format="multipart")
+    assert resp.status_code == 200, resp.content
+    assert resp.json()["previous_avatar_url"].endswith(".webp")
+    bob.clear_avatar()
+    resp = admin_client.put(url, {"copy_current": "proposed"}, format="multipart")
+    assert resp.status_code == 400  # nothing to copy
+    bob.set_avatar(ContentFile(b"RIFF"))
+    assert Poll.objects.get(pk=poll_id).previous_avatar
