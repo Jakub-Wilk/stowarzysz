@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import TYPE_CHECKING, Any, ClassVar
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -233,18 +234,17 @@ class AvatarKind(ProfileChangeKind):
         return f"{action}: {config['target_username']}"
 
     def apply(self, poll: Poll, target: Any) -> str | None:
+        if target.avatar:  # keep a copy: the live file is deleted when it is replaced
+            with target.avatar_file.open("rb") as old:
+                poll.previous_avatar_file.save(
+                    f"{uuid4().hex}.webp", ContentFile(old.read()), save=False
+                )
         if poll.config["remove"]:
             target.clear_avatar()
         else:
             with poll.proposed_avatar_file.open("rb") as image:
                 target.set_avatar(ContentFile(image.read()))
         return None
-
-    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
-        try:
-            return super().on_close(poll, result)
-        finally:
-            poll.discard_proposed_avatar()  # the pending picture is never needed after this
 
 
 KINDS: dict[str, PollKind] = {}

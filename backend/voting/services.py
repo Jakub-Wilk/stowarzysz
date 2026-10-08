@@ -51,7 +51,7 @@ def _close(poll: Poll, reason: str) -> None:
     poll.status = Poll.Status.CLOSED
     poll.close_reason = reason
     poll.closed_at = timezone.now()
-    poll.save(update_fields=["result", "status", "close_reason", "closed_at", "proposed_avatar"])
+    poll.save(update_fields=["result", "status", "close_reason", "closed_at", "previous_avatar"])
     participant_ids = list(
         PollParticipant.objects.filter(poll=poll).values_list("user_id", flat=True)
     )

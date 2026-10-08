@@ -219,7 +219,7 @@ def test_image_is_rejected_for_other_kinds(alice: User) -> None:
     assert resp.status_code == 400
 
 
-def test_approved_avatar_vote_replaces_the_picture_and_cleans_up(
+def test_approved_avatar_vote_replaces_the_picture_and_keeps_before_and_after(
     alice: User, bob: User, carol: User, settings
 ) -> None:
     poll_id = propose_avatar(alice, bob).json()["id"]
@@ -228,18 +228,36 @@ def test_approved_avatar_vote_replaces_the_picture_and_cleans_up(
     assert poll.result["applied"] is True
     bob.refresh_from_db()
     assert bob.avatar
+    assert poll.proposed_avatar  # the "after" picture stays for the result screen
+    assert not poll.previous_avatar  # bob had no picture before
+    detail = client_for(alice).get(f"{POLLS}{poll_id}/").json()
+    assert detail["proposed_avatar_url"].endswith(".webp")
+    assert detail["previous_avatar_url"] is None
+    poll.delete()
     assert [p.name for p in stored_files(settings)] == [Path(str(bob.avatar_file.name)).name]
-    assert poll.proposed_avatar.name == ""
 
 
-def test_rejected_avatar_vote_discards_the_pending_image(
+def test_approved_avatar_vote_keeps_the_replaced_picture(
+    alice: User, bob: User, carol: User
+) -> None:
+    from django.core.files.base import ContentFile
+
+    bob.set_avatar(ContentFile(b"RIFF-old"))
+    poll_id = propose_avatar(alice, bob).json()["id"]
+    vote_all(poll_id, {alice: 3, bob: 3, carol: 3})
+    poll = Poll.objects.get(pk=poll_id)
+    with poll.previous_avatar_file.open("rb") as f:
+        assert f.read() == b"RIFF-old"
+
+
+def test_rejected_avatar_vote_keeps_the_proposal_for_the_record(
     alice: User, bob: User, carol: User, settings
 ) -> None:
     poll_id = propose_avatar(alice, bob).json()["id"]
     vote_all(poll_id, {alice: -1, bob: -1, carol: -1})
     bob.refresh_from_db()
     assert not bob.avatar
-    assert stored_files(settings) == []
+    assert Poll.objects.get(pk=poll_id).proposed_avatar
 
 
 def test_avatar_removal_vote(alice: User, bob: User, carol: User, settings) -> None:
@@ -342,7 +360,7 @@ def test_expiry_with_no_votes_is_not_approved(alice: User, bob: User, settings) 
     services.process_deadlines()
     poll = Poll.objects.get(pk=poll_id)
     assert poll.result["approved"] is False
-    assert stored_files(settings) == []
+    assert poll.proposed_avatar
 
 
 def test_command_runs(old_poll: Poll, capsys) -> None:

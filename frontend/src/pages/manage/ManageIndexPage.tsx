@@ -1,9 +1,11 @@
-import { ChevronRight, Gift, Users, type LucideIcon } from 'lucide-react'
+import { ChevronRight, Gift, ImagePlus, Users, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
 
 const objectTypes: { path: string; label: string; icon: LucideIcon }[] = [
   { path: '/manage/users', label: 'Użytkownicy', icon: Users },
   { path: '/manage/secret-santa', label: 'Secret Santa', icon: Gift },
+  // TEMPORARY: remove with the avatar-archive page
+  { path: '/manage/avatar-archive', label: 'Zdjęcia z głosowań', icon: ImagePlus },
 ]
 
 export function ManageIndexPage() {

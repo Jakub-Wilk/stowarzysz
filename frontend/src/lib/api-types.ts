@@ -108,8 +108,10 @@ export interface PollDetail extends PollListItem {
   can_vote: boolean
   can_close: boolean
   can_veto: boolean
-  /** Picture proposed by a profile-picture vote, while it is pending. */
+  /** Picture proposed by a profile-picture vote (kept after it closes). */
   proposed_avatar_url: string | null
+  /** The picture an approved profile-picture vote replaced; null if none (or an older vote). */
+  previous_avatar_url: string | null
 }
 
 export interface Paginated<T> {

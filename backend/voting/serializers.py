@@ -82,6 +82,7 @@ class PollDetailSerializer(PollSerializer):
     can_close = serializers.SerializerMethodField()
     can_veto = serializers.SerializerMethodField()
     proposed_avatar_url = serializers.SerializerMethodField()
+    previous_avatar_url = serializers.SerializerMethodField()
 
     class Meta(PollSerializer.Meta):
         fields = (
@@ -94,6 +95,7 @@ class PollDetailSerializer(PollSerializer):
             "can_close",
             "can_veto",
             "proposed_avatar_url",
+            "previous_avatar_url",
         )
         read_only_fields = fields
 
@@ -133,6 +135,9 @@ class PollDetailSerializer(PollSerializer):
     def get_proposed_avatar_url(self, poll: Poll) -> str | None:
         return poll.proposed_avatar.url if poll.proposed_avatar else None
 
+    def get_previous_avatar_url(self, poll: Poll) -> str | None:
+        return poll.previous_avatar.url if poll.previous_avatar else None
+
 
 class PollCreateSerializer(serializers.Serializer):
     """JSON, or multipart (`config` as a JSON string plus `image`) for profile-picture votes."""
@@ -160,3 +165,16 @@ class BallotRequestSerializer(serializers.Serializer):
 
 class ReactionRequestSerializer(serializers.Serializer):
     emoji = serializers.ChoiceField(choices=REACTION_EMOJI)
+
+
+class ArchivePicturesSerializer(serializers.Serializer):
+    """TEMPORARY: restore the pictures of avatar votes closed before they were kept."""
+
+    previous = serializers.ImageField(write_only=True, required=False)
+    proposed = serializers.ImageField(write_only=True, required=False)
+
+    def validate_previous(self, value: Any) -> Any:
+        return process_avatar(value)
+
+    def validate_proposed(self, value: Any) -> Any:
+        return process_avatar(value)
