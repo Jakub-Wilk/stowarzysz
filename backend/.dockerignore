@@ -9,3 +9,8 @@ __pycache__/
 media/
 staticfiles/
 tests/
+.git
+*.md
+.vscode/
+Dockerfile
+.dockerignore

@@ -244,7 +244,7 @@ backup() {
 
 build() {
   step "Build images (the running stack keeps serving)"
-  run dc build --pull
+  run dc build
 }
 
 launch() {

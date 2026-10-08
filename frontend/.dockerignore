@@ -3,3 +3,11 @@ dist/
 dev-dist/
 .env*
 *.log
+.git
+*.md
+.vscode/
+.oxfmtrc.json
+.oxlintrc.json
+components.json
+Dockerfile
+.dockerignore
