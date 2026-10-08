@@ -35,3 +35,9 @@ def _clear_cache() -> None:
     from django.core.cache import cache
 
     cache.clear()  # throttle counters live in the cache
+
+
+@pytest.fixture
+def run_on_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests run in a transaction, so on_commit hooks would never fire; run them immediately."""
+    monkeypatch.setattr("django.db.transaction.on_commit", lambda fn, **kw: fn())

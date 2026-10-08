@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "voting",
     "push",
     "secretsanta",
+    "ledger",
+    "pacts",
 ]
 
 MIDDLEWARE = [
