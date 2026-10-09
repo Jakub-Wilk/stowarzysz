@@ -4,13 +4,28 @@ from django.db.models import F, Q
 
 
 class LedgerEntry(models.Model):
-    """One debt: `debtor` owes `creditor` `amount` (minor units, e.g. grosze).
+    """One line of the ledger. Amounts are minor units (e.g. grosze). Entries are never edited
+    or deleted: the balances are the sum of the confirmed ones.
 
-    This is the atomic unit of the ledger. Anything that creates money owed between people
-    (a settled bet, later a shared expense) records entries here via `ledger.services`, and
-    `source_type` / `source_id` say where an entry came from without a foreign key.
+    - `debt`: `debtor` owes `creditor` (a settled bet, later a shared expense). Recorded by the
+      system, counts at once. `source_type` / `source_id` say where it came from without a
+      foreign key.
+    - `payment`: `debtor` paid `creditor` to work off what they owe. Started by the payer, it
+      only counts once the receiver confirms it (and can be rejected or cancelled before that).
     """
 
+    class Kind(models.TextChoices):
+        DEBT = "debt"
+        PAYMENT = "payment"
+
+    class Status(models.TextChoices):
+        PENDING = "pending"  # a payment waiting for the receiver
+        CONFIRMED = "confirmed"  # counts towards the balances
+        REJECTED = "rejected"  # the receiver says they weren't paid
+        CANCELLED = "cancelled"  # the payer took it back
+
+    kind = models.CharField(max_length=8, choices=Kind, default=Kind.DEBT)
+    status = models.CharField(max_length=10, choices=Status, default=Status.CONFIRMED)
     debtor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ledger_debts"
     )
@@ -23,8 +38,7 @@ class LedgerEntry(models.Model):
     source_type = models.CharField(max_length=32, blank=True)
     source_id = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    paid_marked_at = models.DateTimeField(null=True)  # the debtor says they paid
-    settled_at = models.DateTimeField(null=True)  # the creditor confirms they were paid
+    decided_at = models.DateTimeField(null=True)  # when a payment was confirmed/rejected/cancelled
 
     objects = models.Manager()
 
@@ -38,4 +52,4 @@ class LedgerEntry(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.debtor_id} -> {self.creditor_id}: {self.amount} {self.currency}"
+        return f"{self.kind} {self.debtor_id} -> {self.creditor_id}: {self.amount} {self.currency}"

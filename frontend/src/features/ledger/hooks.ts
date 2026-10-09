@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiFetch } from '@/lib/api'
-import type { LedgerBalance, LedgerEntry } from '@/lib/api-types'
+import type { LedgerBalances, LedgerEntry } from '@/lib/api-types'
 
 export const ledgerKey = ['ledger'] as const
 
 export function useBalances() {
   return useQuery({
     queryKey: [...ledgerKey, 'balances'],
-    queryFn: () => apiFetch<LedgerBalance[]>('/api/ledger/balances/'),
+    queryFn: () => apiFetch<LedgerBalances>('/api/ledger/balances/'),
   })
 }
 
+/** Every entry in the group, newest first. */
 export function useEntries() {
   return useQuery({
     queryKey: [...ledgerKey, 'entries'],
@@ -19,13 +20,33 @@ export function useEntries() {
   })
 }
 
-export type EntryAction = 'paid' | 'confirm'
+export interface PaymentRequest {
+  toUserId: number
+  /** Grosze. */
+  amount: number
+  note: string
+}
 
-/** The debtor marks a debt paid ("paid"); the creditor then closes it ("confirm"). */
-export function useEntryAction() {
+/** Pay somebody off. It only counts once they confirm it. */
+export function useCreatePayment() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (v: { id: number; action: EntryAction }) =>
+    mutationFn: (v: PaymentRequest) =>
+      apiFetch<LedgerEntry>('/api/ledger/payments/', {
+        method: 'POST',
+        json: { to_user_id: v.toUserId, amount: v.amount, note: v.note },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ledgerKey }),
+  })
+}
+
+/** The receiver confirms or rejects a payment; the payer can cancel one nobody answered yet. */
+export type PaymentAction = 'confirm' | 'reject' | 'cancel'
+
+export function usePaymentAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: number; action: PaymentAction }) =>
       apiFetch<LedgerEntry>(`/api/ledger/entries/${v.id}/${v.action}/`, { method: 'POST' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ledgerKey }),
   })

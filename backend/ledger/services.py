@@ -3,9 +3,10 @@
 from collections import defaultdict
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 
 from core import events
 from ledger.models import LedgerEntry
@@ -13,9 +14,11 @@ from push.sender import send_push
 
 
 def _notify(entry: LedgerEntry, user_ids: list[int], title: str, body: str) -> None:
+    """The ledger is public, so everyone's view refreshes (ids only); push only the people it
+    concerns."""
+
     def announce() -> None:
-        for user_id in {entry.debtor_id, entry.creditor_id}:
-            events.notify_user(user_id, "ledger.updated", {"entry_id": entry.pk})
+        events.broadcast("ledger.updated", {"entry_id": entry.pk})
         send_push(user_ids, title=title, body=body, url="/ledger")
 
     transaction.on_commit(announce)
@@ -61,72 +64,143 @@ def record_debt(
     return entry
 
 
-def _locked_open_entry(entry_id: int) -> LedgerEntry:
-    entry = (
-        LedgerEntry.objects.select_for_update()
-        .select_related("debtor", "creditor")
-        .get(pk=entry_id)
-    )
-    if entry.settled_at is not None:
-        raise ValidationError("To rozliczenie jest już zamknięte.")
-    return entry
+class Conflict(APIException):
+    status_code = 409
+    default_detail = "Ta wpłata nie czeka już na decyzję."
+    default_code = "conflict"
 
 
-def mark_paid(entry_id: int, user: Any) -> LedgerEntry:
-    """The debtor says they paid; the creditor still has to confirm."""
+def create_payment(
+    payer: Any, receiver_id: int, amount: int, note: str = "", *, currency: str = "PLN"
+) -> LedgerEntry:
+    """The payer says they paid `receiver` `amount`. It counts once the receiver confirms."""
+    if amount <= 0:
+        raise ValidationError({"amount": "Kwota musi być dodatnia."})
+    receiver = get_user_model().objects.members().filter(pk=receiver_id).first()
+    if receiver is None:
+        raise ValidationError({"to_user_id": "Nieznany lub nieaktywny poseł."})
+    if receiver.pk == payer.pk:
+        raise ValidationError({"to_user_id": "Nie możesz zapłacić samemu sobie."})
     with transaction.atomic():
-        entry = _locked_open_entry(entry_id)
-        if entry.debtor_id != user.pk:
-            raise PermissionDenied("Tylko dłużnik może oznaczyć dług jako zapłacony.")
-        if entry.paid_marked_at is None:
-            entry.paid_marked_at = timezone.now()
-            entry.save(update_fields=["paid_marked_at"])
-            _notify(
-                entry,
-                [entry.creditor_id],
-                "Zapłacono?",
-                f"{entry.debtor.username} twierdzi, że oddał(a) "
-                f"{format_amount(entry.amount, entry.currency)}",
-            )
-    return entry
-
-
-def confirm_paid(entry_id: int, user: Any) -> LedgerEntry:
-    """The creditor confirms they were paid, which closes the entry."""
-    with transaction.atomic():
-        entry = _locked_open_entry(entry_id)
-        if entry.creditor_id != user.pk:
-            raise PermissionDenied("Tylko wierzyciel może potwierdzić zapłatę.")
-        entry.settled_at = timezone.now()
-        entry.save(update_fields=["settled_at"])
+        entry = LedgerEntry.objects.create(
+            kind=LedgerEntry.Kind.PAYMENT,
+            status=LedgerEntry.Status.PENDING,
+            debtor=payer,
+            creditor=receiver,
+            amount=amount,
+            currency=currency,
+            description=note.strip()[:200] or "Spłata długu",
+        )
         _notify(
             entry,
-            [entry.debtor_id],
-            "Rozliczenie zamknięte",
-            f"{entry.creditor.username} potwierdził(a) zapłatę "
-            f"{format_amount(entry.amount, entry.currency)}",
+            [receiver.pk],
+            "Wpłata do potwierdzenia",
+            f"{payer.username} twierdzi, że zapłacił(a) Ci {format_amount(amount, currency)}",
         )
     return entry
 
 
-def balances_for(user: Any) -> list[tuple[Any, str, int]]:
-    """Open balances per counterpart and currency as (other, currency, amount).
+def _decide(entry_id: int, user: Any, *, party: str, status: str) -> LedgerEntry:
+    with transaction.atomic():
+        entry = (
+            LedgerEntry.objects.select_for_update()
+            .select_related("debtor", "creditor")
+            .get(pk=entry_id)
+        )
+        if entry.kind != LedgerEntry.Kind.PAYMENT or entry.status != LedgerEntry.Status.PENDING:
+            raise Conflict()
+        allowed = entry.creditor_id if party == "receiver" else entry.debtor_id
+        if user.pk != allowed:
+            raise PermissionDenied(
+                "Wpłatę potwierdza lub odrzuca odbiorca, a wycofać ją może tylko płacący."
+            )
+        entry.status = status
+        entry.decided_at = timezone.now()
+        entry.save(update_fields=["status", "decided_at"])
+        amount = format_amount(entry.amount, entry.currency)
+        if status == LedgerEntry.Status.CONFIRMED:
+            _notify(
+                entry,
+                [entry.debtor_id],
+                "Wpłata potwierdzona",
+                f"{entry.creditor.username} potwierdził(a) wpłatę {amount}",
+            )
+        elif status == LedgerEntry.Status.REJECTED:
+            _notify(
+                entry,
+                [entry.debtor_id],
+                "Wpłata odrzucona",
+                f"{entry.creditor.username} nie potwierdza wpłaty {amount}",
+            )
+        else:
+            _notify(
+                entry,
+                [entry.creditor_id],
+                "Wpłata wycofana",
+                f"{entry.debtor.username} wycofał(a) wpłatę {amount}",
+            )
+    return entry
 
-    Positive: the other person owes `user`. Negative: `user` owes them. Zeros are left out.
+
+def confirm_payment(entry_id: int, user: Any) -> LedgerEntry:
+    """The receiver confirms they were paid: the payment now counts."""
+    return _decide(entry_id, user, party="receiver", status=LedgerEntry.Status.CONFIRMED)
+
+
+def reject_payment(entry_id: int, user: Any) -> LedgerEntry:
+    """The receiver says they weren't paid: the payment never counts."""
+    return _decide(entry_id, user, party="receiver", status=LedgerEntry.Status.REJECTED)
+
+
+def cancel_payment(entry_id: int, user: Any) -> LedgerEntry:
+    """The payer takes back a payment the receiver hasn't answered."""
+    return _decide(entry_id, user, party="payer", status=LedgerEntry.Status.CANCELLED)
+
+
+def group_balances() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Balances for the whole group, like a Tricount "Bilans", from the confirmed entries.
+
+    Returns `(members, pairs)`. `members` has each person's `net` per currency (positive: others
+    owe them), biggest creditor first; people at zero are left out. `pairs` is who owes whom
+    after netting each two people's entries against each other, biggest first. A confirmed
+    payment counts as a debt the other way round, which is what pays a debt off.
     """
-    totals: dict[tuple[int, str], int] = defaultdict(int)
+    net: dict[tuple[int, str], int] = defaultdict(int)
+    pair_net: dict[tuple[int, int, str], int] = defaultdict(int)  # (low id, high id): low owes
     people: dict[int, Any] = {}
-    open_entries = LedgerEntry.objects.filter(settled_at__isnull=True).select_related(
+    confirmed = LedgerEntry.objects.filter(status=LedgerEntry.Status.CONFIRMED).select_related(
         "debtor", "creditor"
     )
-    for entry in open_entries.filter(creditor=user):
+    for entry in confirmed:
         people[entry.debtor_id] = entry.debtor
-        totals[(entry.debtor_id, entry.currency)] += entry.amount
-    for entry in open_entries.filter(debtor=user):
         people[entry.creditor_id] = entry.creditor
-        totals[(entry.creditor_id, entry.currency)] -= entry.amount
-    return [
-        (people[other_id], currency, amount)
-        for (other_id, currency), amount in sorted(totals.items())
+        owing, owed = (entry.debtor_id, entry.creditor_id)
+        if entry.kind == LedgerEntry.Kind.PAYMENT:
+            owing, owed = owed, owing
+        net[(owing, entry.currency)] -= entry.amount
+        net[(owed, entry.currency)] += entry.amount
+        low, high = sorted((owing, owed))
+        pair_net[(low, high, entry.currency)] += (1 if owing == low else -1) * entry.amount
+
+    members = [
+        {"user": people[user_id], "currency": currency, "net": amount}
+        for (user_id, currency), amount in net.items()
         if amount != 0
     ]
+    members.sort(key=lambda m: (-m["net"], m["user"].username))
+
+    pairs = []
+    for (low, high, currency), amount in pair_net.items():
+        if amount == 0:
+            continue
+        debtor, creditor = (low, high) if amount > 0 else (high, low)
+        pairs.append(
+            {
+                "debtor": people[debtor],
+                "creditor": people[creditor],
+                "currency": currency,
+                "amount": abs(amount),
+            }
+        )
+    pairs.sort(key=lambda p: (-p["amount"], p["debtor"].username))
+    return members, pairs

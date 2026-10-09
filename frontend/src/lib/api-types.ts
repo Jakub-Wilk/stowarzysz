@@ -375,8 +375,15 @@ export interface PactStats extends PactKindStats {
 
 // --- ledger ---------------------------------------------------------------------------
 
+/** `debt`: someone owes someone (from a pact). `payment`: the debtor paid the creditor back. */
+export type LedgerEntryKind = 'debt' | 'payment'
+/** A payment counts once `confirmed`; debts always are. */
+export type LedgerEntryStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled'
+
 export interface LedgerEntry {
   id: number
+  kind: LedgerEntryKind
+  status: LedgerEntryStatus
   debtor: UserBrief
   creditor: UserBrief
   /** Grosze. */
@@ -386,13 +393,26 @@ export interface LedgerEntry {
   source_type: string
   source_id: number | null
   created_at: string
-  paid_marked_at: string | null
-  settled_at: string | null
+  decided_at: string | null
 }
 
-/** `amount` > 0: `user` owes me. `amount` < 0: I owe `user`. Grosze. */
-export interface LedgerBalance {
+/** One person's total. `net` > 0: others owe them; `net` < 0: they owe others. Grosze. */
+export interface LedgerMemberBalance {
   user: UserBrief
   currency: string
+  net: number
+}
+
+/** `debtor` owes `creditor` `amount` after netting the two people's debts. Grosze. */
+export interface LedgerPairBalance {
+  debtor: UserBrief
+  creditor: UserBrief
+  currency: string
   amount: number
+}
+
+/** The whole group's open balances; every member can read them. */
+export interface LedgerBalances {
+  members: LedgerMemberBalance[]
+  pairs: LedgerPairBalance[]
 }

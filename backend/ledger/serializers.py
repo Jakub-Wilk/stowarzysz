@@ -12,6 +12,8 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
         model = LedgerEntry
         fields = (
             "id",
+            "kind",
+            "status",
             "debtor",
             "creditor",
             "amount",
@@ -20,15 +22,36 @@ class LedgerEntrySerializer(serializers.ModelSerializer):
             "source_type",
             "source_id",
             "created_at",
-            "paid_marked_at",
-            "settled_at",
+            "decided_at",
         )
         read_only_fields = fields
 
 
-class BalanceSerializer(serializers.Serializer):
-    """`amount` > 0: `user` owes me. `amount` < 0: I owe `user`. Minor units."""
+class MemberBalanceSerializer(serializers.Serializer):
+    """One person's total. `net` > 0: others owe them; `net` < 0: they owe others."""
 
     user = PersonSerializer()
     currency = serializers.CharField()
+    net = serializers.IntegerField()
+
+
+class PairBalanceSerializer(serializers.Serializer):
+    """`debtor` owes `creditor` `amount` after netting the two people's debts. Minor units."""
+
+    debtor = PersonSerializer()
+    creditor = PersonSerializer()
+    currency = serializers.CharField()
     amount = serializers.IntegerField()
+
+
+class BalancesSerializer(serializers.Serializer):
+    members = MemberBalanceSerializer(many=True)
+    pairs = PairBalanceSerializer(many=True)
+
+
+class PaymentCreateSerializer(serializers.Serializer):
+    """Starting a payment: who was paid and how much (minor units)."""
+
+    to_user_id = serializers.IntegerField()
+    amount = serializers.IntegerField(min_value=1)
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
