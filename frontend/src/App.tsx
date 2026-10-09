@@ -8,6 +8,7 @@ import { useHasSession } from '@/features/auth/hooks'
 import { PublicOnly, RequireAuth, RequireSuperuser } from '@/features/auth/RouteGuards'
 import { RealtimeShell } from '@/features/voting/realtime'
 import { ActivatePage } from '@/pages/ActivatePage'
+import { LedgerPage } from '@/pages/LedgerPage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { AvatarArchivePage } from '@/pages/manage/AvatarArchivePage'
@@ -15,6 +16,8 @@ import { ManageIndexPage } from '@/pages/manage/ManageIndexPage'
 import { SantaManagePage } from '@/pages/manage/SantaManagePage'
 import { UserFormPage } from '@/pages/manage/UserFormPage'
 import { UsersPage } from '@/pages/manage/UsersPage'
+import { PactDetailPage } from '@/pages/PactDetailPage'
+import { PactNewPage } from '@/pages/PactNewPage'
 import { VoteDetailPage } from '@/pages/VoteDetailPage'
 import { VoteNewPage } from '@/pages/VoteNewPage'
 import { MetalDefs } from '@/themes/MetalDefs'
@@ -45,6 +48,9 @@ export default function App() {
             <Route element={<SubPageLayout />}>
               <Route path="voting/new" element={<VoteNewPage />} />
               <Route path="voting/:id" element={<VoteDetailPage />} />
+              <Route path="pacts/new" element={<PactNewPage />} />
+              <Route path="pacts/:id" element={<PactDetailPage />} />
+              <Route path="ledger" element={<LedgerPage />} />
             </Route>
             <Route element={<RequireSuperuser />}>
               <Route path="manage" element={<ManageLayout />}>

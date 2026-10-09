@@ -222,3 +222,168 @@ export interface SantaHistoryEvent {
   gift_tiers: number[]
   pairings: SantaPairing[]
 }
+
+// --- pacts ----------------------------------------------------------------------------
+
+export type PactKindKey = 'bet' | 'group_bet' | 'prediction' | 'resolution'
+export type PactStatus =
+  | 'proposed'
+  | 'active'
+  | 'awaiting_result'
+  | 'resolved'
+  | 'declined'
+  | 'cancelled'
+  | 'void'
+export type PactParticipantState =
+  | 'invited'
+  | 'requested'
+  | 'active'
+  | 'settled'
+  | 'void'
+  | 'declined'
+  | 'rejected'
+  | 'withdrawn'
+  | 'expired'
+export type PactProposalState = 'pending' | 'confirmed' | 'disputed' | 'superseded' | 'overruled'
+
+/** What a person puts into a pact. Amounts are in grosze; `side` is only used by sided kinds. */
+export interface PactTerms {
+  stake_amount?: number | null
+  stake_note?: string
+  side?: string
+}
+
+export interface PactListItem {
+  id: number
+  kind: PactKindKey
+  title: string
+  condition: string
+  due_at: string | null
+  /** Anyone may ask to join. Every member can read every pact either way. */
+  is_open: boolean
+  status: PactStatus
+  creator: UserBrief
+  created_at: string
+  resolved_at: string | null
+  active_count: number
+  my: {
+    participant_id: number | null
+    role: 'host' | 'opponent' | null
+    state: PactParticipantState | null
+  }
+}
+
+export interface PactParticipant {
+  id: number
+  user: UserBrief
+  role: 'host' | 'opponent'
+  side: string
+  stake_amount: number | null
+  stake_note: string
+  state: PactParticipantState
+}
+
+export interface PactProposal {
+  id: number
+  /** The wager it settles (bets); null when it settles the whole pact. */
+  wager_id: number | null
+  proposed_by: UserBrief
+  /** Shape depends on the kind; `{ void: true }` calls it off. */
+  result: Record<string, unknown>
+  state: PactProposalState
+  created_at: string
+  decided_at: string | null
+  ruling_poll_id: number | null
+  confirmed_by: number[]
+}
+
+export interface PactAttachment {
+  id: number
+  url: string
+  caption: string
+  uploaded_by: UserBrief
+  created_at: string
+}
+
+/** What the signed-in user can do on a pact right now (decided by the server). */
+export interface PactActions {
+  can_respond: boolean
+  can_request_join: boolean
+  can_withdraw_request: boolean
+  can_attach: boolean
+  /** Participant ids whose join request the user must decide. */
+  to_decide: number[]
+  /** Proposal ids waiting for the user's confirmation. */
+  to_confirm: number[]
+  /** Disputed proposal ids the user may put to a Sejmik vote. */
+  can_escalate: number[]
+}
+
+export interface PactDetail extends PactListItem {
+  notes: string
+  config: { sides?: string[] }
+  outcome: Record<string, unknown> | null
+  participants: PactParticipant[]
+  proposals: PactProposal[]
+  actions: PactActions
+  attachments: PactAttachment[]
+}
+
+export interface PactInvitee extends PactTerms {
+  user_id: number
+}
+
+export interface PactCreatePayload {
+  kind: PactKindKey
+  title: string
+  condition: string
+  notes: string
+  due_at: string | null
+  is_open: boolean
+  config: { sides?: string[] }
+  /** The creator's own side and stake (group bets, predictions). */
+  host?: PactTerms
+  opponents: PactInvitee[]
+}
+
+export interface PactRespondPayload extends PactTerms {
+  accept: boolean
+}
+
+export interface PactKindStats {
+  won: number
+  lost: number
+  draw: number
+}
+
+export interface PactStats extends PactKindStats {
+  user: UserBrief
+  /** Grosze won / lost on pacts. */
+  money_won: number
+  money_lost: number
+  by_kind: Partial<Record<PactKindKey, PactKindStats>>
+}
+
+// --- ledger ---------------------------------------------------------------------------
+
+export interface LedgerEntry {
+  id: number
+  debtor: UserBrief
+  creditor: UserBrief
+  /** Grosze. */
+  amount: number
+  currency: string
+  description: string
+  source_type: string
+  source_id: number | null
+  created_at: string
+  paid_marked_at: string | null
+  settled_at: string | null
+}
+
+/** `amount` > 0: `user` owes me. `amount` < 0: I owe `user`. Grosze. */
+export interface LedgerBalance {
+  user: UserBrief
+  currency: string
+  amount: number
+}

@@ -7,6 +7,12 @@ import {
   ProfileResultDisplay,
 } from '@/features/voting/kinds/profile'
 import {
+  RulingBallotInput,
+  RulingProposal,
+  RulingResultChip,
+  RulingResultDisplay,
+} from '@/features/voting/kinds/ruling'
+import {
   ScoreBallotInput,
   ScoreResultChip,
   ScoreResultDisplay,
@@ -29,6 +35,13 @@ const kinds: Record<string, PollKindUI> = {
   score,
   nickname: { ...profileChange, Proposal: NicknameProposal, CreateForm: NicknameCreateForm },
   avatar: { ...profileChange, Proposal: AvatarProposal, CreateForm: AvatarCreateForm },
+  /** Created by the server when the parties of a pact dispute a result; not in the create screen. */
+  pact_ruling: {
+    BallotInput: RulingBallotInput,
+    ResultDisplay: RulingResultDisplay,
+    ResultChip: RulingResultChip,
+    Proposal: RulingProposal,
+  },
 }
 
 export function getKindUI(kind: string): PollKindUI | null {
