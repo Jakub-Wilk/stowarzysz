@@ -14,13 +14,11 @@ from pacts.views import (
     PactJoinView,
     PactListCreateView,
     PactRespondView,
-    PactStatsView,
     PactWithdrawView,
 )
 
 urlpatterns = [
     path("", PactListCreateView.as_view(), name="pact_list_create"),
-    path("stats/", PactStatsView.as_view(), name="pact_stats"),
     path("<int:pact_id>/", PactDetailView.as_view(), name="pact_detail"),
     path("<int:pact_id>/respond/", PactRespondView.as_view(), name="pact_respond"),
     path("<int:pact_id>/join/", PactJoinView.as_view(), name="pact_join"),

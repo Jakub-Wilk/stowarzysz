@@ -18,13 +18,11 @@ from pacts.serializers import (
     PactCreateSerializer,
     PactDetailSerializer,
     PactSerializer,
-    PactStatsSerializer,
     ProposalSerializer,
     ProposeOutcomeSerializer,
     RespondSerializer,
     TermsSerializer,
 )
-from pacts.stats import pact_stats
 
 
 def visible_pacts(request: Request) -> QuerySet:
@@ -179,14 +177,6 @@ class JudgmentView(APIView):
     def post(self, request: Request, pact_id: int) -> Response:
         services.call_judgment(pact_id, request.user)
         return Response(_detail(request, pact_id))
-
-
-class PactStatsView(APIView):
-    @extend_schema(responses={200: PactStatsSerializer(many=True)})
-    def get(self, request: Request) -> Response:
-        return Response(
-            PactStatsSerializer(pact_stats(), many=True, context={"request": request}).data
-        )
 
 
 class PactCancelView(APIView):

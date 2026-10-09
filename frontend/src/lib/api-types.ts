@@ -43,6 +43,7 @@ export interface ManagedUser {
   has_password: boolean
   avatar_url: string | null
   voting: VotingStats
+  pacts: PactStats
 }
 
 export interface VotingStats {
@@ -52,7 +53,10 @@ export interface VotingStats {
   veto_percent: number
 }
 
-export type ManagedUserPayload = Omit<ManagedUser, 'id' | 'has_password' | 'avatar_url' | 'voting'>
+export type ManagedUserPayload = Omit<
+  ManagedUser,
+  'id' | 'has_password' | 'avatar_url' | 'voting' | 'pacts'
+>
 
 export interface ActivationLink {
   token: string
@@ -361,8 +365,8 @@ export interface PactKindStats {
   draw: number
 }
 
+/** A member's record across settled pacts (administrators see it on the profile). */
 export interface PactStats extends PactKindStats {
-  user: UserBrief
   /** Grosze won / lost on pacts. */
   money_won: number
   money_lost: number

@@ -661,10 +661,15 @@ def test_the_cron_command_keeps_going_when_one_job_fails(db, monkeypatch) -> Non
     assert "Closed" in out.getvalue()  # the poll job still ran
 
 
+@pytest.fixture
+def boss(db) -> User:
+    return User.objects.create_superuser("boss", "admin-pass-123")
+
+
 # --- stats ---------------------------------------------------------------------------------
 
 
-def test_stats_count_settled_claims_and_money(alice, bob, carol) -> None:
+def test_stats_count_settled_claims_and_money(boss, alice, bob, carol) -> None:
     first = make_bet(alice, (bob, 1000), (carol, 1500))
     accept(bob, first)
     accept(carol, first)
@@ -675,28 +680,36 @@ def test_stats_count_settled_claims_and_money(alice, bob, carol) -> None:
     accept(bob, open_claim)
     propose(alice, open_claim, bob, "host")  # unconfirmed: must not count
 
-    rows = {r["user"]["username"]: r for r in client_for(bob).get(PACTS + "stats/").json()}
+    rows = {r["username"]: r["pacts"] for r in client_for(boss).get("/api/auth/users/").json()}
     assert (rows["alice"]["won"], rows["alice"]["lost"]) == (1, 1)
     assert (rows["bob"]["won"], rows["bob"]["lost"]) == (0, 1)
     assert (rows["carol"]["won"], rows["carol"]["lost"]) == (1, 0)
     assert rows["alice"]["money_won"] == 1000 and rows["alice"]["money_lost"] == 1500
     assert rows["carol"]["money_won"] == 1500
     assert rows["alice"]["by_kind"] == {"bet": {"won": 1, "lost": 1, "draw": 0}}
+    detail = client_for(boss).get(f"/api/auth/users/{alice.pk}/").json()["pacts"]
+    assert detail == rows["alice"]
 
 
-def test_stats_leave_out_members_with_no_record(alice, bob, dave) -> None:
+def test_a_member_with_no_settled_pacts_has_an_empty_record(boss, alice, bob, dave) -> None:
     pact = make_bet(alice, (bob, 1000))
     accept(bob, pact)
-    names = [r["user"]["username"] for r in client_for(dave).get(PACTS + "stats/").json()]
-    assert names == []
+    record = client_for(boss).get(f"/api/auth/users/{dave.pk}/").json()["pacts"]
+    assert record == {
+        "won": 0,
+        "lost": 0,
+        "draw": 0,
+        "money_won": 0,
+        "money_lost": 0,
+        "by_kind": {},
+    }
+
+
+def test_the_old_ranking_endpoint_is_gone(alice) -> None:
+    assert client_for(alice).get(PACTS + "stats/").status_code == 404
 
 
 # --- TEMPORARY: admins creating pacts as someone else ----------------------------------------
-
-
-@pytest.fixture
-def boss(db) -> User:
-    return User.objects.create_superuser("boss", "admin-pass-123")
 
 
 def test_only_superusers_can_create_as_someone_else(alice, bob) -> None:

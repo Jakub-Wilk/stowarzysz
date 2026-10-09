@@ -122,5 +122,5 @@ def test_stats_use_one_query(admin_client: APIClient, django_assert_max_num_quer
     names = [f"u{i}" for i in range(6)]
     users = make(*names)
     run_poll(users[0], users[1:], {u: 1 for u in users})
-    with django_assert_max_num_queries(6):  # auth + list; not one per user
+    with django_assert_max_num_queries(10):  # auth + list + pact stats; not one per user
         assert admin_client.get("/api/auth/users/").status_code == 200

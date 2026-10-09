@@ -248,21 +248,3 @@ class JoinDecisionSerializer(serializers.Serializer):
 class ProposeOutcomeSerializer(serializers.Serializer):
     wager_id = serializers.IntegerField(required=False, allow_null=True)
     result = serializers.JSONField()
-
-
-class KindStatsSerializer(serializers.Serializer):
-    won = serializers.IntegerField()
-    lost = serializers.IntegerField()
-    draw = serializers.IntegerField()
-
-
-class PactStatsSerializer(serializers.Serializer):
-    """One member's record across settled pacts. Money is in minor units, PLN only."""
-
-    user = PersonSerializer()
-    won = serializers.IntegerField()
-    lost = serializers.IntegerField()
-    draw = serializers.IntegerField()
-    money_won = serializers.IntegerField()
-    money_lost = serializers.IntegerField()
-    by_kind = serializers.DictField(child=KindStatsSerializer())

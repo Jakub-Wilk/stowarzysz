@@ -114,7 +114,6 @@ def test_every_endpoint_requires_auth(api_client: APIClient, alice, bob) -> None
         api_client.post(url(pact, "join/"), {}, format="json"),
         api_client.post(url(pact, "withdraw/")),
         api_client.post(url(pact, "participants/1/decide/"), {"approve": True}, format="json"),
-        api_client.get(PACTS + "stats/"),
     ]
     assert [c.status_code for c in calls] == [401] * len(calls)
 

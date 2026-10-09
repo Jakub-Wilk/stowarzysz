@@ -7,7 +7,6 @@ import type {
   PactListItem,
   PactProposal,
   PactRespondPayload,
-  PactStats,
   PactTerms,
 } from '@/lib/api-types'
 
@@ -26,13 +25,6 @@ export function usePact(id: number) {
   return useQuery({
     queryKey: detailKey(id),
     queryFn: () => apiFetch<PactDetail>(`/api/pacts/${id}/`),
-  })
-}
-
-export function usePactStats() {
-  return useQuery({
-    queryKey: [...pactsKey, 'stats'],
-    queryFn: () => apiFetch<PactStats[]>('/api/pacts/stats/'),
   })
 }
 

@@ -9,6 +9,7 @@ import { ActivationLinkDialog } from '@/features/admin/ActivationLinkDialog'
 import { AvatarField } from '@/features/admin/AvatarField'
 import type { PendingPicture } from '@/features/admin/avatar'
 import { DeleteUserDialog } from '@/features/admin/DeleteUserDialog'
+import { PactStatsBlock } from '@/features/admin/PactStats'
 import { VotingStatsBlock } from '@/features/admin/VotingStats'
 import {
   useCreateUser,
@@ -214,6 +215,7 @@ export function UserForm({ user }: { user?: ManagedUser }) {
       </form>
 
       {user && <VotingStatsBlock stats={user.voting} />}
+      {user && <PactStatsBlock stats={user.pacts} />}
 
       {user && (
         <section className="mt-10 flex max-w-md flex-col gap-4 border-t pt-6">

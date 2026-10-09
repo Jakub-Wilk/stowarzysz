@@ -9,6 +9,7 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 
 from accounts.avatars import process_avatar
 from accounts.models import ActivationToken, hash_token
+from pacts.stats import EMPTY, PactStatsSerializer, all_pact_stats
 from voting.stats import VotingStatsSerializer, voting_stats
 
 User = get_user_model()
@@ -40,6 +41,7 @@ class ManagedUserSerializer(serializers.ModelSerializer):
     has_password = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
     voting = serializers.SerializerMethodField()
+    pacts = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -51,12 +53,20 @@ class ManagedUserSerializer(serializers.ModelSerializer):
             "has_password",
             "avatar_url",
             "voting",
+            "pacts",
         )
-        read_only_fields = ("id", "has_password", "avatar_url", "voting")
+        read_only_fields = ("id", "has_password", "avatar_url", "voting", "pacts")
 
     @extend_schema_field(VotingStatsSerializer)
     def get_voting(self, obj: Any) -> dict[str, Any]:
         return voting_stats(obj)
+
+    @extend_schema_field(PactStatsSerializer)
+    def get_pacts(self, obj: Any) -> dict[str, Any]:
+        # everyone's record is computed once per request, not once per listed user
+        if "pact_stats" not in self.context:
+            self.context["pact_stats"] = all_pact_stats()
+        return self.context["pact_stats"].get(obj.pk, EMPTY)
 
     def get_has_password(self, obj: Any) -> bool:
         return obj.has_usable_password()
