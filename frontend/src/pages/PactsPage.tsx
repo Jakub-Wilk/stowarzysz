@@ -1,4 +1,4 @@
-import { Plus, Wallet } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 
@@ -47,21 +47,9 @@ export function PactsPage() {
     <>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-2xl font-semibold">Zakłady</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Rozliczenia"
-            title="Rozliczenia"
-            nativeButton={false}
-            render={<Link to="/ledger" />}
-          >
-            <Wallet />
-          </Button>
-          <Button nativeButton={false} render={<Link to="/pacts/new" />}>
-            <Plus /> Zakład
-          </Button>
-        </div>
+        <Button nativeButton={false} render={<Link to="/pacts/new" />}>
+          <Plus /> Zakład
+        </Button>
       </div>
 
       <div className="mt-6 flex gap-2" role="group" aria-label="Widok">

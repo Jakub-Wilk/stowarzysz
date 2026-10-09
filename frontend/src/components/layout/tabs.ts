@@ -1,6 +1,7 @@
-import { Gift, Handshake, Vote, type LucideIcon } from 'lucide-react'
+import { Gift, Handshake, Vote, Wallet, type LucideIcon } from 'lucide-react'
 import type { ComponentType } from 'react'
 
+import { LedgerPage } from '@/pages/LedgerPage'
 import { PactsPage } from '@/pages/PactsPage'
 import { SecretSantaPage } from '@/pages/SecretSantaPage'
 import { VotingPage } from '@/pages/VotingPage'
@@ -16,5 +17,6 @@ export interface TabDef {
 export const tabs: TabDef[] = [
   { path: '/voting', label: 'Sejmik', icon: Vote, page: VotingPage },
   { path: '/pacts', label: 'Zakłady', icon: Handshake, page: PactsPage },
+  { path: '/ledger', label: 'Rozliczenia', icon: Wallet, page: LedgerPage },
   { path: '/secret-santa', label: 'Secret Santa', icon: Gift, page: SecretSantaPage },
 ]

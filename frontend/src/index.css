@@ -67,6 +67,10 @@
   html {
     @apply font-sans;
   }
+  /* Italic so a hint never passes for a typed value. */
+  ::placeholder {
+    @apply italic;
+  }
 }
 
 /* Emoji reactions drift up and dissolve like smoke (see features/voting/SmokeLayer). */

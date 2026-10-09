@@ -22,3 +22,5 @@ export const PARTICIPANT_FORMS: PluralForms = {
 }
 export const PACT_FORMS: PluralForms = { one: 'zakład', few: 'zakłady', many: 'zakładów' }
 export const PICTURE_FORMS: PluralForms = { one: 'zdjęcie', few: 'zdjęcia', many: 'zdjęć' }
+export const PERSON_FORMS: PluralForms = { one: 'osoba', few: 'osoby', many: 'osób' }
+export const ITEM_FORMS: PluralForms = { one: 'pozycja', few: 'pozycje', many: 'pozycji' }

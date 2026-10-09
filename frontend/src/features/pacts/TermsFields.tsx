@@ -88,6 +88,9 @@ export function TermsFields({
           <Label htmlFor={`${idPrefix}-note`}>
             {kind.money === 'wager' ? 'Albo opis stawki' : 'Opis stawki (opcjonalnie)'}
           </Label>
+          <span className="text-sm text-muted-foreground">
+            Sama stawka opisowa (bez kwoty) po rozstrzygnięciu staje się długiem w Rozliczeniach.
+          </span>
           <Input
             id={`${idPrefix}-note`}
             maxLength={200}

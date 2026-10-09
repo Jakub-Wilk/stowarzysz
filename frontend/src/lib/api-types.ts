@@ -374,45 +374,208 @@ export interface PactStats extends PactKindStats {
 }
 
 // --- ledger ---------------------------------------------------------------------------
+// Mirrors `backend/ledger`: an entry (what happened) means obligations (who owes whom), and the
+// balances are the sum of the obligations of confirmed entries. Money in the base currency (PLN)
+// travels as integer grosze; an entry's own `amount` is in minor units of its `currency`.
 
-/** `debt`: someone owes someone (from a pact). `payment`: the debtor paid the creditor back. */
-export type LedgerEntryKind = 'debt' | 'payment'
-/** A payment counts once `confirmed`; debts always are. */
+export type LedgerKindKey = 'expense' | 'debt' | 'payment'
+/** Only `confirmed` entries count. A payment is `pending` until the receiver confirms it. */
 export type LedgerEntryStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled'
+export type LedgerCategory =
+  | 'food'
+  | 'groceries'
+  | 'transport'
+  | 'lodging'
+  | 'fun'
+  | 'bills'
+  | 'other'
+/** How an item is divided: evenly, by weights, or into exact amounts. */
+export type SplitKind = 'equal' | 'shares' | 'exact'
 
-export interface LedgerEntry {
-  id: number
-  kind: LedgerEntryKind
-  status: LedgerEntryStatus
-  debtor: UserBrief
-  creditor: UserBrief
-  /** Grosze. */
+export interface ExpensePayer {
+  user_id: number
   amount: number
-  currency: string
-  description: string
-  source_type: string
-  source_id: number | null
-  created_at: string
-  decided_at: string | null
 }
 
-/** One person's total. `net` > 0: others owe them; `net` < 0: they owe others. Grosze. */
+export interface ExpenseShare {
+  user_id: number
+  /** Ignored for `equal`; the amount itself for `exact`. */
+  weight: number
+}
+
+export interface ExpenseItem {
+  name: string
+  amount: number
+  split: SplitKind
+  shares: ExpenseShare[]
+}
+
+export interface ExpenseDetails {
+  payers: ExpensePayer[]
+  items: ExpenseItem[]
+}
+
+export interface DebtDetails {
+  debts: { debtor_id: number; creditor_id: number; amount: number; item: string }[]
+}
+
+export interface PaymentDetails {
+  from: number
+  to: number
+}
+
+/** `debtor` owes `creditor` `amount` (grosze, or a quantity of `item`) because of the entry. */
+export interface LedgerObligation {
+  debtor: UserBrief
+  creditor: UserBrief
+  amount: number
+  item: string
+}
+
+/** One person in an expense: what they paid and their part, in the entry's currency and in PLN. */
+export interface LedgerShareRow {
+  user: UserBrief
+  paid: number
+  owed: number
+  paid_base: number
+  owed_base: number
+}
+
+export interface LedgerAttachment {
+  id: number
+  url: string
+  uploaded_by: UserBrief
+  created_at: string
+}
+
+/** What the signed-in user can do with the entry right now (decided by the server). */
+export interface LedgerActions {
+  confirm: boolean
+  reject: boolean
+  cancel: boolean
+  edit: boolean
+  attach: boolean
+}
+
+interface LedgerEntryBase {
+  id: number
+  status: LedgerEntryStatus
+  title: string
+  note: string
+  category: LedgerCategory | ''
+  /** `YYYY-MM-DD`. */
+  occurred_on: string
+  /** Minor units of `currency`, or a quantity of `item`; null when an entry mixes units. */
+  amount: number | null
+  /** Empty for goods and mixed entries. */
+  currency: string
+  item: string
+  /** `amount` in grosze; null for goods and mixed entries. */
+  base_amount: number | null
+  /** PLN for one unit of `currency` (decimal string); null for PLN. */
+  rate: string | null
+  /** The day the rate was published (a weekend uses Friday's). */
+  rate_date: string | null
+  source_type: string
+  source_id: number | null
+  created_by: UserBrief | null
+  created_at: string
+  updated_at: string
+  decided_at: string | null
+  /** Send it back when editing; a newer one on the server means somebody else saved first. */
+  version: number
+  obligations: LedgerObligation[]
+  attachments: LedgerAttachment[]
+  actions: LedgerActions
+}
+
+export type ExpenseEntry = LedgerEntryBase & {
+  kind: 'expense'
+  details: ExpenseDetails
+  breakdown: LedgerShareRow[]
+}
+export type DebtEntry = LedgerEntryBase & { kind: 'debt'; details: DebtDetails; breakdown: null }
+export type PaymentEntry = LedgerEntryBase & {
+  kind: 'payment'
+  details: PaymentDetails
+  breakdown: null
+}
+export type LedgerEntry = ExpenseEntry | DebtEntry | PaymentEntry
+
+export interface ExpenseInput {
+  kind: 'expense'
+  title: string
+  currency: string
+  occurred_on: string
+  category: LedgerCategory
+  note: string
+  payers: ExpensePayer[]
+  items: ExpenseItem[]
+}
+
+export interface DebtInput {
+  kind: 'debt'
+  debtor_id: number
+  item: string
+  amount: number
+  note: string
+}
+
+export interface PaymentInput {
+  kind: 'payment'
+  to_user_id: number
+  amount: number
+  item: string
+  note: string
+}
+
+export type LedgerEntryInput = ExpenseInput | DebtInput | PaymentInput
+
+/** One person's total in one unit. `net` > 0: others owe them; `net` < 0: they owe others. */
 export interface LedgerMemberBalance {
   user: UserBrief
-  currency: string
+  /** Empty for money (grosze). */
+  item: string
   net: number
 }
 
-/** `debtor` owes `creditor` `amount` after netting the two people's debts. Grosze. */
-export interface LedgerPairBalance {
+/** `debtor` should give `creditor` `amount` (grosze, or a quantity of `item`). */
+export interface LedgerTransfer {
   debtor: UserBrief
   creditor: UserBrief
-  currency: string
+  item: string
   amount: number
 }
 
-/** The whole group's open balances; every member can read them. */
+export interface LedgerPendingPayment extends LedgerTransfer {
+  entry_id: number
+}
+
+/**
+ * The group's Bilans. `members` counts confirmed entries; `settlements` (who should pay whom, the
+ * fewest transfers for money, per pair for goods) already assume `pending` payments go through.
+ */
 export interface LedgerBalances {
+  currency: string
   members: LedgerMemberBalance[]
-  pairs: LedgerPairBalance[]
+  settlements: LedgerTransfer[]
+  pending: LedgerPendingPayment[]
+}
+
+export interface LedgerCurrency {
+  code: string
+  /** Minor-unit digits: 2 for PLN, 0 for JPY. */
+  exponent: number
+}
+
+export interface LedgerMeta {
+  base_currency: string
+  currencies: LedgerCurrency[]
+  categories: { key: LedgerCategory; label: string }[]
+}
+
+export interface LedgerRate {
+  currency: string
+  rate: string
+  rate_date: string
 }

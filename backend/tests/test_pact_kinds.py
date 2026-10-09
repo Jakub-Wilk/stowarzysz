@@ -7,7 +7,6 @@ from pacts.kinds import (
     Party,
     ResolutionKind,
     Terms,
-    _allocate,
     get_kind,
 )
 
@@ -30,20 +29,6 @@ def test_registry_has_all_four_kinds() -> None:
     }
     with pytest.raises(ValidationError):
         get_kind("nope")
-
-
-@pytest.mark.parametrize(
-    ("total", "weights"),
-    [(2000, [3000, 5000]), (100, [1, 1, 1]), (1, [1, 1]), (999, [7, 11, 13]), (5, [1])],
-)
-def test_allocate_always_sums_to_the_total(total: int, weights: list[int]) -> None:
-    shares = _allocate(total, weights)
-    assert sum(shares) == total
-    assert all(s >= 0 for s in shares)
-
-
-def test_allocate_matches_the_documented_example() -> None:
-    assert _allocate(2000, [3000, 5000]) == [750, 1250]
 
 
 # --- bet --------------------------------------------------------------------
@@ -105,13 +90,30 @@ def test_group_bet_nobody_loses_more_than_their_stake_and_payouts_sum_to_the_pot
     assert paid_by == {4: 1000, 5: 1}
 
 
-def test_group_bet_empty_side_draw_and_note_only_stakes_settle_no_money() -> None:
+def test_group_bet_empty_side_and_draw_settle_no_money() -> None:
     kind = GroupBetKind()
     only_winners = [party(A, "tak", 100, host=True), party(B, "tak", 200)]
     assert kind.settle(only_winners, {"winner": "tak"}, {}).debts == []
     assert kind.settle(group_parties(), {"winner": "draw"}, {}).debts == []
     no_cash = [party(A, "tak", None, host=True), party(B, "nie", 500)]
     assert kind.settle(no_cash, {"winner": "tak"}, {}).debts == []
+
+
+def test_group_bet_note_only_stakes_become_item_debts_spread_over_winners() -> None:
+    kind = GroupBetKind()
+    parties = [
+        Party(A, True, "tak", None),
+        Party(B, False, "tak", None),
+        Party(4, False, "nie", None, "piwo"),
+        Party(5, False, "nie", None, "kolacja"),
+        Party(6, False, "nie", None, "kawa"),
+    ]
+    debts = kind.settle(parties, {"winner": "tak"}, {}).debts
+    assert [(d.debtor_id, d.creditor_id, d.amount, d.item) for d in debts] == [
+        (4, A, 1, "piwo"),
+        (5, B, 1, "kolacja"),
+        (6, A, 1, "kawa"),
+    ]
 
 
 def test_group_bet_terms_and_outcome_validation() -> None:

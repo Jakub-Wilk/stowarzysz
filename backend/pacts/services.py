@@ -13,7 +13,8 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 
 from accounts.avatars import process_photo
 from core import events
-from ledger.services import format_amount, record_debt
+from ledger.money import format_amount
+from ledger.services import record_debts
 from pacts.kinds import Party, Terms, get_kind
 from pacts.models import (
     JoinConsent,
@@ -91,6 +92,7 @@ def _party(participant: PactParticipant) -> Party:
         participant.role == Role.HOST,
         participant.side,
         participant.stake_amount,
+        participant.stake_note,
     )
 
 
@@ -550,18 +552,7 @@ def _settle(pact: Pact, proposal: OutcomeProposal) -> None:
     else:
         settlement = kind.settle([_party(r) for r in affected], proposal.result, pact.config)
         verdicts, debts = settlement.verdicts, settlement.debts
-    users = get_user_model().objects.in_bulk(
-        [d.debtor_id for d in debts] + [d.creditor_id for d in debts]
-    )
-    for debt in debts:
-        record_debt(
-            users[debt.debtor_id],
-            users[debt.creditor_id],
-            debt.amount,
-            pact.title,
-            source_type="pact",
-            source_id=pact.pk,
-        )
+    record_debts(debts, title=pact.title, source_type="pact", source_id=pact.pk)
     proposal.state = Proposal.CONFIRMED
     proposal.decided_at = now
     proposal.verdicts = {str(uid): v for uid, v in verdicts.items()}
@@ -571,7 +562,7 @@ def _settle(pact: Pact, proposal: OutcomeProposal) -> None:
         row.state = end_state
         row.save(update_fields=["state"])
     _resolve_if_finished(pact, void=void)
-    summary = ", ".join(format_amount(d.amount) for d in debts) or "bez rozliczenia"
+    summary = ", ".join(format_amount(d.amount, item=d.item) for d in debts) or "bez rozliczenia"
     _announce(
         pact,
         "Zakład rozstrzygnięty" if not void else "Zakład unieważniony",

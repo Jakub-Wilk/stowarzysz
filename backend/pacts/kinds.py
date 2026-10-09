@@ -10,6 +10,9 @@ from typing import Any, ClassVar
 
 from rest_framework.exceptions import ValidationError
 
+from ledger.money import Debt, allocate
+
+ITEM_LENGTH = 60  # a stake note is up to 200 characters; an owed item (ledger) is shorter
 DRAW = "draw"
 WON, LOST, DREW = "won", "lost", "draw"
 
@@ -32,35 +35,13 @@ class Party:
     is_host: bool
     side: str
     stake_amount: int | None
-
-
-@dataclass(frozen=True)
-class Debt:
-    """Money one participant owes another once a claim is settled (minor units)."""
-
-    debtor_id: int
-    creditor_id: int
-    amount: int
+    stake_note: str = ""
 
 
 @dataclass(frozen=True)
 class Settlement:
     debts: list[Debt]
     verdicts: dict[int, str]  # user id -> won / lost / draw (people with no verdict are omitted)
-
-
-def _allocate(total: int, weights: list[int]) -> list[int]:
-    """Split `total` in proportion to `weights` in whole units, summing exactly to `total`
-    (largest remainder; ties go to the earlier entry)."""
-    weight_sum = sum(weights)
-    shares = [total * w // weight_sum for w in weights]
-    leftover = total - sum(shares)
-    by_remainder = sorted(
-        range(len(weights)), key=lambda i: (-(total * weights[i] % weight_sum), i)
-    )
-    for i in by_remainder[:leftover]:
-        shares[i] += 1
-    return shares
 
 
 class PactKind(ABC):
@@ -156,7 +137,12 @@ class BetKind(PactKind):
         won, lost = (host, opponent) if winner == self.HOST else (opponent, host)
         verdicts = {won.user_id: WON, lost.user_id: LOST}
         stake = opponent.stake_amount
-        debts = [Debt(lost.user_id, won.user_id, stake)] if stake else []
+        note = opponent.stake_note.strip()
+        debts = []
+        if stake:
+            debts.append(Debt(lost.user_id, won.user_id, stake))
+        elif note:  # a stake in kind
+            debts.append(Debt(lost.user_id, won.user_id, 1, note[:ITEM_LENGTH]))
         return Settlement(debts, verdicts)
 
 
@@ -200,14 +186,24 @@ class GroupBetKind(PactKind):
         verdicts = {p.user_id: WON if p.side == winner else LOST for p in parties}
         winners = [p for p in parties if p.side == winner and p.stake_amount]
         losers = [p for p in parties if p.side != winner and p.stake_amount]
-        if not winners or not losers:
-            return Settlement([], verdicts)
-        weights = [w.stake_amount or 0 for w in winners]
         debts = []
-        for loser in losers:
-            for w, amount in zip(winners, _allocate(loser.stake_amount or 0, weights), strict=True):
-                if amount:
-                    debts.append(Debt(loser.user_id, w.user_id, amount))
+        if winners and losers:
+            weights = [w.stake_amount or 0 for w in winners]
+            for loser in losers:
+                shares = allocate(loser.stake_amount or 0, weights)
+                for w, amount in zip(winners, shares, strict=True):
+                    if amount:
+                        debts.append(Debt(loser.user_id, w.user_id, amount))
+        # Stakes in kind (note only): each loser owes their item to one winner, taking turns
+        # among everyone on the winning side so the items are spread out.
+        in_kind = [p for p in parties if p.side != winner and not p.stake_amount and p.stake_note]
+        everyone_right = [p for p in parties if p.side == winner]
+        for i, loser in enumerate(in_kind):
+            if everyone_right:
+                taker = everyone_right[i % len(everyone_right)]
+                debts.append(
+                    Debt(loser.user_id, taker.user_id, 1, loser.stake_note.strip()[:ITEM_LENGTH])
+                )
         return Settlement(debts, verdicts)
 
 

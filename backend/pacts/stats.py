@@ -8,7 +8,7 @@ from typing import Any
 from django.db.models import Sum
 from rest_framework import serializers
 
-from ledger.models import LedgerEntry
+from ledger.models import LedgerEntry, Obligation
 from pacts.models import OutcomeProposal
 
 
@@ -53,7 +53,9 @@ def all_pact_stats() -> dict[int, dict[str, Any]]:
             if verdict in ("won", "lost", "draw"):
                 record[int(user_id)][claim.pact.kind][verdict] += 1
 
-    money = LedgerEntry.objects.filter(source_type="pact")
+    money = Obligation.objects.filter(
+        entry__source_type="pact", entry__status=LedgerEntry.Status.CONFIRMED, item=""
+    )
     won = {
         r["creditor"]: r["total"] for r in money.values("creditor").annotate(total=Sum("amount"))
     }

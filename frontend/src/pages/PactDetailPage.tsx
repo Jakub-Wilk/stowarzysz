@@ -4,6 +4,7 @@ import { BackLink } from '@/components/layout/BackLink'
 import { Button } from '@/components/ui/button'
 import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
+import { PactSettlement } from '@/features/ledger/PactSettlement'
 import { Attachments } from '@/features/pacts/Attachments'
 import { ClaimsPanel } from '@/features/pacts/ClaimsPanel'
 import { dueLabel, isArchived } from '@/features/pacts/format'
@@ -98,6 +99,7 @@ function PactView({ pact }: { pact: PactDetail }) {
 
       <Attachments pact={pact} myId={me?.id} />
       <Outcome pact={pact} />
+      <PactSettlement pactId={pact.id} myId={me?.id} />
       <ResponsePanel pact={pact} />
       <ClaimsPanel pact={pact} />
       <Participants pact={pact} />

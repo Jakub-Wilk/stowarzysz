@@ -1,206 +1,190 @@
-"""All ledger state changes go through here (locked, validated, events sent after commit)."""
+"""All ledger state changes go through here: validated by the entry's kind, locked, versioned,
+and announced after commit.
 
-from collections import defaultdict
+The ledger is public, like Tricount: every change refreshes everyone's view over SSE (ids only),
+and push goes only to the people it concerns. Other apps write to it only via `record_debts`.
+"""
+
+from datetime import date
 from typing import Any
+from uuid import uuid4
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.http import Http404
 from django.utils import timezone
-from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from accounts.avatars import process_photo
 from core import events
-from ledger.models import LedgerEntry
+from ledger import rates
+from ledger.kinds import Conflict, DebtKind, Draft, EntryKind, Push, get_kind
+from ledger.models import EntryAttachment, LedgerEntry, Obligation
+from ledger.money import BASE_CURRENCY, Debt
 from push.sender import send_push
 
+Status = LedgerEntry.Status
 
-def _notify(entry: LedgerEntry, user_ids: list[int], title: str, body: str) -> None:
-    """The ledger is public, so everyone's view refreshes (ids only); push only the people it
-    concerns."""
+MAX_ATTACHMENTS = 10  # per entry
 
+
+def _announce(entry: LedgerEntry, pushes: list[Push]) -> None:
     def announce() -> None:
         events.broadcast("ledger.updated", {"entry_id": entry.pk})
-        send_push(user_ids, title=title, body=body, url="/ledger")
+        for push in pushes:
+            send_push(push.user_ids, title=push.title, body=push.body, url=f"/ledger/{entry.pk}")
 
     transaction.on_commit(announce)
 
 
-def format_amount(amount: int, currency: str = "PLN") -> str:
-    """Minor units to a Polish amount: 750 -> '7,50 zł'; whole amounts drop the decimals."""
-    major, minor = divmod(amount, 100)
-    text = f"{major}" if minor == 0 else f"{major},{minor:02d}"
-    return f"{text} zł" if currency == "PLN" else f"{text} {currency}"
-
-
-def record_debt(
-    debtor: Any,
-    creditor: Any,
-    amount: int,
-    description: str,
-    *,
-    source_type: str = "",
-    source_id: int | None = None,
-    currency: str = "PLN",
-) -> LedgerEntry:
-    """Record that `debtor` owes `creditor` `amount` minor units. Call inside a transaction."""
-    if amount <= 0:
-        raise ValidationError("Kwota musi być dodatnia.")
-    if debtor.pk == creditor.pk:
-        raise ValidationError("Nie można być dłużnikiem samego siebie.")
-    entry = LedgerEntry.objects.create(
-        debtor=debtor,
-        creditor=creditor,
-        amount=amount,
-        currency=currency,
-        description=description,
-        source_type=source_type,
-        source_id=source_id,
-    )
-    _notify(
-        entry,
-        [creditor.pk],
-        "Nowe rozliczenie",
-        f"{debtor.username} jest Ci winien {format_amount(amount, currency)}: {description}",
-    )
+def _locked(entry_id: int) -> LedgerEntry:
+    entry = LedgerEntry.objects.select_for_update().filter(pk=entry_id).first()
+    if entry is None:
+        raise Http404
     return entry
 
 
-class Conflict(APIException):
-    status_code = 409
-    default_detail = "Ta wpłata nie czeka już na decyzję."
-    default_code = "conflict"
+def _rate(draft: Draft) -> rates.Rate | None:
+    """The day's rate for a foreign-currency draft (may hit the network: call it before locking)."""
+    if draft.currency in ("", BASE_CURRENCY):
+        return None
+    return rates.rate_for(draft.currency, draft.occurred_on)
 
 
-def create_payment(
-    payer: Any, receiver_id: int, amount: int, note: str = "", *, currency: str = "PLN"
-) -> LedgerEntry:
-    """The payer says they paid `receiver` `amount`. It counts once the receiver confirms."""
-    if amount <= 0:
-        raise ValidationError({"amount": "Kwota musi być dodatnia."})
-    receiver = get_user_model().objects.members().filter(pk=receiver_id).first()
-    if receiver is None:
-        raise ValidationError({"to_user_id": "Nieznany lub nieaktywny poseł."})
-    if receiver.pk == payer.pk:
-        raise ValidationError({"to_user_id": "Nie możesz zapłacić samemu sobie."})
+def _apply(entry: LedgerEntry, kind: EntryKind, draft: Draft, rate: rates.Rate | None) -> None:
+    """Write a draft onto an entry and (re)derive what it means. Inside a transaction."""
+    for field in ("title", "occurred_on", "amount", "currency", "item", "details"):
+        setattr(entry, field, getattr(draft, field))
+    entry.category, entry.note = draft.category, draft.note
+    entry.source_type, entry.source_id = draft.source_type, draft.source_id
+    entry.rate = rate.value if rate else None
+    entry.rate_date = rate.day if rate else None
+    entry.base_amount = kind.base_amount(entry)
+    entry.save()
+    entry.obligations.all().delete()
+    Obligation.objects.bulk_create(
+        Obligation(
+            entry=entry,
+            debtor_id=d.debtor_id,
+            creditor_id=d.creditor_id,
+            amount=d.amount,
+            item=d.item,
+        )
+        for d in kind.obligations(entry)
+    )
+
+
+def create_entry(kind_key: str, author: Any, data: dict[str, Any]) -> LedgerEntry:
+    """A member adds an expense, a goods debt or a payment."""
+    kind = get_kind(kind_key)
+    draft = kind.clean(data, author)
+    rate = _rate(draft)
     with transaction.atomic():
-        entry = LedgerEntry.objects.create(
-            kind=LedgerEntry.Kind.PAYMENT,
-            status=LedgerEntry.Status.PENDING,
-            debtor=payer,
-            creditor=receiver,
-            amount=amount,
-            currency=currency,
-            description=note.strip()[:200] or "Spłata długu",
+        entry = LedgerEntry(
+            kind=kind.key,
+            status=Status.PENDING if kind.starts_pending else Status.CONFIRMED,
+            created_by=author,
+            updated_by=author,
         )
-        _notify(
-            entry,
-            [receiver.pk],
-            "Wpłata do potwierdzenia",
-            f"{payer.username} twierdzi, że zapłacił(a) Ci {format_amount(amount, currency)}",
-        )
+        _apply(entry, kind, draft, rate)
+        _announce(entry, kind.announcements(entry, "created", author))
     return entry
 
 
-def _decide(entry_id: int, user: Any, *, party: str, status: str) -> LedgerEntry:
+def update_entry(entry_id: int, user: Any, data: dict[str, Any], version: int) -> LedgerEntry:
+    """Replace an entry's content (an expense, by anyone). `version` is the one the user edited;
+    if somebody saved in between, nothing is overwritten (409) and they reload."""
+    current = LedgerEntry.objects.filter(pk=entry_id).first()
+    if current is None:
+        raise Http404
+    kind = get_kind(current.kind)
+    kind.check(current, user, "edit")  # fail fast, before validating or fetching a rate
+    draft = kind.clean(data, user)
+    rate = _rate(draft)
     with transaction.atomic():
-        entry = (
-            LedgerEntry.objects.select_for_update()
-            .select_related("debtor", "creditor")
-            .get(pk=entry_id)
-        )
-        if entry.kind != LedgerEntry.Kind.PAYMENT or entry.status != LedgerEntry.Status.PENDING:
-            raise Conflict()
-        allowed = entry.creditor_id if party == "receiver" else entry.debtor_id
-        if user.pk != allowed:
-            raise PermissionDenied(
-                "Wpłatę potwierdza lub odrzuca odbiorca, a wycofać ją może tylko płacący."
-            )
+        entry = _locked(entry_id)
+        kind.check(entry, user, "edit")
+        if entry.version != version:
+            raise Conflict("Ktoś zmienił ten wpis w międzyczasie. Odśwież i spróbuj jeszcze raz.")
+        entry.version += 1
+        entry.updated_by = user
+        _apply(entry, kind, draft, rate)
+        _announce(entry, kind.announcements(entry, "updated", user))
+    return entry
+
+
+def _decide(entry_id: int, user: Any, action: str, status: str) -> LedgerEntry:
+    with transaction.atomic():
+        entry = _locked(entry_id)
+        kind = get_kind(entry.kind)
+        kind.check(entry, user, action)
         entry.status = status
         entry.decided_at = timezone.now()
-        entry.save(update_fields=["status", "decided_at"])
-        amount = format_amount(entry.amount, entry.currency)
-        if status == LedgerEntry.Status.CONFIRMED:
-            _notify(
-                entry,
-                [entry.debtor_id],
-                "Wpłata potwierdzona",
-                f"{entry.creditor.username} potwierdził(a) wpłatę {amount}",
-            )
-        elif status == LedgerEntry.Status.REJECTED:
-            _notify(
-                entry,
-                [entry.debtor_id],
-                "Wpłata odrzucona",
-                f"{entry.creditor.username} nie potwierdza wpłaty {amount}",
-            )
-        else:
-            _notify(
-                entry,
-                [entry.creditor_id],
-                "Wpłata wycofana",
-                f"{entry.debtor.username} wycofał(a) wpłatę {amount}",
-            )
+        entry.version += 1
+        entry.save(update_fields=["status", "decided_at", "version", "updated_at"])
+        _announce(entry, kind.announcements(entry, status, user))
     return entry
 
 
-def confirm_payment(entry_id: int, user: Any) -> LedgerEntry:
-    """The receiver confirms they were paid: the payment now counts."""
-    return _decide(entry_id, user, party="receiver", status=LedgerEntry.Status.CONFIRMED)
+def confirm(entry_id: int, user: Any) -> LedgerEntry:
+    """The receiver confirms a payment: it now counts."""
+    return _decide(entry_id, user, "confirm", Status.CONFIRMED)
 
 
-def reject_payment(entry_id: int, user: Any) -> LedgerEntry:
+def reject(entry_id: int, user: Any) -> LedgerEntry:
     """The receiver says they weren't paid: the payment never counts."""
-    return _decide(entry_id, user, party="receiver", status=LedgerEntry.Status.REJECTED)
+    return _decide(entry_id, user, "reject", Status.REJECTED)
 
 
-def cancel_payment(entry_id: int, user: Any) -> LedgerEntry:
-    """The payer takes back a payment the receiver hasn't answered."""
-    return _decide(entry_id, user, party="payer", status=LedgerEntry.Status.CANCELLED)
+def cancel(entry_id: int, user: Any) -> LedgerEntry:
+    """Withdraw an entry: delete an expense, take back a payment, drop a goods debt."""
+    return _decide(entry_id, user, "cancel", Status.CANCELLED)
 
 
-def group_balances() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Balances for the whole group, like a Tricount "Bilans", from the confirmed entries.
-
-    Returns `(members, pairs)`. `members` has each person's `net` per currency (positive: others
-    owe them), biggest creditor first; people at zero are left out. `pairs` is who owes whom
-    after netting each two people's entries against each other, biggest first. A confirmed
-    payment counts as a debt the other way round, which is what pays a debt off.
-    """
-    net: dict[tuple[int, str], int] = defaultdict(int)
-    pair_net: dict[tuple[int, int, str], int] = defaultdict(int)  # (low id, high id): low owes
-    people: dict[int, Any] = {}
-    confirmed = LedgerEntry.objects.filter(status=LedgerEntry.Status.CONFIRMED).select_related(
-        "debtor", "creditor"
+def record_debts(
+    debts: list[Debt], *, title: str, source_type: str, source_id: int, on: date | None = None
+) -> LedgerEntry | None:
+    """Record what another app decided is owed (a settled pact) as one debt entry. It counts at
+    once and can only change through its source. Nothing owed (a draw, a void) records nothing.
+    Call inside the caller's transaction."""
+    if not debts:
+        return None
+    kind = get_kind(DebtKind.key)
+    draft = DebtKind.draft(
+        debts,
+        title=title,
+        on=on or timezone.localdate(),
+        source=source_type,
+        source_id=source_id,
     )
-    for entry in confirmed:
-        people[entry.debtor_id] = entry.debtor
-        people[entry.creditor_id] = entry.creditor
-        owing, owed = (entry.debtor_id, entry.creditor_id)
-        if entry.kind == LedgerEntry.Kind.PAYMENT:
-            owing, owed = owed, owing
-        net[(owing, entry.currency)] -= entry.amount
-        net[(owed, entry.currency)] += entry.amount
-        low, high = sorted((owing, owed))
-        pair_net[(low, high, entry.currency)] += (1 if owing == low else -1) * entry.amount
+    with transaction.atomic():
+        entry = LedgerEntry(kind=kind.key, status=Status.CONFIRMED)
+        _apply(entry, kind, draft, None)
+        _announce(entry, kind.announcements(entry, "created", None))
+    return entry
 
-    members = [
-        {"user": people[user_id], "currency": currency, "net": amount}
-        for (user_id, currency), amount in net.items()
-        if amount != 0
-    ]
-    members.sort(key=lambda m: (-m["net"], m["user"].username))
 
-    pairs = []
-    for (low, high, currency), amount in pair_net.items():
-        if amount == 0:
-            continue
-        debtor, creditor = (low, high) if amount > 0 else (high, low)
-        pairs.append(
-            {
-                "debtor": people[debtor],
-                "creditor": people[creditor],
-                "currency": currency,
-                "amount": abs(amount),
-            }
-        )
-    pairs.sort(key=lambda p: (-p["amount"], p["debtor"].username))
-    return members, pairs
+def add_attachment(entry_id: int, user: Any, upload: Any) -> EntryAttachment:
+    """A picture on an entry: the receipt, proof of a transfer."""
+    with transaction.atomic():
+        entry = _locked(entry_id)
+        get_kind(entry.kind).check(entry, user, "attach")
+        if entry.attachments.count() >= MAX_ATTACHMENTS:
+            raise ValidationError(f"Do wpisu można dodać maksymalnie {MAX_ATTACHMENTS} zdjęć.")
+        attachment = EntryAttachment(entry=entry, uploaded_by=user)
+        attachment.image.save(f"{uuid4().hex}.webp", process_photo(upload), save=False)
+        attachment.save()
+        _announce(entry, [])
+    return attachment
+
+
+def delete_attachment(entry_id: int, attachment_id: int, user: Any) -> None:
+    """The uploader or the entry's author can take a picture down."""
+    with transaction.atomic():
+        entry = _locked(entry_id)
+        attachment = entry.attachments.filter(pk=attachment_id).first()
+        if attachment is None:
+            raise Http404
+        if user.pk not in (attachment.uploaded_by_id, entry.created_by_id):
+            raise PermissionDenied("Zdjęcie może usunąć jego autor albo autor wpisu.")
+        attachment.delete()
+        _announce(entry, [])

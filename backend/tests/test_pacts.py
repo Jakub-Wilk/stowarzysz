@@ -4,7 +4,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from accounts.models import User
-from ledger.models import LedgerEntry
+from ledger.models import LedgerEntry, Obligation
 from pacts.models import OutcomeProposal, Pact, PactParticipant
 
 PACTS = "/api/pacts/"
@@ -93,7 +93,7 @@ def propose(user: User, pact: Pact, opponent: User, winner: str) -> Any:
 
 
 def owed() -> set[tuple[str, str, int]]:
-    return {(e.debtor.username, e.creditor.username, e.amount) for e in LedgerEntry.objects.all()}
+    return {(o.debtor.username, o.creditor.username, o.amount) for o in Obligation.objects.all()}
 
 
 # --- auth -------------------------------------------------------------------
@@ -360,7 +360,7 @@ def test_outcome_validation_and_state_checks(alice, bob) -> None:
     assert resp.status_code == 400  # the host's own row isn't a wager
 
 
-def test_non_cash_wager_settles_without_a_debt(alice, bob) -> None:
+def test_non_cash_wager_settles_into_an_item_debt(alice, bob) -> None:
     resp = client_for(alice).post(
         PACTS,
         {
@@ -374,7 +374,11 @@ def test_non_cash_wager_settles_without_a_debt(alice, bob) -> None:
     pact = Pact.objects.get(pk=resp.json()["id"])
     accept(bob, pact)
     settle(pact, alice, bob, bob, "host")
-    assert not LedgerEntry.objects.exists()
+    entry = LedgerEntry.objects.get()
+    assert (entry.kind, entry.source_type, entry.source_id) == ("debt", "pact", pact.pk)
+    assert (entry.item, entry.amount, entry.currency) == ("kolacja", 1, "")
+    debt = entry.obligations.get()
+    assert (debt.debtor_id, debt.creditor_id, debt.item) == (bob.pk, alice.pk, "kolacja")
     pact.refresh_from_db()
     assert pact.status == Pact.Status.RESOLVED
 
