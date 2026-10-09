@@ -14,9 +14,9 @@ export function AppLayout() {
   )
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-2xl flex-col overflow-x-clip">
+    <div className="mx-auto flex h-svh max-w-2xl flex-col overflow-hidden">
       <AppHeader />
-      <main className="flex flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col">
         <SwipePager index={index} onIndexChange={(i) => navigate(tabs[i].path)}>
           {tabs.map(({ path, page: Page }) => (
             <Page key={path} />

@@ -21,7 +21,7 @@ interface SwipePagerProps {
   children: React.ReactNode[]
 }
 
-/** Horizontal pager: pages sit side by side, follow the finger while dragging, then slide into place. */
+/** Horizontal pager: pages sit side by side, each scrolling vertically on its own, follow the finger while dragging, then slide into place. */
 export function SwipePager({ index, onIndexChange, children }: SwipePagerProps) {
   const last = children.length - 1
   const gesture = useRef<Gesture | null>(null)
@@ -73,7 +73,7 @@ export function SwipePager({ index, onIndexChange, children }: SwipePagerProps) 
   const dragging = dragX !== null
   return (
     <div
-      className="flex-1 touch-pan-y overflow-x-hidden"
+      className="min-h-0 flex-1 touch-pan-y overflow-x-hidden"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={(e) => end(e, true)}
@@ -81,13 +81,17 @@ export function SwipePager({ index, onIndexChange, children }: SwipePagerProps) 
     >
       <div
         className={cn(
-          'flex items-start',
+          'flex h-full',
           !dragging && 'transition-transform duration-300 ease-out motion-reduce:transition-none',
         )}
         style={{ transform: `translateX(calc(${-index * 100}% + ${dragX ?? 0}px))` }}
       >
         {children.map((child, i) => (
-          <div key={i} className="w-full shrink-0 p-4" inert={i !== index}>
+          <div
+            key={i}
+            className="h-full w-full shrink-0 overflow-y-auto overscroll-contain p-4"
+            inert={i !== index}
+          >
             {child}
           </div>
         ))}
