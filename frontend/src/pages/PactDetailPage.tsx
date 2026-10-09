@@ -79,11 +79,6 @@ function PactView({ pact }: { pact: PactDetail }) {
             {!isArchived(pact.status) && ` (${dueLabel(pact.due_at)})`}
           </span>
         )}
-        {pact.is_open && !isArchived(pact.status) && (
-          <span className="text-sm text-muted-foreground">
-            Otwarty: każdy może poprosić o dołączenie.
-          </span>
-        )}
       </header>
 
       <section className="flex flex-col gap-2 rounded-lg border bg-card p-4">

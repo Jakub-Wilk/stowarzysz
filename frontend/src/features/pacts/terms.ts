@@ -21,7 +21,6 @@ export function buildTerms(kind: PactKindUI, state: TermsState): TermsResult {
     return { terms: null, error: 'Podaj poprawną kwotę, np. 10 lub 12,50.' }
   }
   if (kind.sided && !state.side) return { terms: null, error: 'Wybierz stronę.' }
-  if (kind.money === 'pot' && amount === null) return { terms: null, error: 'Podaj stawkę.' }
   if (kind.money === 'wager' && amount === null && !state.note.trim()) {
     return { terms: null, error: 'Podaj stawkę: kwotę albo opis (np. kolacja).' }
   }

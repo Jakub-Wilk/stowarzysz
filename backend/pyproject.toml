@@ -47,7 +47,13 @@ python-version = "3.14"
 # (`status: CharField`, `ballot: JSONField`) and reverse relations/`<fk>_id` are unknown. Those
 # rules would only report false positives for model-heavy code, so they are off for this app.
 [[tool.ty.overrides]]
-include = ["voting/**", "secretsanta/**", "pacts/**", "ledger/**"]
+include = [
+  "voting/**",
+  "secretsanta/**",
+  "pacts/**",
+  "ledger/**",
+  "tests/test_pact_flows.py",
+]
 
 [tool.ty.overrides.rules]
 invalid-assignment = "ignore"

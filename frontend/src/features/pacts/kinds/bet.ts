@@ -9,7 +9,8 @@ export const bet: PactKindUI = {
   sided: false,
   wagerBased: true,
   needsDue: false,
-  canBeOpen: true,
+  joinable: true,
+  judgedByEveryone: false,
   outcomeChoices: (pact, wager) => {
     const opponent = wager?.user.username ?? 'przeciwnik'
     return [

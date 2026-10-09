@@ -106,6 +106,11 @@ def _no_claim_in_flight(pact: Pact) -> None:
         raise Conflict("Trwa rozstrzyganie wyniku, poczekaj na jego zakończenie.")
 
 
+def result_allowed(pact: Pact, now: datetime | None = None) -> bool:
+    """With a deadline, nobody can call the result before it has passed (only call it off)."""
+    return pact.due_at is None or pact.due_at <= (now or timezone.now())
+
+
 def create_pact(
     creator: Any,
     *,
@@ -114,23 +119,29 @@ def create_pact(
     condition: str,
     notes: str = "",
     due_at: datetime | None = None,
-    is_open: bool = False,
     config: dict[str, Any] | None = None,
     host: Terms | None = None,
     opponents: list[Terms],
+    backfill: bool = False,
 ) -> Pact:
+    """Create a pact for `creator`.
+
+    TEMPORARY `backfill` (admins entering old pacts for someone): the deadline may be in the
+    past and the invitees are already in with their terms, so the pact starts at once and nobody
+    is notified. Remove together with `creator_id` on the create endpoint.
+    """
     kind = get_kind(kind_key)
-    if is_open and not kind.allows_open_join:
-        raise ValidationError("Ten rodzaj zakładu nie może być otwarty.")
+    if kind.judged_by_everyone and opponents:
+        raise ValidationError(
+            "Tego rodzaju zakładu oceniają wszyscy posłowie, nie zapraszaj nikogo."
+        )
     if kind.needs_due_date and due_at is None:
         raise ValidationError("Podaj termin.")
-    if due_at is not None and due_at <= timezone.now():
+    if due_at is not None and due_at <= timezone.now() and not backfill:
         raise ValidationError("Termin musi być w przyszłości.")
-    if not opponents and not is_open:
-        raise ValidationError("Zaproś przynajmniej jedną osobę albo otwórz zakład dla wszystkich.")
     clean_config = kind.validate_config(config or {})
     host_terms = kind.validate_terms(host or Terms(creator.pk), clean_config, host=True, final=True)
-    cleaned = [kind.validate_terms(t, clean_config, host=False, final=False) for t in opponents]
+    cleaned = [kind.validate_terms(t, clean_config, host=False, final=backfill) for t in opponents]
     ids = [terms.user_id for terms in cleaned]
     if len(set(ids)) != len(ids):
         raise ValidationError("Ta sama osoba jest zaproszona więcej niż raz.")
@@ -148,7 +159,7 @@ def create_pact(
             condition=condition,
             notes=notes,
             due_at=due_at,
-            is_open=is_open,
+            status=Pact.Status.ACTIVE if kind.judged_by_everyone else Pact.Status.PROPOSED,
             config=clean_config,
         )
         PactParticipant.objects.create(
@@ -167,14 +178,17 @@ def create_pact(
                 stake_amount=terms.stake_amount,
                 stake_note=terms.stake_note,
                 side=terms.side,
+                state=State.ACTIVE if backfill else State.INVITED,
             )
             for terms in cleaned
         )
+        if backfill:
+            _refresh_status(pact)
         _announce(
             pact,
             "Nowy zakład",
             f"{creator.username} zaprasza Cię: {title}",
-            push_to=ids,
+            push_to=[] if backfill else ids,
             event="pact.created",
         )
     return pact
@@ -190,12 +204,6 @@ def _refresh_status(pact: Pact) -> None:
     waiting_invites = others.filter(state=State.INVITED).exists()
     if has_active and not (kind.all_must_answer and waiting_invites):
         pact.status = Pact.Status.ACTIVE
-        pact.save(update_fields=["status"])
-    elif (
-        not pact.is_open
-        and not others.filter(state__in=(State.INVITED, State.REQUESTED, State.ACTIVE)).exists()
-    ):
-        pact.status = Pact.Status.DECLINED  # everyone said no (or let their invite lapse)
         pact.save(update_fields=["status"])
 
 
@@ -301,12 +309,12 @@ def delete_attachment(pact_id: int, attachment_id: int, user: Any) -> None:
 
 
 def request_to_join(pact_id: int, user: Any, terms: Terms) -> PactParticipant:
-    """Ask to join an open pact. The kind decides who has to approve."""
+    """Ask to join a pact. The kind decides who has to approve."""
     with transaction.atomic():
         pact = _locked_pact(pact_id)
         kind = get_kind(pact.kind)
-        if not pact.is_open:
-            raise Conflict("Ten zakład nie przyjmuje próśb o dołączenie.")
+        if not kind.joinable:
+            raise Conflict("Do tego rodzaju zakładu nie można dołączać.")
         if pact.status not in (Pact.Status.PROPOSED, Pact.Status.ACTIVE) or (
             pact.due_at is not None and pact.due_at <= timezone.now()
         ):
@@ -431,6 +439,8 @@ def propose_outcome(
         kind = get_kind(pact.kind)
         if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
             raise Conflict()
+        if kind.judged_by_everyone:
+            raise Conflict("To postanowienie oceniają wszyscy posłowie w głosowaniu w Sejmiku.")
         wager = None
         if kind.wager_based:
             wager = PactParticipant.objects.filter(
@@ -447,9 +457,14 @@ def propose_outcome(
         scope = pact.proposals.filter(wager=wager)
         if _ruling_open(scope):
             raise Conflict("Trwa głosowanie w sprawie spornego wyniku.")
-        cleaned = (
-            dict(VOID) if result.get("void") is True else kind.validate_outcome(result, pact.config)
-        )
+        if result.get("void") is True:
+            cleaned = dict(VOID)  # calling it off is always possible
+        elif not result_allowed(pact):
+            raise Conflict(
+                "Wynik można podać dopiero po upływie terminu. Wcześniej można tylko unieważnić."
+            )
+        else:
+            cleaned = kind.validate_outcome(result, pact.config)
         scope.filter(state__in=(Proposal.PENDING, Proposal.DISPUTED)).update(
             state=Proposal.SUPERSEDED
         )
@@ -646,6 +661,61 @@ def apply_ruling(proposal_id: int, *, upheld: bool) -> dict[str, Any]:
                 push_to=_active_ids(pact),
             )
     return {"applied": upheld}
+
+
+# --- resolutions: judged by everyone ---------------------------------------------
+
+
+def call_judgment(pact_id: int, user: Any) -> Pact:
+    """Put a resolution to a Sejmik vote of every member except its author.
+
+    Only once the deadline has passed, for the author and everyone else alike.
+    """
+    with transaction.atomic():
+        pact = _locked_pact(pact_id)
+        if not get_kind(pact.kind).judged_by_everyone:
+            raise Conflict("Ten zakład nie jest oceniany w głosowaniu.")
+        if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
+            raise Conflict()
+        if not result_allowed(pact):
+            raise PermissionDenied("Postanowienie można ocenić dopiero po upływie terminu.")
+        if pact.judgment_poll_id is not None:
+            raise Conflict("Posłowie już oceniają to postanowienie.")
+        poll = voting_services.create_poll(
+            creator=user,
+            title="",
+            kind_key="resolution_judgment",
+            config={"pact_id": pact.pk},
+            participant_ids=[],
+        )
+        pact.judgment_poll = poll
+        pact.save(update_fields=["judgment_poll"])
+        _announce(pact, "", "")
+    return pact
+
+
+def apply_judgment(pact_id: int, *, kept: bool, decided: bool) -> dict[str, Any]:
+    """Called when the judging vote closes: settle the resolution, or (tie, no votes) leave it
+    open so somebody can call for judgment again."""
+    with transaction.atomic():
+        pact = _locked_pact(pact_id)
+        pact.judgment_poll = None
+        pact.save(update_fields=["judgment_poll"])
+        if not decided:
+            _announce(
+                pact,
+                "Brak rozstrzygnięcia",
+                f"Posłowie nie rozstrzygnęli: {pact.title}",
+                push_to=[pact.creator_id],
+            )
+            return {"applied": False}
+        if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
+            return {"applied": False, "apply_error": "Zakład jest już zamknięty."}
+        proposal = OutcomeProposal.objects.create(
+            pact=pact, proposed_by=pact.creator, result={"kept": kept}
+        )
+        _settle(pact, proposal)
+    return {"applied": True}
 
 
 # --- deadlines -----------------------------------------------------------------

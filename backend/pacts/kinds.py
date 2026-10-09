@@ -66,7 +66,8 @@ def _allocate(total: int, weights: list[int]) -> list[int]:
 class PactKind(ABC):
     key: ClassVar[str]
     has_money: ClassVar[bool] = False
-    allows_open_join: ClassVar[bool] = False  # may be created open for anyone to ask to join
+    joinable: ClassVar[bool] = True  # anyone may ask to join (the participants decide)
+    judged_by_everyone: ClassVar[bool] = False  # a Sejmik vote of all members decides it
     needs_due_date: ClassVar[bool] = False
     wager_based: ClassVar[bool] = False  # each opponent is a separate wager against the host
     all_must_answer: ClassVar[bool] = False  # starts only once every invitee has answered
@@ -120,7 +121,6 @@ class BetKind(PactKind):
 
     key = "bet"
     has_money = True
-    allows_open_join = True
     wager_based = True
 
     HOST = "host"
@@ -160,50 +160,33 @@ class BetKind(PactKind):
         return Settlement(debts, verdicts)
 
 
-class _SidedKind(PactKind):
-    """Participants each pick a side of a question; the winning side is the one that was right."""
+class GroupBetKind(PactKind):
+    """Everyone picks a side of a question; the winning side is the one that was right.
 
-    allows_open_join = True
+    With stakes it is a shared pot: the winning side splits the losing side's stakes in
+    proportion to their own, so nobody loses more than they put in. Stakes are optional, so
+    without any it is a plain prediction that just scores who was right."""
+
+    key = "group_bet"
+    has_money = True
+    all_must_answer = True  # every stake changes everyone's payout
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         return {"sides": _clean_sides(config)}
+
+    def validate_terms(
+        self, terms: Terms, config: dict[str, Any], *, host: bool, final: bool
+    ) -> Terms:
+        side = terms.side.strip()
+        if (host or final or side) and side not in config["sides"]:
+            raise ValidationError({"side": "Wybierz jedną ze stron zakładu."})
+        return Terms(terms.user_id, _clean_amount(terms), terms.stake_note.strip(), side)
 
     def validate_outcome(self, result: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
         winner = result.get("winner")
         if winner != DRAW and winner not in config["sides"]:
             raise ValidationError("Wynik musi wskazywać jedną ze stron albo remis.")
         return {"winner": winner}
-
-    def _check_side(self, terms: Terms, config: dict[str, Any], *, required: bool) -> str:
-        side = terms.side.strip()
-        if not side and not required:
-            return ""
-        if side not in config["sides"]:
-            raise ValidationError({"side": "Wybierz jedną ze stron zakładu."})
-        return side
-
-    def _verdicts(self, parties: list[Party], winner: str) -> dict[int, str]:
-        if winner == DRAW:
-            return {p.user_id: DREW for p in parties}
-        return {p.user_id: WON if p.side == winner else LOST for p in parties}
-
-
-class GroupBetKind(_SidedKind):
-    """A shared pot: everyone picks a side and a stake. The winning side splits the losing side's
-    stakes in proportion to their own, so nobody can lose more than they put in."""
-
-    key = "group_bet"
-    has_money = True
-    all_must_answer = True  # every stake changes everyone's payout
-
-    def validate_terms(
-        self, terms: Terms, config: dict[str, Any], *, host: bool, final: bool
-    ) -> Terms:
-        committing = host or final
-        side = self._check_side(terms, config, required=committing)
-        if committing and not terms.stake_amount:
-            raise ValidationError({"stake_amount": "Podaj stawkę."})
-        return Terms(terms.user_id, _clean_amount(terms), terms.stake_note.strip(), side)
 
     def join_approvers(self, host_id: int, active_ids: list[int]) -> set[int]:
         return set(active_ids)
@@ -212,9 +195,9 @@ class GroupBetKind(_SidedKind):
         self, parties: list[Party], result: dict[str, Any], config: dict[str, Any]
     ) -> Settlement:
         winner = result["winner"]
-        verdicts = self._verdicts(parties, winner)
         if winner == DRAW:
-            return Settlement([], verdicts)
+            return Settlement([], {p.user_id: DREW for p in parties})
+        verdicts = {p.user_id: WON if p.side == winner else LOST for p in parties}
         winners = [p for p in parties if p.side == winner and p.stake_amount]
         losers = [p for p in parties if p.side != winner and p.stake_amount]
         if not winners or not losers:
@@ -228,32 +211,15 @@ class GroupBetKind(_SidedKind):
         return Settlement(debts, verdicts)
 
 
-class PredictionKind(_SidedKind):
-    """A dated claim; everyone picks a side and the ones who were right score. No money."""
-
-    key = "prediction"
-    needs_due_date = True
-
-    def validate_terms(
-        self, terms: Terms, config: dict[str, Any], *, host: bool, final: bool
-    ) -> Terms:
-        if terms.stake_amount:
-            raise ValidationError("Przewidywania nie mają stawki pieniężnej.")
-        side = self._check_side(terms, config, required=host or final)
-        return Terms(terms.user_id, None, terms.stake_note.strip(), side)
-
-    def settle(
-        self, parties: list[Party], result: dict[str, Any], config: dict[str, Any]
-    ) -> Settlement:
-        return Settlement([], self._verdicts(parties, result["winner"]))
-
-
 class ResolutionKind(PactKind):
-    """A personal resolution (postanowienie): the host commits to something and the others judge
-    whether it was kept. No money, only pride."""
+    """A personal resolution (postanowienie): the host commits to something and every other
+    member judges, in a Sejmik vote, whether it was kept. No money, only pride, and nobody is
+    invited: the whole house is the jury."""
 
     key = "resolution"
     needs_due_date = True
+    joinable = False
+    judged_by_everyone = True
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         return {}
@@ -296,5 +262,4 @@ def get_kind(key: str) -> PactKind:
 
 register(BetKind())
 register(GroupBetKind())
-register(PredictionKind())
 register(ResolutionKind())

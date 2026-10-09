@@ -1,7 +1,5 @@
-import csv
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from io import StringIO
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,8 +8,8 @@ from django.utils import timezone
 
 from accounts.models import User
 from ledger.models import LedgerEntry
-from pacts import importing, services
-from pacts.models import OutcomeProposal, Pact, PactParticipant
+from pacts import services
+from pacts.models import OutcomeProposal, Pact
 from tests.test_pacts import (
     PACTS,
     accept,
@@ -28,6 +26,7 @@ from tests.test_pacts import (
     url,
     wager,
 )
+from voting import services as voting_services
 from voting.models import Poll
 
 pytestmark = pytest.mark.usefixtures("run_on_commit")
@@ -92,14 +91,15 @@ def test_a_group_bet_decline_lets_the_rest_start(group, bob, carol) -> None:
     assert state(group) == Pact.Status.ACTIVE
 
 
-def test_group_bet_acceptance_needs_a_side_and_a_stake(group, bob) -> None:
+def test_group_bet_acceptance_needs_a_side_but_a_stake_is_optional(group, bob) -> None:
     assert respond(bob, group).status_code == 400
-    assert respond(bob, group, side="nie").status_code == 400
     assert respond(bob, group, side="maybe", stake_amount=100).status_code == 400
     assert wager(group, bob).state == "invited"
+    assert respond(bob, group, side="nie").status_code == 200
+    assert wager(group, bob).stake_amount is None
 
 
-def test_group_bet_needs_the_hosts_side_and_stake(alice, bob) -> None:
+def test_group_bet_needs_the_hosts_side(alice, bob) -> None:
     resp = client_for(alice).post(
         PACTS,
         {
@@ -169,7 +169,7 @@ def decide(user: User, pact: Pact, requester: User, approve: bool) -> Any:
 
 
 def test_bet_join_request_is_approved_by_the_host_alone(alice, bob, carol, dave, pushes) -> None:
-    pact = make_bet(alice, (bob, 1000), is_open=True)
+    pact = make_bet(alice, (bob, 1000))
     accept(bob, pact)
     pushes.clear()
     assert request(carol, pact, stake_amount=1500).status_code == 200
@@ -183,7 +183,7 @@ def test_bet_join_request_is_approved_by_the_host_alone(alice, bob, carol, dave,
 
 
 def test_a_joined_wager_settles_like_any_other(alice, bob, carol) -> None:
-    pact = make_bet(alice, (bob, 1000), is_open=True)
+    pact = make_bet(alice, (bob, 1000))
     accept(bob, pact)
     request(carol, pact, stake_amount=1500)
     decide(alice, pact, carol, True)
@@ -192,18 +192,19 @@ def test_a_joined_wager_settles_like_any_other(alice, bob, carol) -> None:
     assert owed() == {("alice", "carol", 1500)}
 
 
-def test_bet_join_needs_a_stake_and_an_open_pact(alice, bob, carol) -> None:
-    closed = make_bet(alice, (bob, 1000))
-    accept(bob, closed)
-    assert request(carol, closed, stake_amount=100).status_code == 409  # not open
-    open_pact = make_bet(alice, (bob, 1000), is_open=True)
-    assert request(carol, open_pact).status_code == 400
-    assert request(carol, open_pact, stake_amount=100).status_code == 200
-    assert request(carol, open_pact, stake_amount=100).status_code == 409  # already asked
+def test_every_pact_takes_join_requests_but_a_bet_needs_a_stake(alice, bob, carol) -> None:
+    pact = make_bet(alice, (bob, 1000))
+    accept(bob, pact)
+    assert request(carol, pact).status_code == 400
+    assert request(carol, pact, stake_amount=100).status_code == 200
+    assert request(carol, pact, stake_amount=100).status_code == 409  # already asked
+    done = make_bet(alice, (bob, 1000))
+    Pact.objects.filter(pk=done.pk).update(status=Pact.Status.RESOLVED)
+    assert request(carol, done, stake_amount=100).status_code == 409  # too late
 
 
 def test_rejected_requests_can_be_made_again(alice, bob, carol) -> None:
-    pact = make_bet(alice, (bob, 1000), is_open=True)
+    pact = make_bet(alice, (bob, 1000))
     accept(bob, pact)
     request(carol, pact, stake_amount=100)
     decide(alice, pact, carol, False)
@@ -213,7 +214,7 @@ def test_rejected_requests_can_be_made_again(alice, bob, carol) -> None:
 
 
 def test_withdrawing_a_request(alice, bob, carol) -> None:
-    pact = make_bet(alice, (bob, 1000), is_open=True)
+    pact = make_bet(alice, (bob, 1000))
     request(carol, pact, stake_amount=100)
     assert client_for(carol).post(url(pact, "withdraw/")).status_code == 200
     assert wager(pact, carol).state == "withdrawn"
@@ -222,7 +223,7 @@ def test_withdrawing_a_request(alice, bob, carol) -> None:
 
 
 def test_an_open_pact_with_nobody_invited_starts_with_the_first_approved_joiner(alice, bob) -> None:
-    pact = create(alice, kind="bet", title="t", condition="c", is_open=True)
+    pact = create(alice, kind="bet", title="t", condition="c")
     assert pact.status == Pact.Status.PROPOSED
     request(bob, pact, stake_amount=500)
     decide(alice, pact, bob, True)
@@ -237,7 +238,6 @@ def test_group_bet_joiners_need_every_active_participant_to_approve(
         kind="group_bet",
         title="t",
         condition="c",
-        is_open=True,
         host={"side": "tak", "stake_amount": 1000},
         opponents=[{"user_id": bob.pk}],
     )
@@ -257,7 +257,6 @@ def test_one_no_is_enough_to_reject_a_group_bet_joiner(alice, bob, dave) -> None
         kind="group_bet",
         title="t",
         condition="c",
-        is_open=True,
         host={"side": "tak", "stake_amount": 1000},
         opponents=[{"user_id": bob.pk}],
     )
@@ -273,7 +272,6 @@ def test_group_bet_membership_is_frozen_while_a_claim_is_open(alice, bob, carol,
         kind="group_bet",
         title="t",
         condition="c",
-        is_open=True,
         host={"side": "tak", "stake_amount": 1000},
         opponents=[{"user_id": bob.pk}],
     )
@@ -283,7 +281,7 @@ def test_group_bet_membership_is_frozen_while_a_claim_is_open(alice, bob, carol,
 
 
 def test_detail_tells_the_caller_what_they_can_do(alice, bob, carol) -> None:
-    pact = make_bet(alice, (bob, 1000), is_open=True)
+    pact = make_bet(alice, (bob, 1000))
     assert client_for(bob).get(url(pact)).json()["actions"]["can_respond"] is True
     accept(bob, pact)
     assert client_for(carol).get(url(pact)).json()["actions"]["can_request_join"] is True
@@ -329,18 +327,16 @@ def test_calling_off_every_wager_voids_the_pact(alice, bob) -> None:
     assert state(pact) == Pact.Status.VOID
 
 
-def test_prediction_scores_those_who_picked_the_winning_side(alice, bob, carol) -> None:
+def test_a_group_bet_without_stakes_is_a_prediction(alice, bob, carol) -> None:
     pact = create(
         alice,
-        kind="prediction",
+        kind="group_bet",
         title="Polska na mundialu",
         condition="Wyjdzie z grupy",
-        due_at=(timezone.now() + timedelta(days=30)).isoformat(),
         host={"side": "tak"},
         opponents=[{"user_id": bob.pk}, {"user_id": carol.pk}],
     )
     assert respond(bob, pact).status_code == 400  # must pick a side
-    assert respond(bob, pact, side="nie", stake_amount=100).status_code == 400  # no money here
     respond(bob, pact, side="nie")
     respond(carol, pact, side="tak")
     proposal = claim(bob, pact, {"winner": "tak"}).json()
@@ -352,20 +348,11 @@ def test_prediction_scores_those_who_picked_the_winning_side(alice, bob, carol) 
     assert state(pact) == Pact.Status.RESOLVED
 
 
-def test_prediction_and_resolution_require_a_deadline(alice, bob) -> None:
-    for kind in ("prediction", "resolution"):
-        resp = client_for(alice).post(
-            PACTS,
-            {
-                "kind": kind,
-                "title": "t",
-                "condition": "c",
-                "host": {"side": "tak"} if kind == "prediction" else {},
-                "opponents": [{"user_id": bob.pk}],
-            },
-            format="json",
-        )
-        assert resp.status_code == 400
+def test_resolutions_need_a_deadline(alice) -> None:
+    resp = client_for(alice).post(
+        PACTS, {"kind": "resolution", "title": "t", "condition": "c"}, format="json"
+    )
+    assert resp.status_code == 400
 
 
 def test_a_deadline_must_be_in_the_future(alice, bob) -> None:
@@ -383,37 +370,116 @@ def test_a_deadline_must_be_in_the_future(alice, bob) -> None:
     assert resp.status_code == 400
 
 
-def test_resolution_is_judged_by_the_others(alice, bob, carol) -> None:
-    pact = create(
-        alice,
+def resolution(user: User, **extra: Any) -> Pact:
+    return create(
+        user,
         kind="resolution",
         title="Rzucę palenie",
         condition="Do końca roku bez papierosa",
         due_at=(timezone.now() + timedelta(days=90)).isoformat(),
-        opponents=[{"user_id": bob.pk, "stake_note": "stawiam piwo"}, {"user_id": carol.pk}],
+        **extra,
     )
-    respond(bob, pact)
-    respond(carol, pact)
-    assert client_for(alice).post(url(pact), {}).status_code == 405
-    proposal = claim(alice, pact, {"kept": True}).json()
-    confirm(bob, pact, proposal["id"])
-    confirm(carol, pact, proposal["id"])
-    assert OutcomeProposal.objects.get(pk=proposal["id"]).verdicts == {str(alice.pk): "won"}
-    assert state(pact) == Pact.Status.RESOLVED
-    assert not LedgerEntry.objects.exists()
 
 
-def test_resolutions_have_no_money_or_open_join(alice, bob) -> None:
+def overdue(pact: Pact) -> None:
+    Pact.objects.filter(pk=pact.pk).update(due_at=timezone.now() - timedelta(hours=1))
+
+
+def judgment(user: User, pact: Pact) -> Any:
+    return client_for(user).post(url(pact, "judgment/"))
+
+
+def juror_vote(user: User, poll: Poll, kept: bool) -> Any:
+    return client_for(user).put(
+        f"/api/polls/{poll.pk}/ballot/", {"ballot": {"kept": kept}}, format="json"
+    )
+
+
+def test_a_resolution_starts_at_once_and_invites_nobody(alice, bob) -> None:
+    pact = resolution(alice)
+    assert state(pact) == Pact.Status.ACTIVE
+    assert [p.user.username for p in pact.participants.all()] == ["alice"]
     body = {
         "kind": "resolution",
         "title": "t",
         "condition": "c",
         "due_at": (timezone.now() + timedelta(days=9)).isoformat(),
+        "opponents": [{"user_id": bob.pk}],
     }
-    paid = {**body, "opponents": [{"user_id": bob.pk, "stake_amount": 100}]}
-    assert client_for(alice).post(PACTS, paid, format="json").status_code == 400
-    opened = {**body, "is_open": True, "opponents": [{"user_id": bob.pk}]}
-    assert client_for(alice).post(PACTS, opened, format="json").status_code == 400
+    assert client_for(alice).post(PACTS, body, format="json").status_code == 400
+    assert request(bob, pact).status_code == 409  # nobody joins a resolution
+    detail = client_for(bob).get(url(pact)).json()["actions"]
+    assert detail["can_request_join"] is False
+
+
+def test_a_resolution_is_judged_by_every_other_member(alice, bob, carol, dave) -> None:
+    pact = resolution(alice)
+    assert judgment(alice, pact).status_code == 403  # nobody before the deadline, author included
+    assert client_for(alice).get(url(pact)).json()["actions"]["can_call_judgment"] is False
+    overdue(pact)
+    assert judgment(alice, pact).status_code == 200
+    pact.refresh_from_db()
+    poll = pact.judgment_poll
+    assert poll.kind == "resolution_judgment" and poll.title == "Ocena postanowienia: Rzucę palenie"
+    assert set(poll.participants.values_list("user__username", flat=True)) == {
+        "bob",
+        "carol",
+        "dave",
+    }
+    assert judgment(alice, pact).status_code == 409  # one vote at a time
+    manual = client_for(alice).post(
+        url(pact, "outcome/"), {"result": {"kept": True}}, format="json"
+    )
+    assert manual.status_code == 409  # judged by vote only
+    assert juror_vote(alice, poll, True).status_code == 403  # the author doesn't judge
+
+    for juror, kept in ((bob, True), (carol, True), (dave, False)):
+        juror_vote(juror, poll, kept)
+    poll.refresh_from_db()
+    assert poll.result["approved"] is True and poll.result["applied"] is True
+    assert state(pact) == Pact.Status.RESOLVED
+    claim_row = OutcomeProposal.objects.get(pact=pact)
+    assert claim_row.verdicts == {str(alice.pk): "won"} and claim_row.result == {"kept": True}
+    pact.refresh_from_db()
+    assert pact.judgment_poll is None
+    assert not LedgerEntry.objects.exists()
+
+
+def test_a_broken_resolution_counts_as_lost(alice, bob, carol) -> None:
+    pact = resolution(alice)
+    overdue(pact)
+    judgment(alice, pact)
+    pact.refresh_from_db()
+    for juror in (bob, carol):
+        juror_vote(juror, pact.judgment_poll, False)
+    assert OutcomeProposal.objects.get(pact=pact).verdicts == {str(alice.pk): "lost"}
+
+
+def test_a_tied_or_empty_judgment_leaves_the_resolution_open(alice, bob, carol, dave) -> None:
+    pact = resolution(alice)
+    overdue(pact)
+    judgment(alice, pact)
+    pact.refresh_from_db()
+    juror_vote(bob, pact.judgment_poll, True)
+    juror_vote(carol, pact.judgment_poll, False)
+    voting_services.process_deadlines(now=timezone.now() + timedelta(days=4))  # dave never votes
+    assert state(pact) == Pact.Status.ACTIVE
+    pact.refresh_from_db()
+    assert pact.judgment_poll is None and not OutcomeProposal.objects.exists()
+    assert judgment(alice, pact).status_code == 200  # judge again
+
+
+def test_anyone_can_call_for_judgment_once_the_deadline_has_passed(alice, bob) -> None:
+    pact = resolution(alice)
+    Pact.objects.filter(pk=pact.pk).update(due_at=timezone.now() - timedelta(hours=1))
+    assert client_for(bob).get(url(pact)).json()["actions"]["can_call_judgment"] is True
+    assert judgment(bob, pact).status_code == 200
+
+
+def test_only_resolutions_are_judged_this_way(alice, bob) -> None:
+    pact = make_bet(alice, (bob, 1000))
+    accept(bob, pact)
+    assert judgment(alice, pact).status_code == 409
 
 
 # --- Sejmik rulings ------------------------------------------------------------------
@@ -555,13 +621,13 @@ def test_overdue_pacts_are_moved_and_nudged_weekly(alice, bob, pushes) -> None:
     assert services.process_deadlines(now + timedelta(days=30))["nudged"] == 0
 
 
-def test_unanswered_invites_expire_and_an_abandoned_pact_is_declined(alice, bob) -> None:
+def test_unanswered_invites_expire(alice, bob) -> None:
     pact = make_bet(alice, (bob, 1000))
     assert services.process_deadlines()["expired"] == 0
     counts = services.process_deadlines(timezone.now() + timedelta(days=8))
     assert counts["expired"] == 1
     assert wager(pact, bob).state == "expired"
-    assert state(pact) == Pact.Status.DECLINED
+    assert state(pact) == Pact.Status.PROPOSED  # still open to anyone who asks to join
 
 
 def test_expiring_a_straggler_starts_a_group_bet(group, bob) -> None:
@@ -625,103 +691,83 @@ def test_stats_leave_out_members_with_no_record(alice, bob, dave) -> None:
     assert names == []
 
 
-# --- importing the old sheet ----------------------------------------------------------------
+# --- TEMPORARY: admins creating pacts as someone else ----------------------------------------
 
 
-def test_parse_due() -> None:
-    assert importing.parse_due("23.01.2042") == datetime(2042, 1, 23, 23, 59, tzinfo=UTC)
-    assert importing.parse_due("do 2025-06-01 włącznie") == datetime(2025, 6, 1, 23, 59, tzinfo=UTC)
-    assert importing.parse_due("2026") == datetime(2026, 12, 31, 23, 59, tzinfo=UTC)
-    assert importing.parse_due("kiedyś") is None
-    assert importing.parse_due("31.02.2030") is None
+@pytest.fixture
+def boss(db) -> User:
+    return User.objects.create_superuser("boss", "admin-pass-123")
 
 
-HEADERS = [
-    "Nazwa zakładu/postanowienia",
-    "Warunek",
-    "Czas",
-    "Nagroda",
-    "Dodatkowe info",
-    "Rezultat",
-    "Wypłacone",
-]
-
-
-def write_csv(path: Path, rows: list[list[str]]) -> Path:
-    with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        csv.writer(handle).writerows([HEADERS, *rows])
-    return path
-
-
-def test_import_command_creates_pacts_bets_and_ledger_entries(tmp_path, alice, bob, carol) -> None:
-    sheet = write_csv(
-        tmp_path / "sheet.csv",
-        [
-            ["Zakład trumpowski", "Trump wygra", "2016", "50 zł", "", "✅", "✅"],
-            [
-                "Rozwód przed 40",
-                "Roman się rozwiedzie",
-                "23.01.2042",
-                "10000 zł",
-                "info",
-                "❓",
-                "➖",
-            ],
-            ["Psztrycze Podrywy", "5 randek", "2025", "", "", "❌", ""],
-            ["Anulowany", "x", "", "", "", "➖", ""],
-            ["", "", "", "", "", "", ""],
-        ],
-    )
-    mapping = tmp_path / "map.json"
-    mapping.write_text(
-        '{"Zakład trumpowski": {"host": "alice", "opponents": '
-        '[{"username": "bob", "stake_pln": 50}]},'
-        ' "Psztrycze Podrywy": {"host": "alice", "opponents": '
-        '[{"username": "carol", "stake_pln": 20.5}]}}'
-    )
-    out = StringIO()
-    call_command("import_pacts", str(sheet), host="alice", map=mapping, stdout=out)
-    assert "Imported 4 pact(s), skipped 1" in out.getvalue()
-
-    trump = Pact.objects.get(title="Zakład trumpowski")
-    assert (trump.kind, trump.status) == ("bet", Pact.Status.RESOLVED)
-    assert trump.due_at.year == 2016
-    entry = LedgerEntry.objects.get(source_id=trump.pk)
-    assert (entry.debtor, entry.creditor, entry.amount) == (bob, alice, 5000)
-    assert entry.settled_at is not None  # Wypłacone ✅
-
-    podrywy = Pact.objects.get(title="Psztrycze Podrywy")
-    unpaid = LedgerEntry.objects.get(source_id=podrywy.pk)
-    assert (unpaid.debtor, unpaid.creditor, unpaid.amount) == (alice, carol, 2050)
-    assert unpaid.settled_at is None  # host lost, nothing marked paid
-
-    divorce = Pact.objects.get(title="Rozwód przed 40")
-    assert (divorce.kind, divorce.status) == ("resolution", Pact.Status.ACTIVE)
-    assert "Nagroda: 10000 zł" in divorce.notes
-    assert Pact.objects.get(title="Anulowany").status == Pact.Status.VOID
-
-    # imported results feed the stats
-    rows = {r["user"]["username"]: r for r in client_for(alice).get(PACTS + "stats/").json()}
-    assert (rows["alice"]["won"], rows["alice"]["lost"]) == (1, 1)
-
-    # re-running adds nothing
-    again = StringIO()
-    call_command("import_pacts", str(sheet), host="alice", map=mapping, stdout=again)
-    assert "Imported 0 pact(s), skipped 5" in again.getvalue()
-
-
-def test_import_dry_run_changes_nothing(tmp_path, alice) -> None:
-    sheet = write_csv(tmp_path / "s.csv", [["Coś", "c", "2030", "", "", "✅", ""]])
-    out = StringIO()
-    call_command("import_pacts", str(sheet), host="alice", dry_run=True, stdout=out)
-    assert "dry run" in out.getvalue()
+def test_only_superusers_can_create_as_someone_else(alice, bob) -> None:
+    body = {
+        "kind": "bet",
+        "title": "t",
+        "condition": "c",
+        "creator_id": bob.pk,
+        "opponents": [{"user_id": alice.pk, "stake_amount": 100}],
+    }
+    assert client_for(alice).post(PACTS, body, format="json").status_code == 403
     assert Pact.objects.count() == 0
 
 
-def test_import_reports_unknown_users(tmp_path, alice) -> None:
-    from django.core.management.base import CommandError
+def test_an_admin_creates_an_old_bet_as_someone_with_everyone_already_in(
+    boss, alice, bob, pushes
+) -> None:
+    past = (timezone.now() - timedelta(days=400)).isoformat()
+    resp = client_for(boss).post(
+        PACTS,
+        {
+            "kind": "bet",
+            "title": "Zakład trumpowski",
+            "condition": "Trump wygra",
+            "due_at": past,
+            "creator_id": alice.pk,
+            "opponents": [{"user_id": bob.pk, "stake_amount": 5000}],
+        },
+        format="json",
+    )
+    assert resp.status_code == 201, resp.json()
+    pact = Pact.objects.get()
+    assert pact.creator == alice and pact.status == Pact.Status.ACTIVE
+    assert wager(pact, bob).state == "active" and wager(pact, alice).role == "host"
+    assert not pushes  # nobody is pinged about an old pact
+    # the people involved can settle it as usual (the deadline has long passed)
+    assert client_for(bob).get(url(pact)).json()["actions"]["can_set_result"] is True
+    proposal = propose(alice, pact, bob, "host").json()
+    confirm(bob, pact, proposal["id"])
+    assert owed() == {("bob", "alice", 5000)}
 
-    sheet = write_csv(tmp_path / "s.csv", [["Coś", "c", "2030", "", "", "", ""]])
-    with pytest.raises(CommandError, match="nobody"):
-        call_command("import_pacts", str(sheet), host="nobody")
-    assert PactParticipant.objects.count() == 0
+
+def test_an_admin_group_bet_takes_each_invitees_side_up_front(boss, alice, bob) -> None:
+    body = {
+        "kind": "group_bet",
+        "title": "t",
+        "condition": "c",
+        "creator_id": alice.pk,
+        "host": {"side": "tak"},
+        "opponents": [{"user_id": bob.pk}],
+    }
+    assert client_for(boss).post(PACTS, body, format="json").status_code == 400  # no side for bob
+    body["opponents"] = [{"user_id": bob.pk, "side": "nie", "stake_amount": 200}]
+    assert client_for(boss).post(PACTS, body, format="json").status_code == 201
+    pact = Pact.objects.get()
+    assert pact.status == Pact.Status.ACTIVE and wager(pact, bob).side == "nie"
+
+
+def test_creating_as_an_unknown_member_is_rejected(boss, dave) -> None:
+    User.objects.filter(pk=dave.pk).update(is_active=False)
+    for creator_id in (9999, dave.pk):
+        body = {"kind": "bet", "title": "t", "condition": "c", "creator_id": creator_id}
+        assert client_for(boss).post(PACTS, body, format="json").status_code == 400
+
+
+def test_a_normal_create_still_needs_a_future_deadline(alice, bob) -> None:
+    body = {
+        "kind": "bet",
+        "title": "t",
+        "condition": "c",
+        "due_at": (timezone.now() - timedelta(days=1)).isoformat(),
+        "opponents": [{"user_id": bob.pk, "stake_amount": 100}],
+    }
+    assert client_for(alice).post(PACTS, body, format="json").status_code == 400

@@ -37,7 +37,6 @@ export function PactRow({ pact }: { pact: PactListItem }) {
           <span>
             {pact.active_count} {plural(pact.active_count, PARTICIPANT_FORMS)}
           </span>
-          {pact.is_open && !isArchived(pact.status) && <span>Otwarty</span>}
           {dueText && <span>{dueText}</span>}
           {needsYou && (
             <span className="font-semibold text-foreground">Czeka na Twoją odpowiedź</span>

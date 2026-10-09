@@ -2,7 +2,16 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { Button } from '@/components/ui/button'
-import { useClaimAction, useProposeOutcome } from '@/features/pacts/hooks'
+import { formatDate } from '@/features/secretsanta/format'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useCallJudgment, useClaimAction, useProposeOutcome } from '@/features/pacts/hooks'
 import { getPactKind } from '@/features/pacts/kinds'
 import { VOID_CHOICE, type OutcomeChoice } from '@/features/pacts/kinds/types'
 import { MutationError } from '@/features/pacts/MutationError'
@@ -112,65 +121,126 @@ function ProposeForm({ pact }: { pact: PactDetail }) {
   )
   const [wagerId, setWagerId] = useState<number | null>(wagers[0]?.id ?? null)
   const [choice, setChoice] = useState<OutcomeChoice | null>(null)
+  const [open, setOpen] = useState(false)
   const wager = wagers.find((w) => w.id === wagerId) ?? null
-  const choices = [...kind.outcomeChoices(pact, wager), VOID_CHOICE]
+  const canSet = pact.actions.can_set_result
+  // before the deadline nobody can call the result: the only claim left is calling it off
+  const choices = canSet ? [...kind.outcomeChoices(pact, wager), VOID_CHOICE] : [VOID_CHOICE]
 
   if (kind.wagerBased && wagers.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
-      <h3 className="text-lg font-semibold">Podaj wynik</h3>
-      {kind.wagerBased && wagers.length > 1 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Zakład">
-          {wagers.map((w) => (
-            <Button
-              key={w.id}
-              variant={wagerId === w.id ? 'default' : 'outline'}
-              aria-pressed={wagerId === w.id}
-              onClick={() => {
-                setWagerId(w.id)
-                setChoice(null)
-              }}
-            >
-              z {w.user.username}
-            </Button>
-          ))}
-        </div>
-      )}
-      {kind.wagerBased && wagers.length === 1 && (
-        <p className="text-sm text-muted-foreground">Zakład z {wagers[0].user.username}.</p>
-      )}
-      <div className="flex flex-col gap-2" role="group" aria-label="Wynik">
-        {choices.map((c) => (
-          <Button
-            key={c.label}
-            variant={choice?.label === c.label ? 'default' : 'outline'}
-            className="h-auto justify-start py-3 text-left whitespace-normal"
-            aria-pressed={choice?.label === c.label}
-            onClick={() => setChoice(c)}
-          >
-            {c.label}
-          </Button>
-        ))}
-      </div>
-      <Button
-        disabled={!choice || propose.isPending}
-        onClick={() =>
-          choice &&
-          propose.mutate(
-            { wagerId: kind.wagerBased ? wagerId : null, result: choice.result },
-            { onSuccess: () => setChoice(null) },
-          )
-        }
-      >
-        {propose.isPending ? 'Wysyłanie…' : 'Wyślij do potwierdzenia'}
+    <>
+      <Button className="w-full" onClick={() => setOpen(true)}>
+        {canSet ? 'Podaj wynik' : 'Unieważnij zakład'}
       </Button>
-      <p className="text-sm text-muted-foreground">
-        {kind.wagerBased
-          ? 'Wynik zacznie obowiązywać, gdy druga strona go potwierdzi.'
-          : 'Wynik zacznie obowiązywać, gdy potwierdzą go wszyscy pozostali uczestnicy.'}
-      </p>
-      <MutationError error={propose.error} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{canSet ? 'Podaj wynik' : 'Unieważnij zakład'}</DialogTitle>
+            <DialogDescription>
+              {!canSet && pact.due_at
+                ? `Wynik można podać dopiero po terminie (${formatDate(pact.due_at)}). Do tego czasu można tylko unieważnić zakład, jeśli druga strona się zgodzi.`
+                : kind.wagerBased
+                  ? 'Wynik zacznie obowiązywać, gdy druga strona go potwierdzi.'
+                  : 'Wynik zacznie obowiązywać, gdy potwierdzą go wszyscy pozostali uczestnicy.'}
+            </DialogDescription>
+          </DialogHeader>
+          {kind.wagerBased && wagers.length > 1 && (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Zakład">
+              {wagers.map((w) => (
+                <Button
+                  key={w.id}
+                  variant={wagerId === w.id ? 'default' : 'outline'}
+                  aria-pressed={wagerId === w.id}
+                  onClick={() => {
+                    setWagerId(w.id)
+                    setChoice(null)
+                  }}
+                >
+                  z {w.user.username}
+                </Button>
+              ))}
+            </div>
+          )}
+          {kind.wagerBased && wagers.length === 1 && (
+            <p className="text-sm text-muted-foreground">Zakład z {wagers[0].user.username}.</p>
+          )}
+          <div className="flex flex-col gap-2" role="group" aria-label="Wynik">
+            {choices.map((c) => (
+              <Button
+                key={c.label}
+                variant={choice?.label === c.label ? 'default' : 'outline'}
+                className="h-auto justify-start py-3 text-left whitespace-normal"
+                aria-pressed={choice?.label === c.label}
+                onClick={() => setChoice(c)}
+              >
+                {c.label}
+              </Button>
+            ))}
+          </div>
+          <MutationError error={propose.error} />
+          <DialogFooter>
+            <Button
+              disabled={!choice || propose.isPending}
+              onClick={() =>
+                choice &&
+                propose.mutate(
+                  { wagerId: kind.wagerBased ? wagerId : null, result: choice.result },
+                  {
+                    onSuccess: () => {
+                      setChoice(null)
+                      setOpen(false)
+                    },
+                  },
+                )
+              }
+            >
+              {propose.isPending ? 'Wysyłanie…' : 'Wyślij do potwierdzenia'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+/** Resolutions are judged by every other member in a Sejmik vote instead of by claims. */
+function JudgmentPanel({ pact }: { pact: PactDetail }) {
+  const call = useCallJudgment(pact.id)
+  const isAuthor = pact.my.role === 'host'
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <h3 className="text-lg font-semibold">Ocena postanowienia</h3>
+      {pact.judgment_poll_id !== null ? (
+        <>
+          <p className="text-base">Posłowie właśnie oceniają, czy postanowienie dotrzymano.</p>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link to={`/voting/${pact.judgment_poll_id}`} />}
+          >
+            Zobacz głosowanie w Sejmiku
+          </Button>
+        </>
+      ) : pact.actions.can_call_judgment ? (
+        <>
+          <p className="text-base">
+            {isAuthor
+              ? 'Termin minął. Oddaj sprawę pod głosowanie wszystkich posłów, niezależnie od tego, czy się udało.'
+              : 'Termin minął. Możesz poprosić posłów o ocenę, czy postanowienie dotrzymano.'}
+          </p>
+          <Button disabled={call.isPending} onClick={() => call.mutate()}>
+            {call.isPending ? 'Wysyłanie…' : 'Oddaj pod głosowanie w Sejmiku'}
+          </Button>
+        </>
+      ) : (
+        <p className="text-base text-muted-foreground">
+          Dopiero po terminie{pact.due_at ? ` (${formatDate(pact.due_at)})` : ''} wszyscy posłowie
+          zagłosują w Sejmiku, czy postanowienie dotrzymano.
+        </p>
+      )}
+      <MutationError error={call.error} />
     </section>
   )
 }
@@ -180,6 +250,7 @@ export function ClaimsPanel({ pact }: { pact: PactDetail }) {
   const running = pact.status === 'active' || pact.status === 'awaiting_result'
   const participating = pact.my.state === 'active'
   if (!running) return null
+  if (getPactKind(pact.kind).judgedByEveryone) return <JudgmentPanel pact={pact} />
 
   return (
     <section className="flex flex-col gap-4" aria-label="Wynik">

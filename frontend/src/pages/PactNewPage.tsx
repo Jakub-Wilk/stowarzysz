@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useMe } from '@/features/auth/hooks'
 import { UserAvatar } from '@/features/auth/UserAvatar'
@@ -44,14 +43,19 @@ export function PactNewPage() {
   const [condition, setCondition] = useState('')
   const [notes, setNotes] = useState('')
   const [due, setDue] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
   const [sides, setSides] = useState<string[]>(DEFAULT_SIDES)
   const [host, setHost] = useState<TermsState>(emptyTerms)
   const [invited, setInvited] = useState<ReadonlyMap<number, TermsState>>(new Map())
   const [localError, setLocalError] = useState<string | null>(null)
+  // TEMPORARY (admins entering old pacts by hand): create the pact as someone else
+  const [asUser, setAsUser] = useState('')
 
   const kind = getPactKind(kindKey)
-  const others = (people.data ?? []).filter((p) => p.id !== me?.id)
+  const backfill = me?.is_superuser === true && asUser !== ''
+  const creatorId = backfill ? Number(asUser) : me?.id
+  const others = (people.data ?? []).filter((p) => p.id !== creatorId)
+  // an old pact has everyone in already, so each invitee's own side and stake are needed up front
+  const invitesNeedTerms = kind.money === 'wager' || (backfill && kind.sided)
   const cleanSides = sides.map((s) => s.trim())
   const errors = formErrors(create.error)
 
@@ -68,7 +72,6 @@ export function PactNewPage() {
     setKindKey(key)
     setLocalError(null)
     create.reset()
-    if (!getPactKind(key).canBeOpen) setIsOpen(false)
   }
 
   const submit = (e: SubmitEvent<HTMLFormElement>) => {
@@ -94,7 +97,7 @@ export function PactNewPage() {
     const opponents: PactInvitee[] = []
     for (const [userId, state] of invited) {
       const name = others.find((p) => p.id === userId)?.username ?? 'zaproszona osoba'
-      if (kind.money === 'wager') {
+      if (invitesNeedTerms) {
         const built = buildTerms(kind, state)
         if (built.error !== null) return setLocalError(`${name}: ${built.error}`)
         opponents.push({ user_id: userId, ...built.terms })
@@ -110,10 +113,10 @@ export function PactNewPage() {
         condition: condition.trim(),
         notes: notes.trim(),
         due_at: due ? endOfDayIso(due) : null,
-        is_open: isOpen,
         config: kind.sided ? { sides: cleanSides } : {},
         host: hostTerms,
         opponents,
+        creator_id: backfill ? creatorId : undefined,
       },
       { onSuccess: (pact) => navigate(`/pacts/${pact.id}`, { replace: true }) },
     )
@@ -125,6 +128,36 @@ export function PactNewPage() {
       <h2 className="mb-6 text-2xl font-semibold">Nowy zakład</h2>
 
       <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
+        {me?.is_superuser && (
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
+            <Label htmlFor="as-user">Utwórz jako (tymczasowo, tylko administrator)</Label>
+            <select
+              id="as-user"
+              className="h-12 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              value={asUser}
+              onChange={(e) => {
+                setAsUser(e.target.value)
+                setInvited(new Map()) // the creator can't invite themselves
+              }}
+            >
+              <option value="">Ja ({me.username})</option>
+              {(people.data ?? [])
+                .filter((p) => p.id !== me.id)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.username}
+                  </option>
+                ))}
+            </select>
+            {backfill && (
+              <span className="text-sm text-muted-foreground">
+                Stary zakład: może mieć termin z przeszłości, a zaproszeni od razu biorą w nim
+                udział (podaj ich stronę i stawkę). Nikt nie dostanie powiadomienia.
+              </span>
+            )}
+          </div>
+        )}
+
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-base font-medium">Rodzaj</legend>
           <div className="grid grid-cols-2 gap-2">
@@ -181,7 +214,7 @@ export function PactNewPage() {
           <Input
             id="due"
             type="date"
-            min={tomorrowInput()}
+            min={backfill ? undefined : tomorrowInput()}
             value={due}
             onChange={(e) => setDue(e.target.value)}
           />
@@ -226,7 +259,7 @@ export function PactNewPage() {
 
         {(kind.sided || kind.money === 'pot') && (
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-base font-medium">Twoje warunki</legend>
+            <legend className="sr-only">Twoje warunki</legend>
             <TermsFields
               kind={kind}
               sides={cleanSides.filter(Boolean)}
@@ -237,54 +270,54 @@ export function PactNewPage() {
           </fieldset>
         )}
 
-        {kind.canBeOpen && (
-          <label className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3">
-            <span className="flex flex-col">
-              <span className="text-base font-medium">Otwarty</span>
-              <span className="text-sm text-muted-foreground">
-                Każdy może poprosić o dołączenie.
-              </span>
-            </span>
-            <Switch checked={isOpen} onCheckedChange={setIsOpen} aria-label="Otwarty zakład" />
-          </label>
+        {kind.judgedByEveryone ? (
+          <p className="rounded-lg border bg-card px-4 py-3 text-base">
+            Nikogo nie zapraszasz: po terminie wszyscy pozostali posłowie zagłosują w Sejmiku, czy
+            dotrzymałeś słowa.
+          </p>
+        ) : (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-base font-medium">Zaproś (opcjonalnie)</legend>
+            <p className="text-sm text-muted-foreground">
+              Pozostali posłowie też mogą sami poprosić o dołączenie.
+            </p>
+            {people.isPending && (
+              <span className="text-base text-muted-foreground">Ładowanie…</span>
+            )}
+            {others.map((person) => {
+              const state = invited.get(person.id)
+              return (
+                <div
+                  key={person.id}
+                  className={cn(
+                    'flex flex-col gap-3 rounded-lg border bg-card px-4 py-3',
+                    state && 'border-primary/60',
+                  )}
+                >
+                  <label className="flex cursor-pointer items-center gap-4">
+                    <Checkbox
+                      checked={state !== undefined}
+                      onCheckedChange={() => toggle(person.id)}
+                      aria-label={person.username}
+                    />
+                    <UserAvatar username={person.username} src={person.avatar_url} size="md" />
+                    <span className="text-metal text-lg font-medium">{person.username}</span>
+                  </label>
+                  {state && invitesNeedTerms && (
+                    <TermsFields
+                      kind={kind}
+                      sides={cleanSides.filter(Boolean)}
+                      state={state}
+                      onChange={(next) => setTerms(person.id, next)}
+                      idPrefix={`invite-${person.id}`}
+                    />
+                  )}
+                </div>
+              )
+            })}
+            {create.isError && <FieldError message={errors.fields.opponents} />}
+          </fieldset>
         )}
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-base font-medium">Zaproś</legend>
-          {people.isPending && <span className="text-base text-muted-foreground">Ładowanie…</span>}
-          {others.map((person) => {
-            const state = invited.get(person.id)
-            return (
-              <div
-                key={person.id}
-                className={cn(
-                  'flex flex-col gap-3 rounded-lg border bg-card px-4 py-3',
-                  state && 'border-primary/60',
-                )}
-              >
-                <label className="flex cursor-pointer items-center gap-4">
-                  <Checkbox
-                    checked={state !== undefined}
-                    onCheckedChange={() => toggle(person.id)}
-                    aria-label={person.username}
-                  />
-                  <UserAvatar username={person.username} src={person.avatar_url} size="md" />
-                  <span className="text-metal text-lg font-medium">{person.username}</span>
-                </label>
-                {state && kind.money === 'wager' && (
-                  <TermsFields
-                    kind={kind}
-                    sides={[]}
-                    state={state}
-                    onChange={(next) => setTerms(person.id, next)}
-                    idPrefix={`invite-${person.id}`}
-                  />
-                )}
-              </div>
-            )
-          })}
-          {create.isError && <FieldError message={errors.fields.opponents} />}
-        </fieldset>
 
         <details className="rounded-lg border bg-card px-4 py-3">
           <summary className="cursor-pointer text-base font-medium">Dodatkowe informacje</summary>

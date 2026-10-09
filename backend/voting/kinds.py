@@ -325,6 +325,78 @@ class PactRulingKind(PollKind):
             return {"applied": False, "apply_error": "Nie udało się zastosować rozstrzygnięcia."}
 
 
+class ResolutionJudgmentKind(PollKind):
+    """Every member except the author judges whether a resolution (postanowienie) was kept.
+
+    Ballot `{"kept": bool}`. A strict majority of the votes cast decides; a tie or no votes
+    decides nothing and the resolution stays open. Applied by `pacts.services.apply_judgment`.
+    """
+
+    key = "resolution_judgment"
+    allows_veto = False
+    allows_early_close = False
+
+    def _pact(self, config: Any) -> Any:
+        from pacts.models import Pact
+
+        pact_id = config.get("pact_id") if isinstance(config, dict) else None
+        pact = None
+        if isinstance(pact_id, int) and not isinstance(pact_id, bool):
+            pact = Pact.objects.filter(pk=pact_id, kind="resolution").first()
+        if pact is None:
+            raise serializers.ValidationError({"pact_id": "Nie ma takiego postanowienia."})
+        return pact
+
+    def validate_config(self, config: Any) -> dict[str, Any]:
+        pact = self._pact(config)
+        return {
+            "pact_id": pact.pk,
+            "pact_title": pact.title,
+            "condition": pact.condition,
+            "author_id": pact.creator_id,
+            "author_username": pact.creator.username,
+        }
+
+    def generate_title(self, config: dict[str, Any]) -> str:
+        return f"Ocena postanowienia: {config['pact_title']}"
+
+    def eligible_participants(self, config: dict[str, Any], creator: Any) -> list[Any]:
+        return list(get_user_model().objects.members().exclude(pk=config["author_id"]))
+
+    def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
+        kept = ballot.get("kept") if isinstance(ballot, dict) else None
+        if not isinstance(kept, bool):
+            raise serializers.ValidationError("Głos musi mieć postać {'kept': true/false}.")
+        return {"kept": kept}
+
+    def veto_ballot(self, config: dict[str, Any]) -> dict[str, Any]:
+        return {"kept": False}
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        kept = sum(1 for e in entries if e.ballot["kept"])
+        broken = len(entries) - kept
+        decided = kept != broken
+        return {
+            "votes_cast": len(entries),
+            "kept": kept,
+            "broken": broken,
+            "decided": decided,
+            "approved": kept > broken,  # "kept their word"
+            "tone": ("positive" if kept > broken else "negative") if decided else "neutral",
+        }
+
+    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
+        from pacts import services
+
+        try:
+            with transaction.atomic():  # a failure here must not poison the poll's own close
+                return services.apply_judgment(
+                    poll.config["pact_id"], kept=result["approved"], decided=result["decided"]
+                )
+        except Exception:
+            return {"applied": False, "apply_error": "Nie udało się zastosować oceny."}
+
+
 KINDS: dict[str, PollKind] = {}
 
 
@@ -344,3 +416,4 @@ register(ScoreKind())
 register(NicknameKind())
 register(AvatarKind())
 register(PactRulingKind())
+register(ResolutionJudgmentKind())

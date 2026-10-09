@@ -6,7 +6,7 @@ from django.dispatch import receiver
 
 
 class Pact(models.Model):
-    """A bet, resolution or prediction between members. Kind-specific rules live in
+    """A bet, group bet or resolution between members. Kind-specific rules live in
     `pacts.kinds`, keyed by `kind`; `config` and `outcome` are JSON so new kinds need no schema
     changes.
 
@@ -32,13 +32,16 @@ class Pact(models.Model):
     condition = models.TextField()  # what has to happen for the host to win
     notes = models.TextField(blank=True)
     due_at = models.DateTimeField(null=True, blank=True)
-    is_open = models.BooleanField(default=False)  # anyone may ask to join
     config = models.JSONField(default=dict)
     status = models.CharField(max_length=16, choices=Status, default=Status.PROPOSED)
     outcome = models.JSONField(null=True)  # frozen when the pact is resolved
     created_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True)
     last_nudged_at = models.DateTimeField(null=True)  # last "please settle this" push
+    # resolutions only: the Sejmik vote in which every other member judges whether it was kept
+    judgment_poll = models.ForeignKey(
+        "voting.Poll", on_delete=models.SET_NULL, null=True, related_name="+"
+    )
 
     objects = models.Manager()
 

@@ -57,9 +57,6 @@ function InvitePanel({ pact }: { pact: PactDetail }) {
           traci więcej niż swoją stawkę.
         </p>
       )}
-      {kind.key === 'resolution' && (
-        <p className="text-base">Zostaniesz sędzią: ocenisz, czy postanowienie dotrzymano.</p>
-      )}
       {asksTerms && (
         <TermsFields
           kind={kind}

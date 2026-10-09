@@ -20,14 +20,16 @@ export interface PactKindUI {
   blurb: string
   /** Where stakes come from: a wager per opponent, a shared pot, or none. */
   money: 'wager' | 'pot' | 'none'
-  /** Participants pick one side of a question. */
+  /** Participants pick one side of a question (stakes, if any, form a shared pot). */
   sided: boolean
   /** Each opponent is a separate wager against the host. */
   wagerBased: boolean
   /** The creator must set a deadline. */
   needsDue: boolean
-  /** May be created open for anyone to ask to join. */
-  canBeOpen: boolean
+  /** Anyone may ask to join (the participants decide). */
+  joinable: boolean
+  /** Nobody is invited: every other member judges it in a Sejmik vote. */
+  judgedByEveryone: boolean
   /** The claims someone can make about how a wager (bets) or the whole pact ended. */
   outcomeChoices: (pact: PactDetail, wager: PactParticipant | null) => OutcomeChoice[]
   /** A claim as a sentence, e.g. "wygrywa alice". */

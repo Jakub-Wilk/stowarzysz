@@ -5,7 +5,6 @@ from pacts.kinds import (
     BetKind,
     GroupBetKind,
     Party,
-    PredictionKind,
     ResolutionKind,
     Terms,
     _allocate,
@@ -24,10 +23,9 @@ def owed(settlement) -> set[tuple[int, int, int]]:
 
 
 def test_registry_has_all_four_kinds() -> None:
-    assert {get_kind(k).key for k in ("bet", "group_bet", "prediction", "resolution")} == {
+    assert {get_kind(k).key for k in ("bet", "group_bet", "resolution")} == {
         "bet",
         "group_bet",
-        "prediction",
         "resolution",
     }
     with pytest.raises(ValidationError):
@@ -127,7 +125,7 @@ def test_group_bet_terms_and_outcome_validation() -> None:
     # the creator pre-filling an invitee may leave things open; committing may not
     assert kind.validate_terms(Terms(B), config, host=False, final=False) == Terms(B)
     with pytest.raises(ValidationError):
-        kind.validate_terms(Terms(B), config, host=False, final=True)
+        kind.validate_terms(Terms(B, 100), config, host=False, final=True)  # no side
     with pytest.raises(ValidationError):
         kind.validate_terms(Terms(B, 100, "", "maybe"), config, host=False, final=True)
     assert (
@@ -141,22 +139,31 @@ def test_group_bet_terms_and_outcome_validation() -> None:
 def test_group_bet_joins_need_everyone_but_other_kinds_only_the_host() -> None:
     assert GroupBetKind().join_approvers(A, [A, B, C]) == {A, B, C}
     assert BetKind().join_approvers(A, [A, B, C]) == {A}
-    assert PredictionKind().join_approvers(A, [A, B, C]) == {A}
+    assert ResolutionKind().joinable is False and BetKind().joinable is True
 
 
 # --- prediction and resolution ----------------------------------------------
 
 
-def test_prediction_scores_the_right_side_and_has_no_money() -> None:
-    kind = PredictionKind()
-    settlement = kind.settle([party(A, "tak", host=True), party(B, "nie")], {"winner": "nie"}, {})
+def test_group_bet_without_stakes_is_a_prediction_that_only_scores() -> None:
+    kind = GroupBetKind()
+    config = kind.validate_config({})
+    parties = [party(A, "tak", host=True), party(B, "nie"), party(C, "nie")]
+    settlement = kind.settle(parties, {"winner": "nie"}, config)
     assert settlement.debts == []
-    assert settlement.verdicts == {A: "lost", B: "won"}
+    assert settlement.verdicts == {A: "lost", B: "won", C: "won"}
+    assert (
+        kind.validate_terms(Terms(B, None, "", "tak"), config, host=False, final=True).side == "tak"
+    )
     with pytest.raises(ValidationError):
-        kind.validate_terms(
-            Terms(B, 100, "", "tak"), {"sides": ["tak", "nie"]}, host=False, final=True
-        )
-    assert kind.needs_due_date
+        kind.validate_terms(Terms(B), config, host=False, final=True)  # a side is still required
+
+
+def test_stakes_are_optional_per_person_in_a_group_bet() -> None:
+    parties = [party(A, "tak", 1000, host=True), party(B, "nie"), party(C, "nie", 500)]
+    settlement = GroupBetKind().settle(parties, {"winner": "tak"}, {})
+    assert owed(settlement) == {(C, A, 500)}  # B put nothing in, so owes nothing
+    assert settlement.verdicts == {A: "won", B: "lost", C: "lost"}
 
 
 def test_resolution_judges_the_host_only() -> None:

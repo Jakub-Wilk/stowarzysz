@@ -70,7 +70,9 @@ export function TermsFields({
       )}
       {showMoney && (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${idPrefix}-amount`}>Stawka (zł)</Label>
+          <Label htmlFor={`${idPrefix}-amount`}>
+            {kind.money === 'pot' ? 'Stawka (zł, opcjonalnie)' : 'Stawka (zł)'}
+          </Label>
           <Input
             id={`${idPrefix}-amount`}
             inputMode="decimal"
@@ -81,10 +83,10 @@ export function TermsFields({
           />
         </div>
       )}
-      {!hideStake && kind.money !== 'pot' && (
+      {!hideStake && kind.money !== 'none' && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${idPrefix}-note`}>
-            {kind.money === 'wager' ? 'Albo opis stawki' : 'Stawka honorowa (opcjonalnie)'}
+            {kind.money === 'wager' ? 'Albo opis stawki' : 'Opis stawki (opcjonalnie)'}
           </Label>
           <Input
             id={`${idPrefix}-note`}

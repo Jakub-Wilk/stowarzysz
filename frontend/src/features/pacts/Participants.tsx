@@ -28,13 +28,7 @@ export function Participants({ pact }: { pact: PactDetail }) {
           const stake = formatStake(p)
           const deciding = pact.actions.to_decide.includes(p.id)
           const note = [
-            p.role === 'host'
-              ? kind.key === 'resolution'
-                ? 'zobowiązuje się'
-                : 'autor'
-              : kind.key === 'resolution'
-                ? 'sędzia'
-                : null,
+            p.role === 'host' ? (kind.judgedByEveryone ? 'zobowiązuje się' : 'autor') : null,
             kind.sided && p.side ? `strona „${p.side}”` : null,
             stake ? `stawka: ${stake}` : null,
             p.state !== 'active' && p.state !== 'settled' ? PARTICIPANT_STATE_LABEL[p.state] : null,

@@ -225,7 +225,7 @@ export interface SantaHistoryEvent {
 
 // --- pacts ----------------------------------------------------------------------------
 
-export type PactKindKey = 'bet' | 'group_bet' | 'prediction' | 'resolution'
+export type PactKindKey = 'bet' | 'group_bet' | 'resolution'
 export type PactStatus =
   | 'proposed'
   | 'active'
@@ -259,8 +259,6 @@ export interface PactListItem {
   title: string
   condition: string
   due_at: string | null
-  /** Anyone may ask to join. Every member can read every pact either way. */
-  is_open: boolean
   status: PactStatus
   creator: UserBrief
   created_at: string
@@ -309,6 +307,10 @@ export interface PactAttachment {
 export interface PactActions {
   can_respond: boolean
   can_request_join: boolean
+  /** Resolutions only: once the deadline has passed. */
+  can_call_judgment: boolean
+  /** False before the deadline: until then a pact can only be called off. */
+  can_set_result: boolean
   can_withdraw_request: boolean
   can_attach: boolean
   /** Participant ids whose join request the user must decide. */
@@ -327,6 +329,8 @@ export interface PactDetail extends PactListItem {
   proposals: PactProposal[]
   actions: PactActions
   attachments: PactAttachment[]
+  /** Resolutions: the Sejmik vote in which every other member is judging it, if one is running. */
+  judgment_poll_id: number | null
 }
 
 export interface PactInvitee extends PactTerms {
@@ -339,11 +343,12 @@ export interface PactCreatePayload {
   condition: string
   notes: string
   due_at: string | null
-  is_open: boolean
   config: { sides?: string[] }
-  /** The creator's own side and stake (group bets, predictions). */
+  /** The creator's own side and stake (group bets). */
   host?: PactTerms
   opponents: PactInvitee[]
+  /** TEMPORARY, superusers only: create the pact as this member (an old pact, entered by hand). */
+  creator_id?: number
 }
 
 export interface PactRespondPayload extends PactTerms {

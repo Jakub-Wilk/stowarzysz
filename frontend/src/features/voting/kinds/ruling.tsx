@@ -145,3 +145,128 @@ export function RulingResultChip({ result }: { result: PollResult }) {
     </span>
   )
 }
+
+const readKept = (ballot: Ballot | null | undefined): boolean | null =>
+  typeof ballot?.kept === 'boolean' ? ballot.kept : null
+
+/** The resolution being judged: who promised what, with a link to its page. */
+export function JudgmentProposal({ poll }: { poll: PollDetail }) {
+  const pactId = Number(poll.config.pact_id)
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border bg-card p-4">
+      <p className="text-base">
+        <strong>{String(poll.config.author_username)}</strong> zobowiązał(a) się do:
+      </p>
+      <p className="text-xl font-semibold whitespace-pre-wrap">{String(poll.config.condition)}</p>
+      <p className="text-base">Czy dotrzymał(a) słowa?</p>
+      <Button
+        variant="outline"
+        className="self-start"
+        nativeButton={false}
+        render={<Link to={`/pacts/${pactId}`} />}
+      >
+        Zobacz postanowienie
+      </Button>
+    </section>
+  )
+}
+
+export function JudgmentBallotInput({ value, pending, onSubmit }: BallotInputProps) {
+  const saved = readKept(value)
+  const [picked, setPicked] = useState<boolean | null>(saved)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ocena">
+        <Button
+          variant={picked === true ? 'default' : 'outline'}
+          aria-pressed={picked === true}
+          disabled={pending}
+          onClick={() => setPicked(true)}
+        >
+          Dotrzymał(a) słowa
+        </Button>
+        <Button
+          variant={picked === false ? 'default' : 'outline'}
+          aria-pressed={picked === false}
+          disabled={pending}
+          onClick={() => setPicked(false)}
+        >
+          Nie dotrzymał(a)
+        </Button>
+      </div>
+      <Button
+        disabled={picked === null || picked === saved || pending}
+        onClick={() => picked !== null && onSubmit({ kept: picked })}
+      >
+        {saved === null ? 'Oddaj głos' : 'Zmień głos'}
+      </Button>
+    </div>
+  )
+}
+
+export function JudgmentResultDisplay({ poll }: { poll: PollDetail }) {
+  const decided = poll.result?.decided === true
+  const kept = poll.result?.approved === true
+  const tone = toneClasses(decided ? (kept ? 'positive' : 'negative') : 'neutral')
+  return (
+    <div className="flex flex-col gap-4">
+      <div className={cn('flex flex-col items-center gap-2 rounded-2xl border p-6', tone.panel)}>
+        <div className={cn('text-3xl font-black', tone.text)}>
+          {!decided ? 'Brak rozstrzygnięcia' : kept ? 'Dotrzymano słowa' : 'Nie dotrzymano słowa'}
+        </div>
+        <div className="text-base text-muted-foreground">
+          Dotrzymał(a): {String(poll.result?.kept ?? 0)} · Nie dotrzymał(a):{' '}
+          {String(poll.result?.broken ?? 0)}
+        </div>
+        {!decided && (
+          <div className="text-base text-muted-foreground">
+            Remis albo brak głosów: postanowienie czeka na kolejną ocenę.
+          </div>
+        )}
+      </div>
+      <ul className="flex flex-col gap-2">
+        {poll.participants.map(({ user, has_voted, ballot }) => {
+          const choice = readKept(ballot)
+          return (
+            <li
+              key={user.id}
+              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
+            >
+              <UserAvatar username={user.username} src={user.avatar_url} size="md" />
+              <span className="text-metal flex-1 truncate text-lg font-medium">
+                {user.username}
+              </span>
+              {has_voted && choice !== null ? (
+                <span
+                  className={cn(
+                    'text-base font-bold',
+                    toneClasses(choice ? 'positive' : 'negative').text,
+                  )}
+                >
+                  {choice ? 'Dotrzymał(a)' : 'Nie dotrzymał(a)'}
+                </span>
+              ) : (
+                <span className="text-base text-muted-foreground">brak głosu</span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+export function JudgmentResultChip({ result }: { result: PollResult }) {
+  const decided = result.decided === true
+  const kept = result.approved === true
+  return (
+    <span
+      className={cn(
+        'rounded-full px-2.5 py-0.5 text-sm font-bold',
+        toneClasses(decided ? (kept ? 'positive' : 'negative') : 'neutral').chip,
+      )}
+    >
+      {!decided ? 'Bez rozstrzygnięcia' : kept ? 'Dotrzymano' : 'Nie dotrzymano'}
+    </span>
+  )
+}

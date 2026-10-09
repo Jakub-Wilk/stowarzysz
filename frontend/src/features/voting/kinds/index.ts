@@ -7,6 +7,10 @@ import {
   ProfileResultDisplay,
 } from '@/features/voting/kinds/profile'
 import {
+  JudgmentBallotInput,
+  JudgmentProposal,
+  JudgmentResultChip,
+  JudgmentResultDisplay,
   RulingBallotInput,
   RulingProposal,
   RulingResultChip,
@@ -41,6 +45,13 @@ const kinds: Record<string, PollKindUI> = {
     ResultDisplay: RulingResultDisplay,
     ResultChip: RulingResultChip,
     Proposal: RulingProposal,
+  },
+  /** Created by the server when a resolution is put to the vote; not in the create screen. */
+  resolution_judgment: {
+    BallotInput: JudgmentBallotInput,
+    ResultDisplay: JudgmentResultDisplay,
+    ResultChip: JudgmentResultChip,
+    Proposal: JudgmentProposal,
   },
 }
 

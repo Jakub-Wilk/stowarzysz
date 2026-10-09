@@ -140,7 +140,7 @@ def test_create_validation(alice, bob, dave) -> None:
         body = {"kind": "bet", "title": "t", "condition": "c", **over}
         return client.post(PACTS, body, format="json")
 
-    assert create(opponents=[]).status_code == 400  # nobody invited, not open
+    assert create(opponents=[]).status_code == 201  # nobody invited: anyone can still join
     assert create(opponents=[{"user_id": alice.pk, "stake_amount": 100}]).status_code == 400
     assert create(opponents=[{"user_id": 9999, "stake_amount": 100}]).status_code == 400
     assert create(opponents=[{"user_id": bob.pk}]).status_code == 400  # a bet needs a stake
@@ -149,7 +149,7 @@ def test_create_validation(alice, bob, dave) -> None:
     assert (
         create(kind="nope", opponents=[{"user_id": bob.pk, "stake_amount": 1}]).status_code == 400
     )
-    assert Pact.objects.count() == 0
+    assert Pact.objects.count() == 1  # only the one with nobody invited
 
 
 def test_a_non_cash_stake_is_enough(alice, bob) -> None:
@@ -167,10 +167,10 @@ def test_a_non_cash_stake_is_enough(alice, bob) -> None:
     assert wager(Pact.objects.get(), bob).stake_note == "kolacja"
 
 
-def test_open_pact_can_start_with_no_invitees_and_is_broadcast(alice, bob, dave, events) -> None:
+def test_a_pact_can_start_with_no_invitees_and_is_broadcast(alice, bob, dave, events) -> None:
     resp = client_for(alice).post(
         PACTS,
-        {"kind": "bet", "title": "t", "condition": "c", "is_open": True},
+        {"kind": "bet", "title": "t", "condition": "c"},
         format="json",
     )
     assert resp.status_code == 201
@@ -194,12 +194,12 @@ def test_every_member_can_read_every_pact_but_only_participants_act(alice, bob, 
 
 def test_list_filters(alice, bob, dave) -> None:
     mine = make_bet(alice, (bob, 1000))
-    open_pact = make_bet(bob, (alice, 500), is_open=True)
-    assert {p["id"] for p in client_for(dave).get(PACTS).json()} == {mine.pk, open_pact.pk}
-    assert {p["id"] for p in client_for(dave).get(PACTS + "?open=1").json()} == {open_pact.pk}
+    other = make_bet(bob, (alice, 500))
+    assert {p["id"] for p in client_for(dave).get(PACTS).json()} == {mine.pk, other.pk}
+    assert {p["id"] for p in client_for(dave).get(PACTS + "?mine=1").json()} == set()
     assert {p["id"] for p in client_for(alice).get(PACTS + "?mine=1").json()} == {
         mine.pk,
-        open_pact.pk,
+        other.pk,
     }
     assert [p["id"] for p in client_for(alice).get(PACTS + "?status=active").json()] == []
 
@@ -232,12 +232,13 @@ def test_declining_one_wager_leaves_the_others(alice, bob, carol) -> None:
     assert wager(pact, bob).state == "declined"
 
 
-def test_pact_is_declined_when_every_invitee_says_no(alice, bob, carol) -> None:
+def test_pact_stays_open_for_joiners_when_every_invitee_says_no(alice, bob, carol, dave) -> None:
     pact = make_bet(alice, (bob, 1000), (carol, 1500))
     for user in (bob, carol):
         client_for(user).post(url(pact, "respond/"), {"accept": False}, format="json")
     pact.refresh_from_db()
-    assert pact.status == Pact.Status.DECLINED
+    assert pact.status == Pact.Status.PROPOSED  # anyone can still ask to join; the host can cancel
+    assert client_for(dave).get(url(pact)).json()["actions"]["can_request_join"] is True
 
 
 def test_strangers_cannot_respond(alice, bob, dave) -> None:

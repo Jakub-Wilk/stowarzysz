@@ -1,16 +1,14 @@
-from io import BytesIO, StringIO
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.management import call_command
 from PIL import Image
 
 from accounts import avatars
 from pacts.models import Pact, PactAttachment
 from tests.test_avatars import make_image
 from tests.test_pact_flows import (
-    HEADERS,
     accept,
     alice,
     bob,
@@ -21,7 +19,6 @@ from tests.test_pact_flows import (
     make_bet,
     pushes,
     url,
-    write_csv,
 )
 
 pytestmark = pytest.mark.usefixtures("run_on_commit")
@@ -139,26 +136,3 @@ def test_pictures_are_visible_to_every_member(alice, bob, dave) -> None:
     pact = make_bet(alice, (bob, 1000))
     attach(alice, pact)
     assert len(client_for(dave).get(url(pact)).json()["attachments"]) == 1
-
-
-def test_import_attaches_pictures_named_after_the_row(tmp_path, alice, settings) -> None:
-    sheet = write_csv(
-        tmp_path / "s.csv",
-        [
-            ["Zakład trumpowski", "c", "2016", "", "", "✅", ""],
-            ["Bez zdjęcia", "c", "", "", "", "", ""],
-        ],
-    )
-    images = tmp_path / "images"
-    images.mkdir()
-    for name in ("Zakład trumpowski.png", "Zakład trumpowski__2.png", "Inny.png"):
-        (images / name).write_bytes(make_image().read())
-    out = StringIO()
-    call_command("import_pacts", str(sheet), host="alice", images=images, stdout=out)
-    assert "attached 2 picture(s)" in out.getvalue()
-    assert Pact.objects.get(title="Zakład trumpowski").attachments.count() == 2
-    assert Pact.objects.get(title="Bez zdjęcia").attachments.count() == 0
-    again = StringIO()
-    call_command("import_pacts", str(sheet), host="alice", images=images, stdout=again)
-    assert "attached 0 picture(s)" in again.getvalue()  # re-runs don't duplicate
-    assert PactAttachment.objects.count() == 2

@@ -4,10 +4,10 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from accounts.serializers import PersonSerializer
-from pacts.kinds import KINDS
+from pacts.kinds import KINDS, get_kind
 from pacts.models import OutcomeProposal, Pact, PactAttachment, PactParticipant
 from pacts.services import ATTACH_STATES as _ATTACH
-from pacts.services import MAX_ATTACHMENTS
+from pacts.services import MAX_ATTACHMENTS, result_allowed
 
 
 class ParticipantSerializer(serializers.ModelSerializer):
@@ -73,6 +73,8 @@ class ActionsSerializer(serializers.Serializer):
 
     can_respond = serializers.BooleanField()
     can_request_join = serializers.BooleanField()
+    can_call_judgment = serializers.BooleanField()
+    can_set_result = serializers.BooleanField()  # false before the deadline: only void
     can_withdraw_request = serializers.BooleanField()
     can_attach = serializers.BooleanField()
     to_decide = serializers.ListField(child=serializers.IntegerField())  # participant ids
@@ -95,7 +97,6 @@ class PactSerializer(serializers.ModelSerializer):
             "title",
             "condition",
             "due_at",
-            "is_open",
             "status",
             "creator",
             "created_at",
@@ -124,6 +125,7 @@ class PactDetailSerializer(PactSerializer):
     proposals = serializers.SerializerMethodField()
     actions = serializers.SerializerMethodField()
     attachments = AttachmentSerializer(many=True, read_only=True)
+    judgment_poll_id = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta(PactSerializer.Meta):
         fields = (
@@ -135,6 +137,7 @@ class PactDetailSerializer(PactSerializer):
             "proposals",
             "actions",
             "attachments",
+            "judgment_poll_id",
         )
         read_only_fields = fields
 
@@ -181,7 +184,14 @@ class PactDetailSerializer(PactSerializer):
                 can_escalate.append(proposal.pk)
         return {
             "can_respond": running and mine is not None and mine.state == state.INVITED,
-            "can_request_join": pact.is_open and running and (mine is None or mine.state in retry),
+            "can_request_join": get_kind(pact.kind).joinable
+            and running
+            and (mine is None or mine.state in retry),
+            "can_call_judgment": get_kind(pact.kind).judged_by_everyone
+            and running
+            and pact.judgment_poll_id is None
+            and result_allowed(pact),
+            "can_set_result": running and result_allowed(pact),
             "can_withdraw_request": mine is not None and mine.state == state.REQUESTED,
             "can_attach": mine is not None
             and mine.state in _ATTACH
@@ -217,10 +227,11 @@ class PactCreateSerializer(serializers.Serializer):
     condition = serializers.CharField()
     notes = serializers.CharField(required=False, allow_blank=True, default="")
     due_at = serializers.DateTimeField(required=False, allow_null=True)
-    is_open = serializers.BooleanField(required=False, default=False)
     config = serializers.JSONField(required=False, default=dict)
-    host = TermsSerializer(required=False)  # the creator's own side/stake (group bets, predictions)
+    host = TermsSerializer(required=False)  # the creator's own side/stake (group bets)
     opponents = InviteeSerializer(many=True, required=False, default=list)
+    # TEMPORARY, superusers only: create the pact as this member (see `services.create_pact`)
+    creator_id = serializers.IntegerField(required=False)
 
 
 class RespondSerializer(TermsSerializer):

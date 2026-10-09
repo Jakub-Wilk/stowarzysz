@@ -1,7 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.http import Http404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -54,7 +56,6 @@ class PactListCreateView(APIView):
     @extend_schema(
         parameters=[
             OpenApiParameter("status", enum=Pact.Status.values, required=False),
-            OpenApiParameter("open", type=bool, required=False),
             OpenApiParameter("mine", type=bool, required=False),
         ],
         responses={200: PactSerializer(many=True)},
@@ -63,8 +64,6 @@ class PactListCreateView(APIView):
         pacts = visible_pacts(request).order_by("-created_at", "-id")
         if request.query_params.get("status") in Pact.Status.values:
             pacts = pacts.filter(status=request.query_params["status"])
-        if request.query_params.get("open") in ("1", "true"):
-            pacts = pacts.filter(is_open=True)
         if request.query_params.get("mine") in ("1", "true"):
             pacts = pacts.filter(participants__user=request.user)
         return Response(PactSerializer(pacts, many=True, context={"request": request}).data)
@@ -74,17 +73,24 @@ class PactListCreateView(APIView):
         serializer = PactCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        creator = request.user
+        if "creator_id" in data:  # TEMPORARY: admins entering old pacts for someone
+            if not request.user.is_superuser:
+                raise PermissionDenied("Tylko administrator może tworzyć zakłady w czyimś imieniu.")
+            creator = get_user_model().objects.members().filter(pk=data["creator_id"]).first()
+            if creator is None:
+                raise ValidationError({"creator_id": "Nieznany lub nieaktywny poseł."})
         pact = services.create_pact(
-            request.user,
+            creator,
             kind_key=data["kind"],
             title=data["title"],
             condition=data["condition"],
             notes=data["notes"],
             due_at=data.get("due_at"),
-            is_open=data["is_open"],
             config=data["config"],
-            host=_terms(request.user.pk, data["host"]) if "host" in data else None,
+            host=_terms(creator.pk, data["host"]) if "host" in data else None,
             opponents=[_terms(o["user_id"], o) for o in data["opponents"]],
+            backfill="creator_id" in data,
         )
         return Response(_detail(request, pact.pk), status=status.HTTP_201_CREATED)
 
@@ -166,6 +172,15 @@ class AttachmentDetailView(APIView):
         return Response(_detail(request, pact_id))
 
 
+class JudgmentView(APIView):
+    """Put a resolution to a vote of all members (its author may do it any time)."""
+
+    @extend_schema(request=None, responses={200: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int) -> Response:
+        services.call_judgment(pact_id, request.user)
+        return Response(_detail(request, pact_id))
+
+
 class PactStatsView(APIView):
     @extend_schema(responses={200: PactStatsSerializer(many=True)})
     def get(self, request: Request) -> Response:
@@ -189,7 +204,7 @@ class OutcomeProposeView(APIView):
         proposal = services.propose_outcome(
             pact_id,
             request.user,
-            wager_id=serializer.validated_data["wager_id"],
+            wager_id=serializer.validated_data.get("wager_id"),
             result=serializer.validated_data["result"],
         )
         return Response(

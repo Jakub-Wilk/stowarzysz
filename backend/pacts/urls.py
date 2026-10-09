@@ -4,6 +4,7 @@ from pacts.views import (
     AttachmentDetailView,
     AttachmentListView,
     JoinDecideView,
+    JudgmentView,
     OutcomeConfirmView,
     OutcomeDisputeView,
     OutcomeEscalateView,
@@ -35,6 +36,7 @@ urlpatterns = [
         AttachmentDetailView.as_view(),
         name="pact_attachment",
     ),
+    path("<int:pact_id>/judgment/", JudgmentView.as_view(), name="pact_judgment"),
     path("<int:pact_id>/cancel/", PactCancelView.as_view(), name="pact_cancel"),
     path("<int:pact_id>/outcome/", OutcomeProposeView.as_view(), name="pact_outcome_propose"),
     path(

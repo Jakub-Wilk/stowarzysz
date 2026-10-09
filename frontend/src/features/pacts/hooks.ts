@@ -125,3 +125,10 @@ export function useDeleteAttachment(id: number) {
     apiFetch<PactDetail>(`/api/pacts/${id}/attachments/${attachmentId}/`, { method: 'DELETE' }),
   )
 }
+
+/** Resolutions: put it to a Sejmik vote of every other member. */
+export function useCallJudgment(id: number) {
+  return usePactMutation(() =>
+    apiFetch<PactDetail>(`/api/pacts/${id}/judgment/`, { method: 'POST' }),
+  )
+}
