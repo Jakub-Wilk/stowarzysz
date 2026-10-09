@@ -193,13 +193,13 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build    
 docker compose -f docker-compose.prod.yml --env-file .env.prod exec db pg_dump -U stowarzysz stowarzysz > backup.sql   # database backup
 ```
 
-Votes end automatically 72 hours after they are called, with push reminders at 24, 48 and 69 hours. `scripts/deploy.sh` installs the host cron entry that runs this every 5 minutes; by hand (it is safe to run as often as you like) it is:
+Votes end automatically 72 hours after they are called, with push reminders at 24, 48 and 69 hours. The same job moves overdue pacts to "awaiting result", nudges their participants weekly and expires invites unanswered for 7 days. `scripts/deploy.sh` installs the host cron entry that runs this every 5 minutes; by hand (it is safe to run as often as you like) it is:
 
 ```sh
-*/5 * * * * cd /path/to/stowarzysz && docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend python manage.py process_poll_deadlines
+*/5 * * * * cd /path/to/stowarzysz && docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T backend python manage.py process_deadlines
 ```
 
-In development, run `uv run python manage.py process_poll_deadlines` from `backend/` by hand.
+In development, run `uv run python manage.py process_deadlines` from `backend/` by hand.
 
 Database shell (`psql`) in production:
 
@@ -228,7 +228,7 @@ It runs these steps and aborts at the first failure:
 3. **Back up the database** to `backups/db-<UTC time>-<previous commit>.dump` (`pg_dump -Fc`). The dump is checked with `pg_restore --list` first, and only a verified dump replaces an old one, so there are never more than **3** snapshots and a failed backup aborts the deploy before anything changes. The `media` volume and `.env.prod` are not included (see [Operations](#operations)).
 4. **Build** the images while the old version keeps serving.
 5. **Launch** with `up -d --wait`, then check `/api/health/` through nginx. Migrations run on backend start.
-6. **Cron**: make sure the cron daemon is running, install the `process_poll_deadlines` entry in your crontab (one line, safe to repeat), and run it once to prove it works.
+6. **Cron**: make sure the cron daemon is running, install the `process_deadlines` entry in your crontab (one line, safe to repeat), and run it once to prove it works.
 
 Logs go to `logs/deploy-*.log` (the last 20 are kept) and the cron job logs to `logs/deadlines.log`. `scripts/deploy.sh --cron-only` repeats just the last step.
 

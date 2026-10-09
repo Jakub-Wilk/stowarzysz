@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 
 class Pact(models.Model):
@@ -36,6 +38,7 @@ class Pact(models.Model):
     outcome = models.JSONField(null=True)  # frozen when the pact is resolved
     created_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True)
+    last_nudged_at = models.DateTimeField(null=True)  # last "please settle this" push
 
     objects = models.Manager()
 
@@ -63,6 +66,7 @@ class PactParticipant(models.Model):
         DECLINED = "declined"
         REJECTED = "rejected"  # the host turned a join request down
         WITHDRAWN = "withdrawn"
+        EXPIRED = "expired"  # an invite or join request nobody answered in time
 
     pact = models.ForeignKey(Pact, on_delete=models.CASCADE, related_name="participants")
     user = models.ForeignKey(
@@ -97,14 +101,22 @@ class OutcomeProposal(models.Model):
         CONFIRMED = "confirmed"
         DISPUTED = "disputed"
         SUPERSEDED = "superseded"
+        OVERRULED = "overruled"  # a Sejmik ruling rejected a disputed claim
 
     pact = models.ForeignKey(Pact, on_delete=models.CASCADE, related_name="proposals")
-    wager = models.ForeignKey(PactParticipant, on_delete=models.CASCADE, related_name="proposals")
+    # the wager this claim settles (`bet`); null when it settles the whole pact
+    wager = models.ForeignKey(
+        PactParticipant, on_delete=models.CASCADE, related_name="proposals", null=True
+    )
     proposed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
     )
     result = models.JSONField()
+    verdicts = models.JSONField(default=dict)  # {user_id: won|lost|draw|void}, set on settling
     state = models.CharField(max_length=10, choices=State, default=State.PENDING)
+    ruling_poll = models.ForeignKey(
+        "voting.Poll", on_delete=models.SET_NULL, null=True, related_name="+"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True)
 
@@ -112,3 +124,68 @@ class OutcomeProposal(models.Model):
 
     class Meta:
         ordering = ("-created_at", "-id")
+
+
+class OutcomeConfirmation(models.Model):
+    """One required party agreeing to a claim. The claim settles once all of them have."""
+
+    proposal = models.ForeignKey(
+        OutcomeProposal, on_delete=models.CASCADE, related_name="confirmations"
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        constraints = [  # noqa: RUF012
+            models.UniqueConstraint(fields=["proposal", "user"], name="pact_confirmation_unique")
+        ]
+
+
+class JoinConsent(models.Model):
+    """One approver's say on a join request. Who has to approve depends on the kind."""
+
+    participant = models.ForeignKey(
+        PactParticipant, on_delete=models.CASCADE, related_name="consents"
+    )
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
+    )
+    approved = models.BooleanField(null=True)  # null until they decide
+
+    objects = models.Manager()
+
+    class Meta:
+        constraints = [  # noqa: RUF012
+            models.UniqueConstraint(
+                fields=["participant", "approver"], name="pact_join_consent_unique"
+            )
+        ]
+
+
+class PactAttachment(models.Model):
+    """A picture that supplements a pact's notes (the original agreement, proof of the result).
+
+    Stored via `accounts.avatars.process_photo` and served from `MEDIA_URL`."""
+
+    pact = models.ForeignKey(Pact, on_delete=models.CASCADE, related_name="attachments")
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
+    )
+    image = models.ImageField(upload_to="pact_attachments/")
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = models.Manager()
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+
+@receiver(post_delete, sender=PactAttachment)
+def delete_attachment_file(
+    sender: type[PactAttachment], instance: PactAttachment, **kwargs
+) -> None:
+    if instance.image:
+        instance.image.storage.delete(instance.image.name)

@@ -15,6 +15,7 @@ from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
+from django.db import transaction
 from rest_framework import serializers
 
 if TYPE_CHECKING:
@@ -51,6 +52,11 @@ class PollKind(ABC):
     @abstractmethod
     def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
         """Final result from the ballots cast. Include `tone` (positive/neutral/negative) if any."""
+
+    def eligible_participants(self, config: dict[str, Any], creator: Any) -> list[Any] | None:
+        """The exact voters, when the kind decides (the caller is then not added). None: the
+        caller picks the participants."""
+        return None
 
     def validate_proposal(  # noqa: B027 (optional hook)
         self, config: dict[str, Any], *, creator: Any, has_image: bool
@@ -247,6 +253,78 @@ class AvatarKind(ProfileChangeKind):
         return None
 
 
+class PactRulingKind(PollKind):
+    """Members outside a pact decide whether a disputed claim about it stands.
+
+    Ballot `{"upheld": bool}`. Only a strict majority of the votes cast upholds the claim; on a
+    tie or with no votes it is overruled and the parties can claim again. The outcome is applied
+    by `pacts.services.apply_ruling` in `on_close`.
+    """
+
+    key = "pact_ruling"
+    allows_veto = False
+    allows_early_close = False
+
+    def _proposal(self, config: Any) -> Any:
+        from pacts.models import OutcomeProposal
+
+        proposal_id = config.get("proposal_id") if isinstance(config, dict) else None
+        proposal = None
+        if isinstance(proposal_id, int) and not isinstance(proposal_id, bool):
+            proposal = OutcomeProposal.objects.select_related("pact").filter(pk=proposal_id).first()
+        if proposal is None:
+            raise serializers.ValidationError({"proposal_id": "Nie ma takiego wyniku."})
+        return proposal
+
+    def validate_config(self, config: Any) -> dict[str, Any]:
+        proposal = self._proposal(config)
+        return {
+            "proposal_id": proposal.pk,
+            "pact_id": proposal.pact_id,
+            "pact_title": proposal.pact.title,
+            "claim": proposal.result,
+        }
+
+    def generate_title(self, config: dict[str, Any]) -> str:
+        return f"Spór o zakład: {config['pact_title']}"
+
+    def eligible_participants(self, config: dict[str, Any], creator: Any) -> list[Any]:
+        from pacts.models import PactParticipant
+
+        in_pact = PactParticipant.objects.filter(pact_id=config["pact_id"]).values("user_id")
+        return list(get_user_model().objects.members().exclude(pk__in=in_pact))
+
+    def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
+        upheld = ballot.get("upheld") if isinstance(ballot, dict) else None
+        if not isinstance(upheld, bool):
+            raise serializers.ValidationError("Głos musi mieć postać {'upheld': true/false}.")
+        return {"upheld": upheld}
+
+    def veto_ballot(self, config: dict[str, Any]) -> dict[str, Any]:
+        return {"upheld": False}
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        upheld = sum(1 for e in entries if e.ballot["upheld"])
+        rejected = len(entries) - upheld
+        approved = upheld > rejected
+        return {
+            "votes_cast": len(entries),
+            "upheld": upheld,
+            "rejected": rejected,
+            "approved": approved,
+            "tone": "positive" if approved else "negative",
+        }
+
+    def on_close(self, poll: Poll, result: dict[str, Any]) -> dict[str, Any]:
+        from pacts import services
+
+        try:
+            with transaction.atomic():  # a failure here must not poison the poll's own close
+                return services.apply_ruling(poll.config["proposal_id"], upheld=result["approved"])
+        except Exception:
+            return {"applied": False, "apply_error": "Nie udało się zastosować rozstrzygnięcia."}
+
+
 KINDS: dict[str, PollKind] = {}
 
 
@@ -265,3 +343,4 @@ def get_kind(key: str) -> PollKind:
 register(ScoreKind())
 register(NicknameKind())
 register(AvatarKind())
+register(PactRulingKind())

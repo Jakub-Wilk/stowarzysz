@@ -110,6 +110,11 @@ def test_every_endpoint_requires_auth(api_client: APIClient, alice, bob) -> None
         api_client.post(url(pact, "outcome/"), {"wager_id": 1, "result": {}}, format="json"),
         api_client.post(url(pact, "outcome/1/confirm/")),
         api_client.post(url(pact, "outcome/1/dispute/")),
+        api_client.post(url(pact, "outcome/1/escalate/")),
+        api_client.post(url(pact, "join/"), {}, format="json"),
+        api_client.post(url(pact, "withdraw/")),
+        api_client.post(url(pact, "participants/1/decide/"), {"approve": True}, format="json"),
+        api_client.get(PACTS + "stats/"),
     ]
     assert [c.status_code for c in calls] == [401] * len(calls)
 
@@ -123,7 +128,7 @@ def test_create_invites_opponents_and_notifies_them(alice, bob, carol, events, p
     assert wager(pact, alice).role == "host" and wager(pact, alice).state == "active"
     assert wager(pact, bob).state == "invited"
     assert wager(pact, carol).stake_amount == 1500
-    assert {uid for uid, t, _ in events if t == "pact.updated"} == {alice.pk, bob.pk, carol.pk}
+    assert {uid for uid, t, _ in events if t == "pact.created"} == {alice.pk, bob.pk, carol.pk}
     assert pushes[0]["user_ids"] == sorted([bob.pk, carol.pk])
     assert pushes[0]["url"] == f"/pacts/{pact.pk}"
 
@@ -176,18 +181,21 @@ def test_open_pact_can_start_with_no_invitees_and_is_broadcast(alice, bob, dave,
 # --- visibility -------------------------------------------------------------
 
 
-def test_closed_pacts_are_only_visible_to_participants(alice, bob, dave) -> None:
+def test_every_member_can_read_every_pact_but_only_participants_act(alice, bob, dave) -> None:
     pact = make_bet(alice, (bob, 1000))
-    assert client_for(bob).get(url(pact)).status_code == 200
-    assert client_for(dave).get(url(pact)).status_code == 404
-    assert client_for(dave).get(PACTS).json() == []
-    assert [p["id"] for p in client_for(bob).get(PACTS).json()] == [pact.pk]
+    assert client_for(dave).get(url(pact)).status_code == 200
+    assert [p["id"] for p in client_for(dave).get(PACTS).json()] == [pact.pk]
+    assert client_for(dave).get(url(pact)).json()["my"]["role"] is None
+    assert accept(dave, pact).status_code == 403
+    assert client_for(dave).post(url(pact, "cancel/")).status_code == 403
+    accept(bob, pact)
+    assert propose(dave, pact, bob, "host").status_code == 403
 
 
 def test_list_filters(alice, bob, dave) -> None:
     mine = make_bet(alice, (bob, 1000))
     open_pact = make_bet(bob, (alice, 500), is_open=True)
-    assert {p["id"] for p in client_for(dave).get(PACTS).json()} == {open_pact.pk}
+    assert {p["id"] for p in client_for(dave).get(PACTS).json()} == {mine.pk, open_pact.pk}
     assert {p["id"] for p in client_for(dave).get(PACTS + "?open=1").json()} == {open_pact.pk}
     assert {p["id"] for p in client_for(alice).get(PACTS + "?mine=1").json()} == {
         mine.pk,
@@ -234,9 +242,8 @@ def test_pact_is_declined_when_every_invitee_says_no(alice, bob, carol) -> None:
 
 def test_strangers_cannot_respond(alice, bob, dave) -> None:
     pact = make_bet(alice, (bob, 1000))
-    assert accept(dave, pact).status_code == 404  # can't even see it
-    open_pact = make_bet(alice, (bob, 1000), is_open=True)
-    assert accept(dave, open_pact).status_code == 403  # sees it, isn't in it
+    assert accept(dave, pact).status_code == 403  # can see it, isn't in it
+    assert wager(pact, bob).state == "invited"
 
 
 def test_creator_can_cancel_before_it_starts_only(alice, bob) -> None:
@@ -372,10 +379,12 @@ def test_non_cash_wager_settles_without_a_debt(alice, bob) -> None:
     assert pact.status == Pact.Status.RESOLVED
 
 
-def test_settling_notifies_both_sides_and_pushes_the_proposer(started, alice, bob, events, pushes):
+def test_settling_notifies_the_pact_and_pushes_the_proposer(
+    started, alice, bob, carol, events, pushes
+):
     proposal = propose(alice, started, bob, "host").json()
     events.clear()
     pushes.clear()
     client_for(bob).post(url(started, f"outcome/{proposal['id']}/confirm/"))
-    assert {uid for uid, t, _ in events if t == "pact.updated"} == {alice.pk, bob.pk}
+    assert {uid for uid, t, _ in events if t == "pact.updated"} == {alice.pk, bob.pk, carol.pk}
     assert pushes[-1]["user_ids"] == [alice.pk]

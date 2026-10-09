@@ -1,7 +1,8 @@
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 from django.http import Http404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,22 +11,35 @@ from pacts import services
 from pacts.kinds import Terms
 from pacts.models import Pact
 from pacts.serializers import (
+    AttachmentUploadSerializer,
+    JoinDecisionSerializer,
     PactCreateSerializer,
     PactDetailSerializer,
     PactSerializer,
+    PactStatsSerializer,
     ProposalSerializer,
     ProposeOutcomeSerializer,
     RespondSerializer,
+    TermsSerializer,
 )
+from pacts.stats import pact_stats
 
 
 def visible_pacts(request: Request) -> QuerySet:
-    """Open pacts are readable by everyone; the rest only by the people in them."""
-    return (
-        Pact.objects.filter(Q(is_open=True) | Q(participants__user=request.user))
-        .select_related("creator")
-        .prefetch_related("participants__user", "proposals__proposed_by")
-        .distinct()
+    """Every member can read every pact; only participants act on it."""
+    return Pact.objects.select_related("creator").prefetch_related(
+        "participants__user",
+        "participants__consents",
+        "attachments__uploaded_by",
+        "proposals__proposed_by",
+        "proposals__confirmations",
+        "proposals__wager",
+    )
+
+
+def _terms(user_id: int, data: dict) -> Terms:
+    return Terms(
+        user_id, data.get("stake_amount"), data.get("stake_note") or "", data.get("side") or ""
     )
 
 
@@ -69,10 +83,8 @@ class PactListCreateView(APIView):
             due_at=data.get("due_at"),
             is_open=data["is_open"],
             config=data["config"],
-            opponents=[
-                Terms(o["user_id"], o.get("stake_amount"), o.get("stake_note", ""))
-                for o in data["opponents"]
-            ],
+            host=_terms(request.user.pk, data["host"]) if "host" in data else None,
+            opponents=[_terms(o["user_id"], o) for o in data["opponents"]],
         )
         return Response(_detail(request, pact.pk), status=status.HTTP_201_CREATED)
 
@@ -88,10 +100,78 @@ class PactRespondView(APIView):
     def post(self, request: Request, pact_id: int) -> Response:
         serializer = RespondSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         services.respond_to_invite(
-            pact_id, request.user, accept=serializer.validated_data["accept"]
+            pact_id,
+            request.user,
+            accept=data["accept"],
+            side=data.get("side") or "",
+            stake_amount=data.get("stake_amount"),
+            stake_note=data.get("stake_note"),
         )
         return Response(_detail(request, pact_id))
+
+
+class PactJoinView(APIView):
+    @extend_schema(request=TermsSerializer, responses={200: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int) -> Response:
+        serializer = TermsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.request_to_join(
+            pact_id, request.user, _terms(request.user.pk, serializer.validated_data)
+        )
+        return Response(_detail(request, pact_id))
+
+
+class PactWithdrawView(APIView):
+    @extend_schema(request=None, responses={200: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int) -> Response:
+        services.withdraw_request(pact_id, request.user)
+        return Response(_detail(request, pact_id))
+
+
+class JoinDecideView(APIView):
+    @extend_schema(request=JoinDecisionSerializer, responses={200: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int, participant_id: int) -> Response:
+        serializer = JoinDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.decide_join(
+            pact_id, request.user, participant_id, approve=serializer.validated_data["approve"]
+        )
+        return Response(_detail(request, pact_id))
+
+
+class AttachmentListView(APIView):
+    """Pictures that supplement a pact's notes (multipart `image`, optional `caption`)."""
+
+    parser_classes = (MultiPartParser,)
+
+    @extend_schema(request=AttachmentUploadSerializer, responses={201: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int) -> Response:
+        serializer = AttachmentUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        services.add_attachment(
+            pact_id,
+            request.user,
+            serializer.validated_data["image"],
+            serializer.validated_data["caption"],
+        )
+        return Response(_detail(request, pact_id), status=status.HTTP_201_CREATED)
+
+
+class AttachmentDetailView(APIView):
+    @extend_schema(request=None, responses={200: PactDetailSerializer})
+    def delete(self, request: Request, pact_id: int, attachment_id: int) -> Response:
+        services.delete_attachment(pact_id, attachment_id, request.user)
+        return Response(_detail(request, pact_id))
+
+
+class PactStatsView(APIView):
+    @extend_schema(responses={200: PactStatsSerializer(many=True)})
+    def get(self, request: Request) -> Response:
+        return Response(
+            PactStatsSerializer(pact_stats(), many=True, context={"request": request}).data
+        )
 
 
 class PactCancelView(APIView):
@@ -122,6 +202,13 @@ class OutcomeConfirmView(APIView):
     @extend_schema(request=None, responses={200: PactDetailSerializer})
     def post(self, request: Request, pact_id: int, proposal_id: int) -> Response:
         services.confirm_outcome(proposal_id, request.user)
+        return Response(_detail(request, pact_id))
+
+
+class OutcomeEscalateView(APIView):
+    @extend_schema(request=None, responses={200: PactDetailSerializer})
+    def post(self, request: Request, pact_id: int, proposal_id: int) -> Response:
+        services.escalate_dispute(proposal_id, request.user)
         return Response(_detail(request, pact_id))
 
 

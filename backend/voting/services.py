@@ -105,7 +105,12 @@ def create_poll(
     if not title:
         raise ValidationError({"title": "Podaj tytuł głosowania."})
     members = get_user_model().objects.members()
-    if kind.everyone_participates:
+    chosen = kind.eligible_participants(clean_config, creator)
+    if chosen is not None:
+        users = chosen
+        if not users:
+            raise ValidationError("Nikt nie może zagłosować w tej sprawie.")
+    elif kind.everyone_participates:
         users = list(members)
     else:
         wanted = set(participant_ids) | {creator.pk}  # the caller always takes part

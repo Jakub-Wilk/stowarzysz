@@ -3,7 +3,7 @@
 #
 #   scripts/deploy.sh              # full deploy
 #   scripts/deploy.sh --dry-run    # preflight + print every step, change nothing
-#   scripts/deploy.sh --cron-only  # only (re)install and verify the poll-deadline cron job
+#   scripts/deploy.sh --cron-only  # only (re)install and verify the deadline cron job (polls and pacts)
 #
 # master is production. Every step aborts the deploy on failure. Nothing is stopped before the new images
 # are built, and a failed launch rolls the code back to the previous commit. The database is never
@@ -261,14 +261,14 @@ launch() {
 }
 
 install_cron() {
-  step "Cron job for poll deadlines"
+  step "Cron job for poll and pact deadlines"
   local docker_bin flock_bin cmd line current new installed
   docker_bin=$(command -v docker) flock_bin=$(command -v flock)
   [[ $ROOT =~ ^[A-Za-z0-9_./-]+$ ]] || die "the repo path '$ROOT' has characters that are unsafe in a crontab"
   pgrep -x cron >/dev/null || pgrep -x crond >/dev/null ||
     die "the cron daemon is not running (Debian/Ubuntu: sudo service cron start; WSL does not start it by itself)"
   # Cron runs with a minimal PATH and /bin/sh, hence absolute paths. flock stops runs piling up.
-  cmd="cd $ROOT && $flock_bin -n $ROOT/.deadlines.lock $docker_bin compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T backend python manage.py process_poll_deadlines >> $LOG_DIR/deadlines.log 2>&1"
+  cmd="cd $ROOT && $flock_bin -n $ROOT/.deadlines.lock $docker_bin compose -f $COMPOSE_FILE --env-file $ENV_FILE exec -T backend python manage.py process_deadlines >> $LOG_DIR/deadlines.log 2>&1"
   line="*/5 * * * * $cmd $CRON_MARK"
   current=$(crontab -l 2>/dev/null || true)
   new=$(printf '%s\n' "$current" | grep -vF "$CRON_MARK" || true)
