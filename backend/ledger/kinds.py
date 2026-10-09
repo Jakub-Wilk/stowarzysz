@@ -5,7 +5,9 @@ Every kind is a different way of arriving at the same fact, `money.Debt` (X owes
 
 - `expense`: somebody paid for something others shared. Its breakdown (who paid, who owes what)
   becomes the obligations that settle it up.
-- `debt`: exactly the debts given, from a settled pact or goods a member says they are owed.
+- `income`: a negative expense. Somebody received money (a refund, a deposit back, something
+  sold) that belongs to the people it is split among, so they are owed their parts.
+- `debt`: exactly the debts given, from a settled pact or one a member records (money or goods).
 - `payment`: somebody paid somebody back. It is pending until the receiver confirms it, and then
   the receiver owes the payer that amount, which is what cancels the debt.
 
@@ -17,7 +19,7 @@ and the generic services don't change.
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date
 from decimal import Decimal
 from typing import Any, ClassVar
@@ -34,6 +36,7 @@ from ledger.money import (
     allocate,
     format_amount,
     settle_up,
+    to_base,
 )
 
 Status = LedgerEntry.Status
@@ -157,6 +160,16 @@ class ExpenseKind(EntryKind):
 
     key = "expense"
     SPLITS = ("equal", "shares", "exact")
+    SIGN: ClassVar[int] = 1  # +1: payers are owed their outlay; -1 (income): they owe it on
+    WORDS: ClassVar[dict[str, str]] = {
+        "title": "Podaj, za co był wydatek.",
+        "payer_twice": "Każdy płacący może wystąpić tylko raz.",
+        "payers_total": "Płacący muszą razem wyłożyć {total}.",
+        "deleted": "Ten wydatek został usunięty.",
+        "created": "Nowy wydatek",
+        "updated": "Wydatek zmieniony",
+        "cancelled": "Wydatek usunięty",
+    }
 
     def clean(self, data: dict[str, Any], author: Any) -> Draft:
         currency = data["currency"]
@@ -164,16 +177,15 @@ class ExpenseKind(EntryKind):
             raise ValidationError({"currency": "Nieobsługiwana waluta."})
         title = " ".join(data["title"].split())
         if not title:
-            raise ValidationError({"title": "Podaj, za co był wydatek."})
+            raise ValidationError({"title": self.WORDS["title"]})
         items = [self._clean_item(item, currency) for item in data["items"]]
         total = sum(item["amount"] for item in items)
         payers = sorted(data["payers"], key=lambda p: p["user_id"])
         if len({p["user_id"] for p in payers}) != len(payers):
-            raise ValidationError({"payers": "Każdy płacący może wystąpić tylko raz."})
+            raise ValidationError({"payers": self.WORDS["payer_twice"]})
         if sum(p["amount"] for p in payers) != total:
-            raise ValidationError(
-                {"payers": f"Płacący muszą razem wyłożyć {format_amount(total, currency)}."}
-            )
+            message = self.WORDS["payers_total"].format(total=format_amount(total, currency))
+            raise ValidationError({"payers": message})
         people = {p["user_id"] for p in payers} | {
             s["user_id"] for item in items for s in item["shares"]
         }
@@ -233,7 +245,8 @@ class ExpenseKind(EntryKind):
         return self.breakdown(entry).to_base(entry.rate or Decimal(1), CURRENCIES[entry.currency])
 
     def obligations(self, entry: LedgerEntry) -> list[Debt]:
-        return settle_up(self.base_breakdown(entry).nets())
+        nets = self.base_breakdown(entry).nets()
+        return settle_up({user: self.SIGN * net for user, net in nets.items()})
 
     def base_amount(self, entry: LedgerEntry) -> int | None:
         return self.base_breakdown(entry).total
@@ -246,44 +259,73 @@ class ExpenseKind(EntryKind):
         if action not in ("edit", "cancel", "attach"):
             raise Conflict()
         if entry.status != Status.CONFIRMED:
-            raise Conflict("Ten wydatek został usunięty.")
+            raise Conflict(self.WORDS["deleted"])
 
     def announcements(self, entry: LedgerEntry, event: str, actor: Any) -> list[Push]:
-        titles = {
-            "created": "Nowy wydatek",
-            "updated": "Wydatek zmieniony",
-            "cancelled": "Wydatek usunięty",
-        }
-        if event not in titles:
+        if event not in ("created", "updated", "cancelled"):
             return []
         recipients = sorted(self.involved(entry) - {getattr(actor, "pk", None)})
         amount = format_amount(entry.amount or 0, entry.currency)
         body = f"{_username(actor)}: {entry.title} ({amount})"
-        return [Push(recipients, titles[event], body)] if recipients else []
+        return [Push(recipients, self.WORDS[event], body)] if recipients else []
+
+
+class IncomeKind(ExpenseKind):
+    """A negative expense: somebody received money that the people it is split among share, a
+    refund, a deposit back, a sold leftover. Same `details` and rules as an expense, but `payers`
+    are the people who received the money and the nets flip: they owe the others their parts.
+    The breakdown stays positive (received, share), so the arithmetic never sees a minus."""
+
+    key = "income"
+    SIGN = -1
+    WORDS: ClassVar[dict[str, str]] = {
+        "title": "Podaj, za co był przychód.",
+        "payer_twice": "Każdy otrzymujący może wystąpić tylko raz.",
+        "payers_total": "Otrzymujący muszą razem dostać {total}.",
+        "deleted": "Ten przychód został usunięty.",
+        "created": "Nowy przychód",
+        "updated": "Przychód zmieniony",
+        "cancelled": "Przychód usunięty",
+    }
 
 
 class DebtKind(EntryKind):
     """Somebody owes somebody: the debts of a settled pact (recorded by the system through
-    `services.record_debts`) or goods a member says they are owed ("2 x kawa").
+    `services.record_debts`) or one a member records ("ben owes me 50 zł", "I owe ann 2 x kawa").
 
-    `details`: `debts` [{debtor_id, creditor_id, amount, item}], the obligations as they are.
-    Money comes only from the system; a member records money owed to them as an expense, the
-    Tricount way. A manual debt can be deleted by the person owed; a pact's belongs to the pact.
+    `details`: `debts` [{debtor_id, creditor_id, amount, item}], money in minor units of the
+    entry's currency (pacts: always the base currency) or a quantity of goods. A member records
+    only debts they are a party to, either side; money in another currency is converted at the
+    day's rate, like an expense. A manual debt can be edited or deleted by the person owed; a
+    pact's belongs to the pact.
     """
 
     key = "debt"
+    MAX_GOODS = 1000
 
     def clean(self, data: dict[str, Any], author: Any) -> Draft:
+        debtor, creditor = data["debtor_id"], data.get("creditor_id") or author.pk
+        if author.pk not in (debtor, creditor):
+            raise ValidationError(
+                {"debtor_id": "Możesz zapisać tylko swój dług albo dług wobec Ciebie."}
+            )
+        if debtor == creditor:
+            raise ValidationError({"debtor_id": "Nie można być dłużnikiem samego siebie."})
+        require_members([debtor, creditor], "debtor_id")
         item = normalize_item(data["item"])
-        if not item:
-            raise ValidationError({"item": "Podaj, co jest winien."})
-        require_members([data["debtor_id"]], "debtor_id")
-        if data["debtor_id"] == author.pk:
-            raise ValidationError({"debtor_id": "Nie możesz być sobie winien."})
-        debt = Debt(data["debtor_id"], author.pk, data["amount"], item)
-        return DebtKind.draft(
-            [debt], title=data["note"].strip() or item, on=data["occurred_on"], source="manual"
+        currency = data["currency"]
+        if item and data["amount"] > self.MAX_GOODS:
+            raise ValidationError({"amount": f"Najwyżej {self.MAX_GOODS} sztuk."})
+        if not item and currency not in CURRENCIES:
+            raise ValidationError({"currency": "Nieobsługiwana waluta."})
+        draft = DebtKind.draft(
+            [Debt(debtor, creditor, data["amount"], item)],
+            title=" ".join(data["title"].split()) or item or "Dług",
+            on=data["occurred_on"],
+            source="manual",
+            currency=currency,
         )
+        return replace(draft, note=data["note"].strip())
 
     @staticmethod
     def draft(
@@ -293,9 +335,10 @@ class DebtKind(EntryKind):
         on: date,
         source: str,
         source_id: int | None = None,
+        currency: str = BASE_CURRENCY,
     ) -> Draft:
-        """A debt entry for `debts`. One unit gives a headline amount; a mix (a pot plus stakes
-        in kind) has none, and the UI lists the debts."""
+        """A debt entry for `debts` (money in `currency`). One unit gives a headline amount; a mix
+        (a pot plus stakes in kind) has none, and the UI lists the debts."""
         debts = [Debt(d.debtor_id, d.creditor_id, d.amount, normalize_item(d.item)) for d in debts]
         if any(d.amount <= 0 for d in debts):
             raise ValidationError("Kwota musi być dodatnia.")
@@ -308,40 +351,67 @@ class DebtKind(EntryKind):
             title=title[:200],
             occurred_on=on,
             amount=sum(d.amount for d in debts) if single else None,
-            currency=BASE_CURRENCY if single and not item else "",
+            currency=currency if single and not item else "",
             item=item,
             details={"debts": [asdict(d) for d in debts]},
             source_type=source,
             source_id=source_id,
         )
 
-    def obligations(self, entry: LedgerEntry) -> list[Debt]:
+    @staticmethod
+    def debts(entry: LedgerEntry) -> list[Debt]:
+        """The debts as recorded: money in the entry's currency."""
         return [Debt(**debt) for debt in entry.details["debts"]]
+
+    def obligations(self, entry: LedgerEntry) -> list[Debt]:
+        debts = self.debts(entry)
+        if entry.rate is None:
+            return debts
+        exponent = CURRENCIES[entry.currency]
+        converted = [
+            d if d.item else replace(d, amount=to_base(d.amount, entry.rate, exponent))
+            for d in debts
+        ]
+        return [d for d in converted if d.amount > 0]  # a few yen can round to nothing
+
+    def base_amount(self, entry: LedgerEntry) -> int | None:
+        if entry.amount is None or entry.item:
+            return None
+        return sum(d.amount for d in self.obligations(entry))
 
     def check(self, entry: LedgerEntry, user: Any, action: str) -> None:
         if action == "attach":
             if user.pk not in self.involved(entry):
                 raise PermissionDenied("Zdjęcie mogą dodać tylko osoby z tego wpisu.")
             return
-        if action != "cancel" or entry.status != Status.CONFIRMED:
+        if action not in ("cancel", "edit") or entry.status != Status.CONFIRMED:
             raise Conflict()
         if entry.source_type != "manual":
             raise Conflict("Rozliczenie zakładu zmienia się tylko przez zakład.")
-        if user.pk not in {d.creditor_id for d in self.obligations(entry)}:
-            raise PermissionDenied("Wpis może usunąć tylko osoba, której ktoś jest winien.")
+        if user.pk not in {d.creditor_id for d in self.debts(entry)}:
+            raise PermissionDenied(
+                "Wpis może zmienić lub usunąć tylko osoba, której ktoś jest winien."
+            )
 
     def announcements(self, entry: LedgerEntry, event: str, actor: Any) -> list[Push]:
         users = get_user_model().objects.in_bulk(self.involved(entry))
+        currency = entry.currency or BASE_CURRENCY
         pushes = []
-        for debt in self.obligations(entry):
+        for debt in self.debts(entry):
             debtor, creditor = users[debt.debtor_id], users[debt.creditor_id]
-            what = format_amount(debt.amount, item=debt.item)
+            what = format_amount(debt.amount, currency, debt.item)
             if event == "created" and actor is None:
                 body = f"{debtor.username} jest Ci winien {what}: {entry.title}"
                 pushes.append(Push([creditor.pk], "Nowe rozliczenie", body))
             elif event == "created" and actor.pk == creditor.pk:
                 body = f"{creditor.username} zapisał(a), że jesteś winien(-na) {what}"
                 pushes.append(Push([debtor.pk], "Nowe rozliczenie", body))
+            elif event == "created" and actor.pk == debtor.pk:
+                body = f"{debtor.username} zapisał(a), że jest Ci winien(-na) {what}"
+                pushes.append(Push([creditor.pk], "Nowe rozliczenie", body))
+            elif event == "updated":
+                body = f"{_username(actor)} zmienił(a) wpis: {entry.title} ({what})"
+                pushes.append(Push([debtor.pk], "Dług zmieniony", body))
             elif event == "cancelled":
                 body = f"{_username(actor)} usunął(-ęła) wpis: {what}"
                 pushes.append(Push([debtor.pk], "Wpis usunięty", body))
@@ -432,5 +502,6 @@ def get_kind(key: str) -> EntryKind:
 
 
 register(ExpenseKind())
+register(IncomeKind())
 register(DebtKind())
 register(PaymentKind())

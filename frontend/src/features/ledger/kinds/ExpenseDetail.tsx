@@ -1,7 +1,8 @@
 import { UserAvatar } from '@/features/auth/UserAvatar'
+import { WORDING } from '@/features/ledger/expense/wording'
 import { formatDay, useMoney, who } from '@/features/ledger/format'
 import { isItemized, peopleOf } from '@/features/ledger/kinds/helpers'
-import type { ExpenseEntry, ExpenseItem, UserBrief } from '@/lib/api-types'
+import type { ExpenseItem, SharedEntry, UserBrief } from '@/lib/api-types'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -51,7 +52,9 @@ function ItemRow({ item, people, currency }: ItemRowProps) {
   )
 }
 
-export function ExpenseDetail({ entry, myId }: { entry: ExpenseEntry; myId: number | undefined }) {
+/** An expense or an income: its items, and who paid (received) and whose part is what. */
+export function ExpenseDetail({ entry, myId }: { entry: SharedEntry; myId: number | undefined }) {
+  const words = WORDING[entry.kind]
   const money = useMoney()
   const people = peopleOf(entry)
   const foreign = entry.rate !== null
@@ -83,8 +86,8 @@ export function ExpenseDetail({ entry, myId }: { entry: ExpenseEntry; myId: numb
       <section className="flex flex-col gap-1 rounded-lg border bg-card px-4 py-3">
         <Heading>
           {!isItemized(entry) && entry.details.items[0]?.split !== 'equal'
-            ? `Podział ${SPLIT_LABEL[entry.details.items[0].split]}`
-            : 'Podział'}
+            ? `${words.partHeading} (${SPLIT_LABEL[entry.details.items[0].split]})`
+            : words.partHeading}
         </Heading>
         <ul className="divide-y">
           {entry.breakdown.map((row) => (
@@ -96,7 +99,7 @@ export function ExpenseDetail({ entry, myId }: { entry: ExpenseEntry; myId: numb
                 </span>
                 {row.paid > 0 && (
                   <span className="text-sm text-muted-foreground">
-                    zapłacił(a) {money.format(row.paid, entry.currency)}
+                    {words.paid} {money.format(row.paid, entry.currency)}
                   </span>
                 )}
               </div>

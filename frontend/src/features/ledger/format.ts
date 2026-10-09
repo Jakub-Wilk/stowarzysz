@@ -1,5 +1,5 @@
 import { useLedgerMeta } from '@/features/ledger/hooks'
-import type { LedgerEntry, Tone, UserBrief } from '@/lib/api-types'
+import type { LedgerCategoryInfo, LedgerEntry, Tone, UserBrief } from '@/lib/api-types'
 import { formatDebt, formatMoney } from '@/lib/money'
 
 /** "Ty" for the signed-in user, otherwise the username. */
@@ -35,6 +35,12 @@ export function useMoney() {
     format: (minor: number, currency: string): string =>
       formatMoney(minor, currency, exponent(currency)),
   }
+}
+
+/** An entry's category (name and emoji), or nothing for an uncategorized entry. */
+export function useCategory(): (entry: LedgerEntry) => LedgerCategoryInfo | undefined {
+  const meta = useLedgerMeta()
+  return (entry) => meta.data?.categories.find((c) => c.key === entry.category)
 }
 
 /** What an entry means for one person: money (grosze) and goods they gain (+) or owe (-). */

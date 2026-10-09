@@ -8,7 +8,7 @@ import { useHasSession } from '@/features/auth/hooks'
 import { PublicOnly, RequireAuth, RequireSuperuser } from '@/features/auth/RouteGuards'
 import { RealtimeShell } from '@/features/voting/realtime'
 import { ActivatePage } from '@/pages/ActivatePage'
-import { ExpenseEditorPage } from '@/pages/ExpenseEditorPage'
+import { EntryEditorPage } from '@/pages/EntryEditorPage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LedgerEntryPage } from '@/pages/LedgerEntryPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -51,9 +51,10 @@ export default function App() {
               <Route path="voting/:id" element={<VoteDetailPage />} />
               <Route path="pacts/new" element={<PactNewPage />} />
               <Route path="pacts/:id" element={<PactDetailPage />} />
-              <Route path="ledger/new" element={<ExpenseEditorPage />} />
+              <Route path="ledger/new" element={<Navigate to="/ledger/new/expense" replace />} />
+              <Route path="ledger/new/:kind" element={<EntryEditorPage />} />
               <Route path="ledger/:id" element={<LedgerEntryPage />} />
-              <Route path="ledger/:id/edit" element={<ExpenseEditorPage />} />
+              <Route path="ledger/:id/edit" element={<EntryEditorPage />} />
             </Route>
             <Route element={<RequireSuperuser />}>
               <Route path="manage" element={<ManageLayout />}>

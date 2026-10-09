@@ -2,12 +2,14 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 
 import { apiFetch } from '@/lib/api'
 import type {
+  DebtInput,
   ExpenseInput,
   LedgerBalances,
   LedgerEntry,
   LedgerEntryInput,
   LedgerMeta,
   LedgerRate,
+  LedgerStats,
   Paginated,
 } from '@/lib/api-types'
 
@@ -64,6 +66,18 @@ export function useLedgerMeta() {
   })
 }
 
+/** Spending stats for `start`..`end` (`YYYY-MM-DD`); without dates, everything. */
+export function useStats(start: string | null, end: string | null) {
+  const params = new URLSearchParams()
+  if (start) params.set('start', start)
+  if (end) params.set('end', end)
+  return useQuery({
+    queryKey: [...ledgerKey, 'stats', start, end],
+    queryFn: () => apiFetch<LedgerStats>(`/api/ledger/stats/?${params}`),
+    enabled: !start || !end || start <= end,
+  })
+}
+
 /** The rate an expense in `currency` on `date` will use; asking also warms the server's cache. */
 export function useRate(currency: string, date: string, enabled: boolean) {
   return useQuery({
@@ -92,9 +106,10 @@ export function useCreateEntry() {
   )
 }
 
-/** Replace an expense; `version` is the one being edited (a 409 means somebody saved first). */
-export function useUpdateExpense(id: number) {
-  return useEntryMutation((v: { input: ExpenseInput; version: number }) =>
+/** Replace an expense, an income or a debt; `version` is the one being edited (a 409 means
+ * somebody saved first). */
+export function useUpdateEntry(id: number) {
+  return useEntryMutation((v: { input: ExpenseInput | DebtInput; version: number }) =>
     apiFetch<LedgerEntry>(`${ENTRIES}${id}/`, {
       method: 'PUT',
       json: { ...v.input, version: v.version },
@@ -111,12 +126,17 @@ export function useEntryAction() {
   )
 }
 
+export const MAX_PHOTOS = 10 // per entry, as on the server
+
+/** Upload one photo to an entry (outside a hook: the editor uploads after saving). */
+export function uploadAttachment(id: number, image: File): Promise<LedgerEntry> {
+  const form = new FormData()
+  form.append('image', image)
+  return apiFetch<LedgerEntry>(`${ENTRIES}${id}/attachments/`, { method: 'POST', form })
+}
+
 export function useAddAttachment(id: number) {
-  return useEntryMutation((image: File) => {
-    const form = new FormData()
-    form.append('image', image)
-    return apiFetch<LedgerEntry>(`${ENTRIES}${id}/attachments/`, { method: 'POST', form })
-  })
+  return useEntryMutation((image: File) => uploadAttachment(id, image))
 }
 
 export function useDeleteAttachment(id: number) {

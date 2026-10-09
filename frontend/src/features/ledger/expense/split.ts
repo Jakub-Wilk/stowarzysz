@@ -39,3 +39,7 @@ export function owedFor(items: ExpenseItem[]): Map<number, number> {
   })
   return owed
 }
+
+/** A number of shares as typed: "2" -> 2; 0 for anything that is not a whole number above 0. */
+export const parseWeight = (text: string): number =>
+  /^\d+$/.test(text.trim()) && Number(text) > 0 ? Number(text) : 0

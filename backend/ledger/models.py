@@ -5,6 +5,8 @@ Everything kind-specific (what an entry's `details` hold, how they turn into obl
 may do what) lives in `ledger.kinds`; all changes go through `ledger.services`.
 """
 
+from typing import ClassVar
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
@@ -27,13 +29,33 @@ class LedgerEntry(models.Model):
         CANCELLED = "cancelled"  # withdrawn: a deleted expense, a payment taken back
 
     class Category(models.TextChoices):
-        FOOD = "food", "Jedzenie"
-        GROCERIES = "groceries", "Zakupy"
-        TRANSPORT = "transport", "Transport"
-        LODGING = "lodging", "Nocleg"
+        # Keys are stored on entries: rename a label freely, never a key.
+        LODGING = "lodging", "Zakwaterowanie"
+        BILLS = "bills", "Opłaty"
+        GROCERIES = "groceries", "Zakupy spożywcze"
         FUN = "fun", "Rozrywka"
-        BILLS = "bills", "Rachunki"
+        HEALTH = "health", "Opieka zdrowotna"
+        INSURANCE = "insurance", "Ubezpieczenie"
+        TRANSPORT = "transport", "Transport"
+        FOOD = "food", "Restauracje i bary"
+        SHOPPING = "shopping", "Shopping"
+        WEED = "weed", "Zioło"
         OTHER = "other", "Inne"
+
+    # Each category's icon, kept apart from its name; every category needs one (tested).
+    CATEGORY_EMOJI: ClassVar[dict[str, str]] = {
+        Category.LODGING: "🏠",
+        Category.BILLS: "🧾",
+        Category.GROCERIES: "🛒",
+        Category.FUN: "🎉",
+        Category.HEALTH: "💊",
+        Category.INSURANCE: "🛡️",
+        Category.TRANSPORT: "🚗",
+        Category.FOOD: "🍽️",
+        Category.SHOPPING: "🛍️",
+        Category.WEED: "🌿",
+        Category.OTHER: "📦",
+    }
 
     kind = models.CharField(max_length=32)  # a key of `ledger.kinds.KINDS`
     status = models.CharField(max_length=10, choices=Status, default=Status.CONFIRMED)

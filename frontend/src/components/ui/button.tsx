@@ -12,11 +12,13 @@ const buttonVariants = cva(
           'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
+        // App change (not generated): borderless buttons are always underlined, so they read as
+        // buttons and not as plain text. Underlines only touch text; icon-only buttons are as before.
         ghost:
-          'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
+          'underline underline-offset-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
         destructive:
           'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
-        link: 'text-primary underline-offset-4 hover:underline',
+        link: 'text-primary underline underline-offset-4',
       },
       size: {
         default:

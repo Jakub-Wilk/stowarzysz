@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 import { useFlashOnChange } from '@/components/motion/useFlashOnChange'
 import { EntryActions } from '@/features/ledger/EntryActions'
-import { formatImpact, impactOf, impactTone, useMoney } from '@/features/ledger/format'
+import { formatImpact, impactOf, impactTone, useCategory, useMoney } from '@/features/ledger/format'
 import { kindOf } from '@/features/ledger/kinds'
 import { toneClasses } from '@/features/voting/tone'
 import type { LedgerEntry, LedgerEntryStatus, Tone } from '@/lib/api-types'
@@ -38,6 +38,7 @@ export function EntryRow({ entry, myId }: { entry: LedgerEntry; myId: number | u
   const mine = impact ? formatImpact(impact) : null
   const headline = money.headline(entry)
   const Icon = kind.icon
+  const category = useCategory()(entry)
 
   return (
     <div
@@ -53,7 +54,13 @@ export function EntryRow({ entry, myId }: { entry: LedgerEntry; myId: number | u
         className="flex items-center gap-4 rounded-lg p-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-5" aria-label={kind.label} />
+          {category ? (
+            <span role="img" aria-label={category.label} className="text-2xl leading-none">
+              {category.emoji}
+            </span>
+          ) : (
+            <Icon className="size-5" aria-label={kind.label} />
+          )}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-metal truncate text-lg leading-snug font-semibold">

@@ -56,13 +56,27 @@ class ExpenseInputSerializer(_EntryInput):
     items = ItemSerializer(many=True, allow_empty=False, max_length=200)
 
 
+class IncomeInputSerializer(ExpenseInputSerializer):
+    """Somebody received money the others share (a negative expense): `payers` are the people
+    who received it, `items` who it is for."""
+
+    kind = serializers.ChoiceField(choices=["income"])
+
+
 class DebtInputSerializer(_EntryInput):
-    """Goods somebody owes you ("2 x kawa"); it counts at once."""
+    """A debt you are a party to: money ("50 zł") or goods ("2 x kawa"); it counts at once."""
 
     kind = serializers.ChoiceField(choices=["debt"])
     debtor_id = serializers.IntegerField()
-    item = serializers.CharField(max_length=60)
-    amount = serializers.IntegerField(min_value=1, max_value=1000, default=1)
+    creditor_id = serializers.IntegerField(required=False, help_text="Defaults to you.")
+    title = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    item = serializers.CharField(
+        max_length=60, required=False, allow_blank=True, default="", help_text="Empty: money."
+    )
+    amount = serializers.IntegerField(
+        min_value=1, help_text="Minor units of `currency`, or the quantity of `item`."
+    )
+    currency = serializers.ChoiceField(choices=list(CURRENCIES), default=BASE_CURRENCY)
 
 
 class PaymentInputSerializer(_EntryInput):
@@ -76,6 +90,7 @@ class PaymentInputSerializer(_EntryInput):
 
 INPUTS: dict[str, type[_EntryInput]] = {
     "expense": ExpenseInputSerializer,
+    "income": IncomeInputSerializer,
     "debt": DebtInputSerializer,
     "payment": PaymentInputSerializer,
 }
@@ -85,7 +100,19 @@ class ExpenseUpdateSerializer(ExpenseInputSerializer):
     version = serializers.IntegerField(help_text="The version being edited (409 if outdated).")
 
 
-UPDATES: dict[str, type[_EntryInput]] = {"expense": ExpenseUpdateSerializer}  # editable kinds
+class IncomeUpdateSerializer(IncomeInputSerializer):
+    version = serializers.IntegerField(help_text="The version being edited (409 if outdated).")
+
+
+class DebtUpdateSerializer(DebtInputSerializer):
+    version = serializers.IntegerField(help_text="The version being edited (409 if outdated).")
+
+
+UPDATES: dict[str, type[_EntryInput]] = {  # the kinds that can be edited
+    "expense": ExpenseUpdateSerializer,
+    "income": IncomeUpdateSerializer,
+    "debt": DebtUpdateSerializer,
+}
 
 
 class EntryAttachmentUploadSerializer(serializers.Serializer):
@@ -261,12 +288,57 @@ class CurrencySerializer(serializers.Serializer):
     exponent = serializers.IntegerField(help_text="Minor-unit digits: 2 for PLN, 0 for JPY.")
 
 
-class ChoiceSerializer(serializers.Serializer):
+class CategorySerializer(serializers.Serializer):
     key = serializers.CharField()
     label = serializers.CharField()
+    emoji = serializers.CharField()
 
 
 class MetaSerializer(serializers.Serializer):
     base_currency = serializers.CharField()
     currencies = CurrencySerializer(many=True)
-    categories = ChoiceSerializer(many=True)
+    categories = CategorySerializer(many=True)
+
+
+class StatsQuerySerializer(serializers.Serializer):
+    start = serializers.DateField(required=False, help_text="First day; omit for the beginning.")
+    end = serializers.DateField(required=False, help_text="Last day; omit for the latest entry.")
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if "start" in attrs and "end" in attrs and attrs["start"] > attrs["end"]:
+            raise serializers.ValidationError("Początek nie może być po końcu.")
+        return attrs
+
+
+class StatsCategorySerializer(serializers.Serializer):
+    key = serializers.CharField(help_text="An entry category, or `debts`.")
+    label = serializers.CharField()
+    emoji = serializers.CharField()
+    spent = serializers.IntegerField(help_text="Grosze, net of incomes (can be negative).")
+    count = serializers.IntegerField()
+
+
+class StatsPersonSerializer(serializers.Serializer):
+    user = PersonSerializer()
+    share = serializers.IntegerField(help_text="Their part of what was spent, in grosze.")
+    paid = serializers.IntegerField(help_text="What they paid out, in grosze.")
+
+
+class StatsPointSerializer(serializers.Serializer):
+    period = serializers.CharField(help_text="`YYYY-MM-DD` for a day, `YYYY-MM` for a month.")
+    spent = serializers.IntegerField()
+
+
+class StatsSerializer(serializers.Serializer):
+    currency = serializers.CharField()
+    start = serializers.DateField()
+    end = serializers.DateField()
+    unit = serializers.ChoiceField(choices=["day", "month"], help_text="The series' buckets.")
+    spent = serializers.IntegerField(help_text="Expenses and debts minus incomes, in grosze.")
+    expenses = serializers.IntegerField()
+    income = serializers.IntegerField()
+    count = serializers.IntegerField()
+    monthly_average = serializers.IntegerField(allow_null=True)
+    categories = StatsCategorySerializer(many=True)
+    people = StatsPersonSerializer(many=True)
+    series = StatsPointSerializer(many=True)

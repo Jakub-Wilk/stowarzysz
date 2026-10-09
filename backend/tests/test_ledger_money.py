@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from ledger.money import Breakdown, Debt, allocate, format_amount, settle_up
+from ledger.money import Breakdown, Debt, allocate, format_amount, settle_up, to_base
 
 
 @pytest.mark.parametrize(
@@ -87,3 +87,11 @@ def test_format_amount() -> None:
     assert format_amount(1200, "JPY") == "1200 JPY"
     assert format_amount(1, "", "piwo") == "piwo"
     assert format_amount(3, "", "piwo") == "3 x piwo"
+
+
+def test_to_base_rounds_half_up_across_exponents() -> None:
+    assert to_base(1000, Decimal("4.25"), 2) == 4250
+    assert to_base(1, Decimal("4.325"), 2) == 4  # 4.325 grosze
+    assert to_base(1, Decimal("4.35"), 2) == 4
+    assert to_base(1, Decimal("4.5"), 2) == 5
+    assert to_base(100, Decimal("0.0265"), 0) == 265  # 100 JPY

@@ -11,6 +11,7 @@ from ledger.views import (
     MetaView,
     RateView,
     RejectView,
+    StatsView,
 )
 
 urlpatterns = [
@@ -31,5 +32,6 @@ urlpatterns = [
     ),
     path("balances/", BalancesView.as_view(), name="ledger_balances"),
     path("rates/", RateView.as_view(), name="ledger_rate"),
+    path("stats/", StatsView.as_view(), name="ledger_stats"),
     path("meta/", MetaView.as_view(), name="ledger_meta"),
 ]

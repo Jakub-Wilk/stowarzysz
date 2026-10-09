@@ -99,6 +99,13 @@ def settle_up(nets: Mapping[int, int], item: str = "") -> list[Debt]:
     return debts
 
 
+def to_base(amount: int, rate: Decimal, exponent: int) -> int:
+    """`amount` minor units of a currency with `exponent` digits, in base-currency minor units
+    at `rate` (base per unit), rounded half up."""
+    scale = Decimal(10) ** (CURRENCIES[BASE_CURRENCY] - exponent)
+    return int((amount * rate * scale).quantize(Decimal(1), ROUND_HALF_UP))
+
+
 def _spread(total: int, parts: Mapping[int, int]) -> dict[int, int]:
     """`total` divided among `parts`' users in proportion to their amounts, in user id order."""
     ids = sorted(parts)
@@ -125,8 +132,7 @@ class Breakdown:
     def to_base(self, rate: Decimal, exponent: int) -> Breakdown:
         """The same breakdown in the base currency. The total is converted once (half up) and
         then spread over each side, so the result still balances to the grosz."""
-        scale = Decimal(10) ** (CURRENCIES[BASE_CURRENCY] - exponent)
-        base_total = int((self.total * rate * scale).quantize(Decimal(1), ROUND_HALF_UP))
+        base_total = to_base(self.total, rate, exponent)
         return Breakdown(_spread(base_total, self.paid), _spread(base_total, self.owed))
 
 

@@ -10,7 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger import rates, services
+from ledger import rates, services, stats
 from ledger.balances import balances
 from ledger.kinds import Conflict, get_kind
 from ledger.models import LedgerEntry
@@ -21,16 +21,22 @@ from ledger.serializers import (
     BalancesSerializer,
     EntryAttachmentUploadSerializer,
     EntrySerializer,
-    ExpenseUpdateSerializer,
     MetaSerializer,
     RateQuerySerializer,
     RateSerializer,
+    StatsQuerySerializer,
+    StatsSerializer,
     people_for,
 )
 
 ENTRY_INPUT = PolymorphicProxySerializer(
     component_name="EntryInput",
     serializers=list(INPUTS.values()),
+    resource_type_field_name="kind",
+)
+ENTRY_UPDATE = PolymorphicProxySerializer(
+    component_name="EntryUpdate",
+    serializers=list(UPDATES.values()),
     resource_type_field_name="kind",
 )
 
@@ -67,7 +73,7 @@ class EntryListView(APIView):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter("kind", enum=["expense", "debt", "payment"], required=False),
+            OpenApiParameter("kind", enum=["expense", "income", "debt", "payment"], required=False),
             OpenApiParameter("source_type", type=str, required=False),
             OpenApiParameter("source_id", type=int, required=False),
             OpenApiParameter("cursor", type=str, required=False),
@@ -103,13 +109,14 @@ class EntryDetailView(APIView):
     def get(self, request: Request, entry_id: int) -> Response:
         return Response(detail(request, entry_id))
 
-    @extend_schema(request=ExpenseUpdateSerializer, responses={200: EntrySerializer})
+    @extend_schema(request=ENTRY_UPDATE, responses={200: EntrySerializer})
     def put(self, request: Request, entry_id: int) -> Response:
-        """Replace an entry's content (only expenses can be edited). Send the `version` you
-        edited; if somebody saved in between, you get a 409 and should reload."""
+        """Replace an entry's content (expenses, incomes and manual debts). Send the `version`
+        you edited; if somebody saved in between, you get a 409 and should reload."""
         entry = get_object_or_404(LedgerEntry, pk=entry_id)
         if entry.kind not in UPDATES:
             raise Conflict("Tego wpisu nie można edytować.")
+        get_kind(entry.kind).check(entry, request.user, "edit")  # 409/403 before a 400
         serializer = UPDATES[entry.kind](data={**request.data, "kind": entry.kind})
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
@@ -187,6 +194,18 @@ class RateView(APIView):
         return Response(RateSerializer(data).data)
 
 
+class StatsView(APIView):
+    """Spending in a period (public, like the entries): totals, by category, by person and over
+    time. Without dates it covers everything."""
+
+    @extend_schema(parameters=[StatsQuerySerializer], responses={200: StatsSerializer})
+    def get(self, request: Request) -> Response:
+        query = StatsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        data = stats.spending(query.validated_data.get("start"), query.validated_data.get("end"))
+        return Response(StatsSerializer(data, context={"request": request}).data)
+
+
 class MetaView(APIView):
     """What the forms offer: currencies (with their minor-unit digits) and categories."""
 
@@ -196,7 +215,8 @@ class MetaView(APIView):
             "base_currency": BASE_CURRENCY,
             "currencies": [{"code": c, "exponent": e} for c, e in CURRENCIES.items()],
             "categories": [
-                {"key": key, "label": label} for key, label in LedgerEntry.Category.choices
+                {"key": key, "label": label, "emoji": LedgerEntry.CATEGORY_EMOJI[key]}
+                for key, label in LedgerEntry.Category.choices
             ],
         }
         return Response(MetaSerializer(data).data)

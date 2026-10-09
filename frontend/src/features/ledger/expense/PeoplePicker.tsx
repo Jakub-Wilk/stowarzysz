@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import type { UserBrief } from '@/lib/api-types'
 import { cn } from '@/lib/utils'
@@ -44,13 +45,15 @@ export function PeoplePicker({ people, selected, onChange, compact, label }: Peo
           </button>
         )
       })}
-      <button
+      <Button
         type="button"
-        className="rounded-full px-2 py-1 text-sm text-muted-foreground underline-offset-2 hover:underline"
+        variant="ghost"
+        size="sm"
+        className="h-8 px-2"
         onClick={() => onChange(everyone ? new Set() : new Set(people.map((p) => p.id)))}
       >
         {everyone ? 'nikt' : 'wszyscy'}
-      </button>
+      </Button>
     </div>
   )
 }

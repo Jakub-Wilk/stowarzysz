@@ -3,6 +3,7 @@ import { useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 
 import { BackLink } from '@/components/layout/BackLink'
+import { SelectField } from '@/components/SelectField'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -131,24 +132,20 @@ export function PactNewPage() {
         {me?.is_superuser && (
           <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
             <Label htmlFor="as-user">Utwórz jako (tymczasowo, tylko administrator)</Label>
-            <select
+            <SelectField
               id="as-user"
-              className="h-12 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-              value={asUser}
-              onChange={(e) => {
-                setAsUser(e.target.value)
+              value={asUser || 'self'}
+              onChange={(value) => {
+                setAsUser(value === 'self' ? '' : value)
                 setInvited(new Map()) // the creator can't invite themselves
               }}
-            >
-              <option value="">Ja ({me.username})</option>
-              {(people.data ?? [])
-                .filter((p) => p.id !== me.id)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.username}
-                  </option>
-                ))}
-            </select>
+              options={[
+                { value: 'self', label: `Ja (${me.username})` },
+                ...(people.data ?? [])
+                  .filter((p) => p.id !== me.id)
+                  .map((p) => ({ value: String(p.id), label: p.username })),
+              ]}
+            />
             {backfill && (
               <span className="text-sm text-muted-foreground">
                 Stary zakład: może mieć termin z przeszłości, a zaproszeni od razu biorą w nim

@@ -1,5 +1,5 @@
-import { HandCoins, Plus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Banknote, HandCoins, Plus, Receipt, type LucideIcon } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import { Stagger } from '@/components/motion/Stagger'
@@ -7,17 +7,27 @@ import { Button } from '@/components/ui/button'
 import { useMe } from '@/features/auth/hooks'
 import { BalanceView } from '@/features/ledger/BalanceView'
 import { EntryRow } from '@/features/ledger/EntryRow'
-import { GoodsDebtDialog } from '@/features/ledger/GoodsDebtDialog'
 import { useFeed } from '@/features/ledger/hooks'
 import { ListSkeleton, LoadError } from '@/features/ledger/LoadStates'
 import { dayGroup } from '@/features/voting/dates'
 import type { LedgerEntry } from '@/lib/api-types'
 
-type Segment = 'entries' | 'balance'
+// Recharts is large: the stats view (and its charts) loads only when it is opened
+const StatsView = lazy(() => import('@/features/ledger/stats/StatsView'))
+
+type Segment = 'entries' | 'balance' | 'stats'
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'entries', label: 'Wpisy' },
   { key: 'balance', label: 'Bilans' },
+  { key: 'stats', label: 'Statystyki' },
+]
+
+/** What can be added, all equally prominent: Tricount's expense, its income, and a debt. */
+const ADD: { kind: string; label: string; icon: LucideIcon }[] = [
+  { kind: 'expense', label: 'Wydatek', icon: Receipt },
+  { kind: 'income', label: 'Przychód', icon: Banknote },
+  { kind: 'debt', label: 'Dług', icon: HandCoins },
 ]
 
 function Heading({ children }: { children: string }) {
@@ -89,30 +99,30 @@ function Feed({ myId }: { myId: number | undefined }) {
 export function LedgerPage() {
   const { data: me } = useMe()
   const [segment, setSegment] = useState<Segment>('entries')
-  const [owedGoods, setOwedGoods] = useState(false)
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold">Rozliczenia</h2>
-        <div className="flex items-center gap-2">
-          {me && (
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Ktoś jest mi winien coś innego niż pieniądze"
-              title="Dług w naturze"
-              onClick={() => setOwedGoods(true)}
-            >
-              <HandCoins />
-            </Button>
-          )}
-          <Button nativeButton={false} render={<Link to="/ledger/new" />}>
-            <Plus /> Wydatek
+      <h2 className="text-2xl font-semibold">Rozliczenia</h2>
+      <nav className="mt-4 grid grid-cols-3 gap-2" aria-label="Dodaj">
+        {ADD.map(({ kind, label, icon: Icon }) => (
+          <Button
+            key={kind}
+            variant="outline"
+            className="h-auto min-w-0 flex-col gap-1 px-1 py-3"
+            nativeButton={false}
+            aria-label={`Dodaj ${label.toLowerCase()}`}
+            render={<Link to={`/ledger/new/${kind}`} />}
+          >
+            <span className="relative" aria-hidden>
+              <Icon className="size-6" />
+              <span className="absolute -top-1.5 -right-2.5 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+                <Plus className="size-3" strokeWidth={3} />
+              </span>
+            </span>
+            <span className="truncate">{label}</span>
           </Button>
-        </div>
-      </div>
-      {me && <GoodsDebtDialog myId={me.id} open={owedGoods} onOpenChange={setOwedGoods} />}
+        ))}
+      </nav>
 
       <div className="mt-6 flex gap-2" role="group" aria-label="Widok">
         {SEGMENTS.map(({ key, label }) => (
@@ -128,7 +138,13 @@ export function LedgerPage() {
         ))}
       </div>
 
-      {segment === 'entries' ? <Feed myId={me?.id} /> : <BalanceView myId={me?.id} />}
+      {segment === 'entries' && <Feed myId={me?.id} />}
+      {segment === 'balance' && <BalanceView myId={me?.id} />}
+      {segment === 'stats' && (
+        <Suspense fallback={<ListSkeleton label="Ładowanie statystyk" />}>
+          <StatsView myId={me?.id} />
+        </Suspense>
+      )}
     </>
   )
 }

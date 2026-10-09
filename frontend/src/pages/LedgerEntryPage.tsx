@@ -1,29 +1,44 @@
-import { Navigate, useParams } from 'react-router'
+import { Navigate, useLocation, useParams } from 'react-router'
 
 import { BackLink } from '@/components/layout/BackLink'
 import { useMe } from '@/features/auth/hooks'
 import { EntryActions } from '@/features/ledger/EntryActions'
 import { EntryAttachments } from '@/features/ledger/EntryAttachments'
 import { EntryStatusChip } from '@/features/ledger/EntryRow'
-import { formatDay, formatImpact, impactOf, impactTone, useMoney } from '@/features/ledger/format'
-import { useEntry, useLedgerMeta } from '@/features/ledger/hooks'
+import {
+  formatDay,
+  formatImpact,
+  impactOf,
+  impactTone,
+  useCategory,
+  useMoney,
+} from '@/features/ledger/format'
+import { useEntry } from '@/features/ledger/hooks'
 import { kindOf } from '@/features/ledger/kinds'
 import { LoadError } from '@/features/ledger/LoadStates'
 import { KindChip } from '@/features/pacts/StatusChip'
 import { toneClasses } from '@/features/voting/tone'
 import { ApiError } from '@/lib/api'
 import type { LedgerEntry } from '@/lib/api-types'
+import type { EditorOutcome } from '@/pages/EntryEditorPage'
 import { cn } from '@/lib/utils'
 
-function EntryView({ entry, myId }: { entry: LedgerEntry; myId: number | undefined }) {
+function EntryView({
+  entry,
+  myId,
+  photosFailed,
+}: {
+  entry: LedgerEntry
+  myId: number | undefined
+  photosFailed: boolean
+}) {
   const kind = kindOf(entry)
   const money = useMoney()
-  const meta = useLedgerMeta()
-  const category = meta.data?.categories.find((c) => c.key === entry.category)?.label
+  const category = useCategory()(entry)
   const impact = impactOf(entry, myId)
   const mine = impact ? formatImpact(impact) : null
   const headline = money.headline(entry)
-  const edited = entry.version > 1 && entry.kind === 'expense'
+  const edited = entry.version > 1 && entry.status === 'confirmed' && entry.kind !== 'payment'
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,7 +48,11 @@ function EntryView({ entry, myId }: { entry: LedgerEntry; myId: number | undefin
           <KindChip label={kind.label} />
           <EntryStatusChip entry={entry} />
           <span>{formatDay(entry.occurred_on)}</span>
-          {category && <span>· {category}</span>}
+          {category && (
+            <span className="whitespace-nowrap">
+              <span aria-hidden>{category.emoji}</span> {category.label}
+            </span>
+          )}
         </div>
       </header>
 
@@ -57,6 +76,11 @@ function EntryView({ entry, myId }: { entry: LedgerEntry; myId: number | undefin
 
       {entry.note && <p className="text-base whitespace-pre-wrap">{entry.note}</p>}
 
+      {photosFailed && (
+        <p role="alert" className="text-base text-destructive">
+          Nie udało się wysłać części zdjęć. Dodaj je tutaj.
+        </p>
+      )}
       <EntryAttachments entry={entry} myId={myId} />
       <EntryActions entry={entry} />
 
@@ -74,6 +98,7 @@ export function LedgerEntryPage() {
   const valid = Number.isInteger(entryId)
   const { data: me } = useMe()
   const { data: entry, error, isPending, refetch } = useEntry(valid ? entryId : null)
+  const outcome = useLocation().state as EditorOutcome | null
 
   if (!valid || (error instanceof ApiError && error.status === 404)) {
     return <Navigate to="/ledger" replace />
@@ -84,7 +109,9 @@ export function LedgerEntryPage() {
       <BackLink to="/ledger">Rozliczenia</BackLink>
       {isPending && <span className="text-sm text-muted-foreground">Ładowanie…</span>}
       {error && !isPending && <LoadError what="wpisu" onRetry={() => void refetch()} />}
-      {entry && <EntryView entry={entry} myId={me?.id} />}
+      {entry && (
+        <EntryView entry={entry} myId={me?.id} photosFailed={Boolean(outcome?.photosFailed)} />
+      )}
     </>
   )
 }

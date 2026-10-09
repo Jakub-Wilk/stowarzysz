@@ -149,7 +149,12 @@ def test_meta_lists_currencies_with_their_digits_and_polish_categories(alice: Us
     assert body["base_currency"] == "PLN"
     assert [c["code"] for c in body["currencies"][:2]] == ["PLN", "EUR"]
     assert {"code": "JPY", "exponent": 0} in body["currencies"]
-    assert {"key": "food", "label": "Jedzenie"} in body["categories"]
+    assert {"key": "food", "label": "Restauracje i bary", "emoji": "🍽️"} in body["categories"]
+
+
+def test_every_category_has_an_emoji() -> None:
+    assert set(LedgerEntry.CATEGORY_EMOJI) == set(LedgerEntry.Category)
+    assert all(LedgerEntry.CATEGORY_EMOJI.values())
 
 
 # --- expenses -----------------------------------------------------------------------------
@@ -293,7 +298,7 @@ def test_an_outdated_edit_is_refused_instead_of_overwriting(alice, bob) -> None:
     assert client_for(alice).put(url, body, format="json").status_code == 409  # stale version
 
 
-def test_only_expenses_can_be_edited(alice, bob) -> None:
+def test_pact_debts_cannot_be_edited(alice, bob) -> None:
     entry = pact_debts(debt(bob, alice, 100))
     resp = client_for(alice).put(f"{ENTRIES}{entry.pk}/", {"version": 1}, format="json")
     assert resp.status_code == 409
@@ -311,6 +316,54 @@ def test_deleting_an_expense_cancels_it_and_it_stops_counting(alice, bob) -> Non
         409,
     )
     assert LedgerEntry.objects.filter(pk=entry["id"]).exists()  # never deleted
+
+
+# --- income -------------------------------------------------------------------------------
+
+
+def add_income(by: User, items: list[dict], receivers=None, **extra: Any) -> Any:
+    return add_expense(by, items, receivers, kind="income", **extra)
+
+
+def test_an_income_is_a_negative_expense(alice, bob, carol, pushes) -> None:
+    resp = add_income(alice, [item("Zwrot kaucji", 9000, alice, bob, carol)], title="Kaucja")
+    assert resp.status_code == 201, resp.json()
+    body = resp.json()
+    assert (body["kind"], body["amount"], body["base_amount"]) == ("income", 9000, 9000)
+    # the breakdown reads positive: alice received 90 zł, everybody's part is 30 zł
+    rows = {r["user"]["username"]: (r["paid"], r["owed"]) for r in body["breakdown"]}
+    assert rows == {"alice": (9000, 3000), "bob": (0, 3000), "carol": (0, 3000)}
+    # and alice now owes the others their parts
+    assert nets(bilans(bob)) == {"alice": -6000, "bob": 3000, "carol": 3000}
+    assert pushes[-1]["title"] == "Nowy przychód" and pushes[-1]["ids"] == [bob.pk, carol.pk]
+
+
+def test_an_income_cancels_out_the_expense_it_refunds(alice, bob, carol, eur) -> None:
+    add_expense(alice, [item("Bilety", 3000, alice, bob, carol)], currency="EUR")
+    add_income(alice, [item("Zwrot", 3000, alice, bob, carol)], currency="EUR")
+    assert bilans(alice)["members"] == []
+
+
+def test_an_income_is_edited_and_deleted_like_an_expense(alice, bob) -> None:
+    entry = add_income(alice, [item("Zwrot", 1000, alice, bob)]).json()
+    body = {
+        "title": "Zwrot",
+        "items": [item("Zwrot", 1000, bob)],
+        "payers": [{"user_id": alice.pk, "amount": 1000}],
+        "version": entry["version"],
+    }
+    resp = client_for(bob).put(f"{ENTRIES}{entry['id']}/", body, format="json")
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["kind"] == "income"
+    assert nets(bilans(alice)) == {"alice": -1000, "bob": 1000}
+    assert act(bob, entry["id"], "cancel").status_code == 200
+    assert bilans(alice)["members"] == []
+
+
+def test_income_validation_speaks_of_receivers(alice, bob) -> None:
+    resp = add_income(alice, [item("Zwrot", 1000, alice, bob)], [(alice, 1)])
+    assert resp.status_code == 400
+    assert "Otrzymujący" in str(resp.json())
 
 
 # --- debts --------------------------------------------------------------------------------
@@ -375,17 +428,85 @@ def test_a_member_records_goods_owed_to_them_and_can_drop_them(alice, bob) -> No
 @pytest.mark.parametrize(
     "bad",
     [
-        {"item": "kawa"},  # owed to yourself
-        {"debtor_id": "bob", "item": "   "},
-        {"debtor_id": "bob", "item": "kawa", "amount": 0},
-        {"debtor_id": 9999, "item": "kawa"},
+        {"debtor_id": "alice"},  # owed to yourself
+        {"debtor_id": "bob", "amount": 0},
+        {"debtor_id": "bob", "amount": 1001},  # goods are counted in pieces
+        {"debtor_id": "bob", "item": "", "currency": "XYZ"},
+        {"debtor_id": 9999},
+        {"debtor_id": "bob", "creditor_id": "carol"},  # somebody else's debt
     ],
 )
-def test_goods_debt_validation(alice, bob, bad: dict) -> None:
-    body = {"kind": "debt", "debtor_id": alice.pk, **bad}
-    if body["debtor_id"] == "bob":
-        body["debtor_id"] = bob.pk
+def test_debt_validation(alice, bob, carol, bad: dict) -> None:
+    users = {"alice": alice.pk, "bob": bob.pk, "carol": carol.pk}
+    body = {"kind": "debt", "item": "kawa", "amount": 2, **bad}
+    body = {k: users.get(v, v) if isinstance(v, str) else v for k, v in body.items()}
     assert client_for(alice).post(ENTRIES, body, format="json").status_code == 400
+
+
+def money_debt(by: User, debtor: User, creditor: User, amount: int, **extra: Any) -> Any:
+    body = {
+        "kind": "debt",
+        "debtor_id": debtor.pk,
+        "creditor_id": creditor.pk,
+        "amount": amount,
+        **extra,
+    }
+    return client_for(by).post(ENTRIES, body, format="json")
+
+
+def test_a_member_records_money_owed_to_them(alice, bob, pushes) -> None:
+    resp = money_debt(alice, bob, alice, 5000, title="Bilety", note="za koncert")
+    assert resp.status_code == 201, resp.json()
+    entry = resp.json()
+    assert (entry["title"], entry["note"], entry["amount"], entry["currency"]) == (
+        "Bilety",
+        "za koncert",
+        5000,
+        "PLN",
+    )
+    assert entry["base_amount"] == 5000 and entry["item"] == ""
+    assert nets(bilans(bob)) == {"alice": 5000, "bob": -5000}
+    assert pushes[-1]["ids"] == [bob.pk]
+
+
+def test_a_member_can_admit_a_debt_and_the_creditor_is_told(alice, bob, pushes) -> None:
+    resp = money_debt(bob, bob, alice, 2000)
+    assert resp.status_code == 201, resp.json()
+    assert resp.json()["title"] == "Dług"
+    assert nets(bilans(bob)) == {"alice": 2000, "bob": -2000}
+    assert pushes[-1]["ids"] == [alice.pk]
+    assert "jest Ci winien" in pushes[-1]["body"]
+    # it is still the creditor's to change: the debtor can't wipe it
+    assert act(bob, resp.json()["id"], "cancel").status_code == 403
+    assert act(alice, resp.json()["id"], "cancel").status_code == 200
+
+
+def test_a_debt_in_another_currency_is_converted(alice, bob, eur) -> None:
+    resp = money_debt(alice, bob, alice, 1000, currency="EUR")  # 10 EUR at 4.25
+    assert resp.status_code == 201, resp.json()
+    entry = resp.json()
+    assert (entry["amount"], entry["currency"], entry["base_amount"]) == (1000, "EUR", 4250)
+    assert entry["obligations"][0]["amount"] == 4250
+    assert nets(bilans(alice)) == {"alice": 4250, "bob": -4250}
+
+
+def test_the_creditor_edits_a_debt(alice, bob, carol) -> None:
+    entry = money_debt(alice, bob, alice, 1000).json()
+    url = f"{ENTRIES}{entry['id']}/"
+    body = {
+        "debtor_id": carol.pk,
+        "creditor_id": alice.pk,
+        "amount": 3,
+        "item": "piwo",
+        "version": entry["version"],
+    }
+    assert entry["actions"]["edit"] is True
+    assert client_for(bob).put(url, body, format="json").status_code == 403
+    resp = client_for(alice).put(url, body, format="json")
+    assert resp.status_code == 200, resp.json()
+    assert (resp.json()["item"], resp.json()["amount"], resp.json()["title"]) == ("piwo", 3, "piwo")
+    assert bilans(alice)["members"] != [] and nets(bilans(alice)) == {}
+    assert nets(bilans(alice), "piwo") == {"alice": 3, "carol": -3}
 
 
 def test_an_unknown_kind_is_refused(alice) -> None:

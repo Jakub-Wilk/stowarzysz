@@ -378,17 +378,30 @@ export interface PactStats extends PactKindStats {
 // balances are the sum of the obligations of confirmed entries. Money in the base currency (PLN)
 // travels as integer grosze; an entry's own `amount` is in minor units of its `currency`.
 
-export type LedgerKindKey = 'expense' | 'debt' | 'payment'
+export type LedgerKindKey = 'expense' | 'income' | 'debt' | 'payment'
+/** The kinds with payers and items: an expense, and an income (a negative expense, where the
+ * "payers" are who received the money). */
+export type SharedKindKey = 'expense' | 'income'
 /** Only `confirmed` entries count. A payment is `pending` until the receiver confirms it. */
 export type LedgerEntryStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled'
 export type LedgerCategory =
-  | 'food'
-  | 'groceries'
-  | 'transport'
   | 'lodging'
-  | 'fun'
   | 'bills'
+  | 'groceries'
+  | 'fun'
+  | 'health'
+  | 'insurance'
+  | 'transport'
+  | 'food'
+  | 'shopping'
+  | 'weed'
   | 'other'
+/** A category as the server describes it; the emoji is its icon, separate from the name. */
+export interface LedgerCategoryInfo {
+  key: LedgerCategory
+  label: string
+  emoji: string
+}
 /** How an item is divided: evenly, by weights, or into exact amounts. */
 export type SplitKind = 'equal' | 'shares' | 'exact'
 
@@ -494,16 +507,25 @@ export type ExpenseEntry = LedgerEntryBase & {
   details: ExpenseDetails
   breakdown: LedgerShareRow[]
 }
+/** Same shape as an expense; in its breakdown `paid` is what someone received and `owed` the
+ * part that belongs to them. */
+export type IncomeEntry = LedgerEntryBase & {
+  kind: 'income'
+  details: ExpenseDetails
+  breakdown: LedgerShareRow[]
+}
+export type SharedEntry = ExpenseEntry | IncomeEntry
 export type DebtEntry = LedgerEntryBase & { kind: 'debt'; details: DebtDetails; breakdown: null }
 export type PaymentEntry = LedgerEntryBase & {
   kind: 'payment'
   details: PaymentDetails
   breakdown: null
 }
-export type LedgerEntry = ExpenseEntry | DebtEntry | PaymentEntry
+export type LedgerEntry = ExpenseEntry | IncomeEntry | DebtEntry | PaymentEntry
 
+/** An expense or an income (`payers`: who received it). */
 export interface ExpenseInput {
-  kind: 'expense'
+  kind: SharedKindKey
   title: string
   currency: string
   occurred_on: string
@@ -513,11 +535,16 @@ export interface ExpenseInput {
   items: ExpenseItem[]
 }
 
+/** A debt you are a party to: money in `currency` (empty `item`) or a quantity of `item`. */
 export interface DebtInput {
   kind: 'debt'
   debtor_id: number
+  creditor_id: number
+  title: string
   item: string
   amount: number
+  currency: string
+  occurred_on: string
   note: string
 }
 
@@ -571,11 +598,47 @@ export interface LedgerCurrency {
 export interface LedgerMeta {
   base_currency: string
   currencies: LedgerCurrency[]
-  categories: { key: LedgerCategory; label: string }[]
+  categories: LedgerCategoryInfo[]
 }
 
 export interface LedgerRate {
   currency: string
   rate: string
   rate_date: string
+}
+
+/** A slice of the stats: an entry category (or `debts`), net of incomes, in grosze. */
+export interface LedgerStatsCategory {
+  key: LedgerCategory | 'debts'
+  label: string
+  emoji: string
+  spent: number
+  count: number
+}
+
+export interface LedgerStatsPerson {
+  user: UserBrief
+  /** Their part of what was spent. */
+  share: number
+  /** What they paid out. */
+  paid: number
+}
+
+/** The group's spending over a period (grosze): expenses and money debts minus incomes. */
+export interface LedgerStats {
+  currency: string
+  start: string
+  end: string
+  /** What `series` is bucketed by. */
+  unit: 'day' | 'month'
+  spent: number
+  expenses: number
+  income: number
+  count: number
+  /** Null when the period is a single month or less. */
+  monthly_average: number | null
+  categories: LedgerStatsCategory[]
+  people: LedgerStatsPerson[]
+  /** `period` is `YYYY-MM-DD` (a day) or `YYYY-MM` (a month). */
+  series: { period: string; spent: number }[]
 }

@@ -24,3 +24,6 @@ export const PACT_FORMS: PluralForms = { one: 'zakład', few: 'zakłady', many: 
 export const PICTURE_FORMS: PluralForms = { one: 'zdjęcie', few: 'zdjęcia', many: 'zdjęć' }
 export const PERSON_FORMS: PluralForms = { one: 'osoba', few: 'osoby', many: 'osób' }
 export const ITEM_FORMS: PluralForms = { one: 'pozycja', few: 'pozycje', many: 'pozycji' }
+/** After "dla": dla 1 osoby, dla 3 osób. */
+export const PERSON_GENITIVE_FORMS: PluralForms = { one: 'osoby', few: 'osób', many: 'osób' }
+export const ENTRY_FORMS: PluralForms = { one: 'wpis', few: 'wpisy', many: 'wpisów' }
