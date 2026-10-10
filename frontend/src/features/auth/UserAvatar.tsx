@@ -12,12 +12,16 @@ const sizes = {
 
 interface UserAvatarProps {
   username: string
-  /** Profile picture URL; initials on the theme's metallic fill are shown without one. */
+  /**
+   * Profile picture URL; initials on the theme's metallic fill are shown without one.
+   */
   src?: string | null
   size?: keyof typeof sizes
+  /** Let the theme dress the picture up (halloween's pumpkin). Only for the signed-in user's own. */
+  decorated?: boolean
 }
 
-export function UserAvatar({ username, src, size = 'default' }: UserAvatarProps) {
+export function UserAvatar({ username, src, size = 'default', decorated }: UserAvatarProps) {
   return (
     <Avatar className={sizes[size]}>
       {src && <AvatarImage src={src} alt="" />}
@@ -30,6 +34,8 @@ export function UserAvatar({ username, src, size = 'default' }: UserAvatarProps)
       >
         {username.slice(0, 2).toUpperCase() || '?'}
       </AvatarFallback>
+      {/* Hidden unless the theme dresses pictures up (halloween's pumpkin, see halloween.css). */}
+      {src && decorated && <span aria-hidden data-slot="avatar-overlay" className="hidden" />}
     </Avatar>
   )
 }

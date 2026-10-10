@@ -1,0 +1,258 @@
+/*
+ * Theme: capybara (also `capybara-dusk`, see capybara-dusk.css, which shares every rule below the
+ * palette; International Capybara Day, 10 July: a capybara in a hot spring with an
+ * orange on its head). Seasonal, like christmas and halloween: it is not in the picker and its
+ * colours are fixed, not derived from the base hue (see `getSeasonalTheme`). Warm sand and
+ * capybara brown, yuzu-orange accents, spring-water teal. Decorations: a bamboo rail under the
+ * header with a capybara asleep on it, the hot spring across the bottom of the screen with a capybara bobbing in it, an orange on
+ * the header avatar, and steam and floating oranges over the page (`CapybaraLayer`). All motion is
+ * transform/opacity only, and pointer-events are off on everything decorative.
+ */
+@import '@fontsource-variable/fredoka';
+
+[data-theme='capybara'] {
+  --background: oklch(0.965 0.025 80);
+  --foreground: oklch(0.3 0.05 55);
+  --card: oklch(0.99 0.012 80);
+  --card-foreground: oklch(0.3 0.05 55);
+  --popover: oklch(0.99 0.012 80);
+  --popover-foreground: oklch(0.3 0.05 55);
+  --primary: oklch(0.7 0.17 55);
+  --primary-foreground: oklch(0.25 0.06 50);
+  --secondary: oklch(0.92 0.045 195);
+  --secondary-foreground: oklch(0.3 0.06 200);
+  --muted: oklch(0.945 0.025 80);
+  --muted-foreground: oklch(0.5 0.05 60);
+  --accent: oklch(0.92 0.07 70);
+  --accent-foreground: oklch(0.32 0.07 55);
+  --destructive: oklch(0.52 0.2 28);
+  --border: oklch(0.88 0.035 75);
+  --input: oklch(0.84 0.04 75);
+  --ring: oklch(0.62 0.11 195);
+  --chart-1: oklch(0.7 0.17 55);
+  --chart-2: oklch(0.65 0.1 195);
+  --chart-3: oklch(0.5 0.07 55);
+  --chart-4: oklch(0.65 0.14 140);
+  --chart-5: oklch(0.82 0.1 80);
+  --radius: 1rem;
+  --positive: oklch(0.52 0.12 165);
+  --negative: oklch(0.55 0.2 28);
+  --neutral: oklch(0.55 0.04 60);
+  /* Avatars and other `bg-(image:--metal)` fills: a ripe orange with a lit top. */
+  --metal-1: oklch(0.62 0.17 50);
+  --metal-2: oklch(0.7 0.17 55);
+  --metal-3: oklch(0.8 0.15 70);
+  --metal-4: oklch(0.7 0.17 55);
+  --metal-5: oklch(0.6 0.17 48);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: oklch(0.955 0.03 80);
+  --sidebar-foreground: oklch(0.3 0.05 55);
+  --sidebar-primary: oklch(0.7 0.17 55);
+  --sidebar-primary-foreground: oklch(0.25 0.06 50);
+  --sidebar-accent: oklch(0.92 0.07 70);
+  --sidebar-accent-foreground: oklch(0.32 0.07 55);
+  --sidebar-border: oklch(0.88 0.035 75);
+  --sidebar-ring: oklch(0.62 0.11 195);
+}
+
+/* Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) {
+  font-family: 'Fredoka Variable', system-ui, sans-serif;
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk'])
+  :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title'], .font-logo) {
+  font-family: 'Fredoka Variable', system-ui, sans-serif;
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) .font-logo {
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  color: oklch(0.5 0.1 50);
+  text-shadow: 0 2px 0 oklch(0.9 0.08 70);
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) .bg-card {
+  box-shadow: 0 2px 8px oklch(0.6 0.08 60 / 12%);
+}
+
+/* Morning light: a peach glow at the top of a warm sand page. */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) body {
+  background-image: radial-gradient(120% 40% at 50% 0%, oklch(0.93 0.07 70 / 70%), transparent 75%);
+  background-attachment: fixed;
+}
+
+/*
+ * The hot spring: water across the bottom of the screen behind the page, its surface a wave tile
+ * drifting sideways (translateX by exactly one tile, so the loop is seamless), and a capybara
+ * with an orange on its head bobbing in it.
+ */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) body::before,
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) body::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) body::before {
+  left: -80px;
+  right: -80px;
+  bottom: 0;
+  height: 30vh;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='16'%3E%3Cpath fill='%237fd6cf' d='M0 8Q10 0 20 8T40 8T60 8T80 8V16H0Z'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #7fd6cf, #3fb0b0 55%, #2a8f96);
+  background-repeat: repeat-x, no-repeat;
+  background-position:
+    left top,
+    left bottom;
+  background-size:
+    80px 16px,
+    100% calc(100% - 15px);
+  animation: spa-drift 9s linear infinite;
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) body::after {
+  right: 5vw;
+  /* 110px tall: 10px more than the capybara's 100, below its waterline, for the fading water. */
+  bottom: calc(30vh - 48px);
+  width: 160px;
+  height: 110px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 110'%3E%3Cdefs%3E%3CradialGradient id='o' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23ffc15e'/%3E%3Cstop offset='.6' stop-color='%23f58f14'/%3E%3Cstop offset='1' stop-color='%23cf6a06'/%3E%3C/radialGradient%3E%3ClinearGradient id='w' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%2358c4c0' stop-opacity='.85'/%3E%3Cstop offset='.45' stop-color='%2358c4c0' stop-opacity='.55'/%3E%3Cstop offset='1' stop-color='%2358c4c0' stop-opacity='.12'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='%238f5d38' d='M70 74C70 52 100 44 130 50 150 54 158 66 158 74Z'/%3E%3Cpath fill='%23a8734a' d='M18 54C18 40 30 33 48 33 70 33 85 40 91 54L93 74H22C18 68 18 60 18 54Z'/%3E%3Cellipse cx='30' cy='60' rx='13' ry='10' fill='%23c49366'/%3E%3Cellipse cx='21' cy='51' rx='3' ry='4' fill='%233a2418'/%3E%3Ccircle cx='52' cy='47' r='3.2' fill='%2326150c'/%3E%3Ccircle cx='53' cy='46' r='1' fill='%23fff'/%3E%3Ccircle cx='79' cy='38' r='7' fill='%238f5d38'/%3E%3Ccircle cx='79' cy='38' r='3.5' fill='%23c49366'/%3E%3Cpath d='M24 66Q31 69 38 66' fill='none' stroke='%236b4426' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='60' cy='26' r='13' fill='url(%23o)'/%3E%3Cellipse cx='64' cy='13' rx='7' ry='3.4' fill='%234f9a3c' transform='rotate(-25 64 13)'/%3E%3Cellipse cx='55' cy='21' rx='3.6' ry='2.2' fill='%23fff' fill-opacity='.35' transform='rotate(-30 55 21)'/%3E%3Cpath d='M20 69Q30 65 40 69T60 69T80 69T100 69T120 69T140 69T160 69V84A40 26 0 0 1 120 110H60A40 26 0 0 1 20 84Z' fill='url(%23w)'/%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.7' stroke-width='1.2'%3E%3Cellipse cx='56' cy='72' rx='46' ry='3.4'/%3E%3Cellipse cx='56' cy='72' rx='60' ry='5' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  animation: spa-bob 5s ease-in-out infinite;
+}
+
+@keyframes spa-drift {
+  to {
+    transform: translateX(80px);
+  }
+}
+
+@keyframes spa-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* A bamboo rail along the lower edge of the header, like the fence of an open-air bath. */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) header.sticky::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='12'%3E%3Crect y='2' width='72' height='8' rx='4' fill='%239cc973'/%3E%3Crect y='3' width='72' height='2' rx='1' fill='%23c4e39d'/%3E%3Crect x='34' y='1' width='4' height='10' rx='2' fill='%236d9a4a'/%3E%3C/svg%3E");
+  background-position: left top;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
+/*
+ * A capybara asleep in the middle of the header, curled up on the bamboo rail with an orange on its
+ * back; it breathes slowly (transform only).
+ */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) header.sticky::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 117px;
+  height: 54px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 130 60'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23b27c52'/%3E%3Cstop offset='.6' stop-color='%239a6741'/%3E%3Cstop offset='1' stop-color='%237f5232'/%3E%3C/linearGradient%3E%3ClinearGradient id='h' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23b9835a'/%3E%3Cstop offset='1' stop-color='%23a06b43'/%3E%3C/linearGradient%3E%3CradialGradient id='o' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23ffc86a'/%3E%3Cstop offset='.6' stop-color='%23f58f14'/%3E%3Cstop offset='1' stop-color='%23c96506'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='66' cy='58.4' rx='58' ry='1.8' fill='%23000' fill-opacity='.14'/%3E%3Cg transform='translate(0 4)'%3E%3Cpath fill='url(%23b)' d='M38 34C46 20 70 14 92 17 112 20 126 30 126 42 126 49 122 52 114 52H44Z'/%3E%3Cpath d='M50 26C62 19 80 17 94 19' fill='none' stroke='%23d3a47a' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round'/%3E%3Cg fill='none' stroke='%237a4d2c' stroke-opacity='.45' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M64 24l3 3M76 21l3 3M90 22l3 3M104 28l3 3M70 31l3 3M96 33l3 3'/%3E%3C/g%3E%3Cpath d='M104 45.5C97 45.5 89 47.5 84 49.6 79.8 51.3 79.8 53 82.2 53.1H112C115 53 114 49 109 45.5Z' fill='%23855431' stroke='%236e4527' stroke-opacity='.55' stroke-width='1'/%3E%3Cpath d='M82.4 52.6C81.6 51.4 82.2 50.2 83.6 49.9M85.6 52.8C85 51.5 85.6 50.4 87 50.1M88.8 52.8C88.4 51.6 89 50.6 90.3 50.3' fill='none' stroke='%235e3a1f' stroke-width='.9' stroke-linecap='round'/%3E%3Cellipse cx='107' cy='41' rx='15' ry='9' fill='%23a06b43' stroke='%237a4d2c' stroke-opacity='.5' stroke-width='1.2'/%3E%3Ccircle cx='86' cy='13' r='9' fill='url(%23o)'/%3E%3Cellipse cx='91' cy='5' rx='5' ry='2.4' fill='%234f9a3c' transform='rotate(-25 91 5)'/%3E%3Cellipse cx='82' cy='9.5' rx='3' ry='1.8' fill='%23fff' fill-opacity='.4' transform='rotate(-30 82 9.5)'/%3E%3Cpath fill='url(%23h)' d='M5 44C3 36 7 29 17 27 25 25 38 23 46 27 54 31 55 40 53 48V52H13C8 51 6 48 5 44Z'/%3E%3Cellipse cx='15' cy='46' rx='10.5' ry='7' fill='%23cfa077'/%3E%3Cellipse cx='7.5' cy='35' rx='2.3' ry='3' fill='%232b1810'/%3E%3Cpath d='M12 31Q18 28 25 29' fill='none' stroke='%237a4d2c' stroke-opacity='.4' stroke-width='1.4' stroke-linecap='round'/%3E%3Cpath d='M22 51Q28 54 36 52' fill='none' stroke='none'/%3E%3Cpath d='M27 36Q32 40 37 36' fill='none' stroke='%2326150c' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M28.5 38l-1 2M32 39.5v2.2M35.5 38l1 2' stroke='%2326150c' stroke-width='.9' stroke-linecap='round'/%3E%3Cellipse cx='41' cy='43' rx='4.4' ry='2.6' fill='%23ee9a85' fill-opacity='.55'/%3E%3Ccircle cx='12' cy='47' r='.9' fill='%238a5a36'/%3E%3Ccircle cx='16' cy='49' r='.9' fill='%238a5a36'/%3E%3Ccircle cx='9' cy='50' r='.9' fill='%238a5a36'/%3E%3Cpath d='M10 54Q15 56 21 53' fill='none' stroke='%237a4d2c' stroke-width='1.4' stroke-linecap='round' stroke-opacity='.7' transform='translate(0 -4)'/%3E%3Cpath fill='%238a5a36' d='M42 29C41 22 47 18 51 21 54 24 53 29 51 32Z'/%3E%3Cpath fill='%23e2a493' d='M45 29C45 25 48 23 50 25 51 27 50 30 49 31Z'/%3E%3Cpath d='M54 42.5C46 43 36 44 29 45.5 25 46.4 23 48 23 50 23 51.8 24.5 52.3 27 52.3H52C55 52 56 46 54 42.5Z' fill='%237a4d2c'/%3E%3Cpath d='M52 44C44 45 28 46.5 20 47.8 14.5 48.6 11.5 50 11.5 51.2 11.5 52.2 13 52.6 15.5 52.6H50C54 52.6 55 47 52 44Z' fill='%2394603b' stroke='%236e4527' stroke-opacity='.55' stroke-width='1'/%3E%3Cpath d='M23 48.6C31 47.4 39 46.8 47 47' fill='none' stroke='%23c08a5e' stroke-opacity='.6' stroke-width='1.1' stroke-linecap='round'/%3E%3Cpath d='M13 52.2C12.2 51 12.8 49.9 14.2 49.7M16.4 52.4C15.8 51.1 16.4 50 17.8 49.8M19.8 52.4C19.4 51.3 19.9 50.3 21.2 50.1' fill='none' stroke='%235e3a1f' stroke-width='.9' stroke-linecap='round'/%3E%3C/g%3E%3Cg fill='none' stroke='%236a9aa5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 17H17L12 22H17' stroke-width='1.3' stroke-opacity='.75'/%3E%3Cpath d='M20 10H26L20 16H26' stroke-width='1.5' stroke-opacity='.85'/%3E%3Cpath d='M30 1.5H37L30 9H37' stroke-width='1.7'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  animation: capy-breathe 4.5s ease-in-out infinite;
+}
+
+@keyframes capy-breathe {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) scaleY(1.05);
+  }
+}
+
+/*
+ * The signed-in user's own picture in the header (`UserAvatar decorated`) balances an orange on its
+ * head. `UserAvatar` renders the (otherwise hidden) overlay only when `decorated`.
+ */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) [data-slot='avatar-overlay'] {
+  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: 84%;
+  width: 58%;
+  height: 64%;
+  transform: translateX(-50%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44'%3E%3Cdefs%3E%3CradialGradient id='o' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23ffc15e'/%3E%3Cstop offset='.6' stop-color='%23f58f14'/%3E%3Cstop offset='1' stop-color='%23cf6a06'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='20' cy='26' r='16' fill='url(%23o)'/%3E%3Cellipse cx='26' cy='10' rx='8' ry='4' fill='%234f9a3c' transform='rotate(-25 26 10)'/%3E%3Ccircle cx='20' cy='11' r='1.8' fill='%236a4a1c'/%3E%3Cellipse cx='14' cy='19' rx='4' ry='2.4' fill='%23fff' fill-opacity='.35' transform='rotate(-30 14 19)'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 1px 1px oklch(0.3 0.08 50 / 35%));
+  pointer-events: none;
+}
+
+/* Steam rises from the water and thins out. */
+.capy-steam {
+  position: absolute;
+  bottom: 22vh;
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, oklch(1 0 0 / 55%), transparent);
+  animation: steam-rise var(--steam-duration, 12s) ease-out infinite both;
+}
+
+@keyframes steam-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.6);
+  }
+  30% {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(var(--steam-drift, 2vw), -24vh, 0) scale(1.7);
+  }
+}
+
+/* Oranges drift across the water, bobbing as they go. */
+.capy-orange {
+  position: absolute;
+  left: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44'%3E%3Cdefs%3E%3CradialGradient id='o' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23ffc15e'/%3E%3Cstop offset='.6' stop-color='%23f58f14'/%3E%3Cstop offset='1' stop-color='%23cf6a06'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='20' cy='26' r='16' fill='url(%23o)'/%3E%3Cellipse cx='26' cy='10' rx='8' ry='4' fill='%234f9a3c' transform='rotate(-25 26 10)'/%3E%3Ccircle cx='20' cy='11' r='1.8' fill='%236a4a1c'/%3E%3Cellipse cx='14' cy='19' rx='4' ry='2.4' fill='%23fff' fill-opacity='.35' transform='rotate(-30 14 19)'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  animation: orange-float var(--orange-duration, 70s) linear infinite both;
+}
+
+@keyframes orange-float {
+  0% {
+    transform: translate3d(-10vw, 0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(22vw, 4px, 0) rotate(8deg);
+  }
+  50% {
+    transform: translate3d(50vw, -3px, 0) rotate(-6deg);
+  }
+  75% {
+    transform: translate3d(78vw, 4px, 0) rotate(6deg);
+  }
+  100% {
+    transform: translate3d(110vw, 0, 0) rotate(0deg);
+  }
+}

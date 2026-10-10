@@ -3,6 +3,10 @@ import { useEffect } from 'react'
 import { useSanta } from '@/features/secretsanta/hooks'
 import type { ThemeId } from '@/themes'
 import { useTheme } from '@/themes/context'
+import { CapybaraLayer } from '@/themes/CapybaraLayer'
+import { EasterLayer } from '@/themes/EasterLayer'
+import { HalloweenLayer } from '@/themes/HalloweenLayer'
+import { PolandLayer } from '@/themes/PolandLayer'
 import { SnowLayer } from '@/themes/SnowLayer'
 
 /** Whether an event is running, or `undefined` while that isn't known yet. */
@@ -32,7 +36,7 @@ function pickEventTheme(events: [EventStatus, ThemeId][]): ThemeId | null | unde
 /**
  * Forces the running event's theme over whatever the user picked; their pick comes back when the
  * event ends. The override is remembered, so a reload paints it before the status has been fetched.
- * Also renders the effective theme's decorations (snow for christmas).
+ * Also renders the effective theme's decorations (snow for christmas, bats and embers for halloween, petals for polska, eggs for easter, steam and oranges for capybara).
  */
 export function EventThemeSync() {
   const { theme, setOverride } = useTheme()
@@ -42,5 +46,10 @@ export function EventThemeSync() {
     if (eventTheme !== undefined) setOverride(eventTheme)
   }, [eventTheme, setOverride])
 
-  return theme === 'christmas' ? <SnowLayer /> : null
+  if (theme === 'christmas') return <SnowLayer />
+  if (theme === 'halloween') return <HalloweenLayer />
+  if (theme === 'polska') return <PolandLayer />
+  if (theme === 'easter') return <EasterLayer />
+  if (theme === 'capybara' || theme === 'capybara-dusk') return <CapybaraLayer />
+  return null
 }

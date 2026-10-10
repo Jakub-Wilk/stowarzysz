@@ -1,0 +1,104 @@
+/*
+ * Theme: gabinet (a study: dark espresso wood, latte-cream text, cognac leather). Every
+ * colour is derived from the base hue (`--base-hue`, see color.ts; chestnut by default), the cream and
+ * copper highlights sit fixed offsets away. Characterised by serif type (Playfair headings, Source
+ * Serif text), stitched leather boxes and a wood-grain table.
+ */
+@import '@fontsource-variable/source-serif-4';
+@import '@fontsource-variable/playfair-display';
+
+:root[data-theme='gabinet'] {
+  --base-hue: 20;
+}
+
+[data-theme='gabinet'] {
+  --background: hsl(var(--base-hue) calc(48% * var(--base-chroma)) 9%);
+  --foreground: hsl(calc(var(--base-hue) + 14) calc(50% * var(--base-chroma)) 88%);
+  --card: hsl(var(--base-hue) calc(40% * var(--base-chroma)) 16%);
+  --card-foreground: hsl(calc(var(--base-hue) + 14) calc(50% * var(--base-chroma)) 88%);
+  --popover: hsl(var(--base-hue) calc(44% * var(--base-chroma)) 11%);
+  --popover-foreground: hsl(calc(var(--base-hue) + 14) calc(50% * var(--base-chroma)) 88%);
+  --primary: hsl(calc(var(--base-hue) + 2) calc(62% * var(--base-chroma)) 50%);
+  --primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 8%);
+  --secondary: hsl(var(--base-hue) calc(36% * var(--base-chroma)) 23%);
+  --secondary-foreground: hsl(calc(var(--base-hue) + 14) calc(50% * var(--base-chroma)) 88%);
+  --muted: hsl(var(--base-hue) calc(38% * var(--base-chroma)) 18%);
+  --muted-foreground: hsl(calc(var(--base-hue) + 6) calc(28% * var(--base-chroma)) 66%);
+  --accent: hsl(var(--base-hue) calc(42% * var(--base-chroma)) 28%);
+  --accent-foreground: hsl(calc(var(--base-hue) + 14) calc(55% * var(--base-chroma)) 93%);
+  --destructive: oklch(0.7 0.18 25);
+  --border: hsl(calc(var(--base-hue) + 6) calc(50% * var(--base-chroma)) 58% / 34%);
+  --input: hsl(calc(var(--base-hue) + 6) calc(50% * var(--base-chroma)) 58% / 34%);
+  --ring: hsl(calc(var(--base-hue) + 6) calc(70% * var(--base-chroma)) 60%);
+  --chart-1: hsl(calc(var(--base-hue) + 2) calc(62% * var(--base-chroma)) 52%);
+  --chart-2: hsl(calc(var(--base-hue) + 20) calc(58% * var(--base-chroma)) 70%);
+  --chart-3: hsl(calc(var(--base-hue) - 8) calc(55% * var(--base-chroma)) 38%);
+  --chart-4: hsl(calc(var(--base-hue) + 55) calc(30% * var(--base-chroma)) 50%);
+  --chart-5: hsl(calc(var(--base-hue) + 170) calc(25% * var(--base-chroma)) 48%);
+  --radius: 0.25rem;
+  --positive: oklch(0.76 0.13 145);
+  --negative: oklch(0.7 0.18 25);
+  --neutral: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 58%);
+  /* Avatars and other `bg-(image:--metal)` fills: burnished copper leather. */
+  --metal-1: hsl(calc(var(--base-hue) - 2) calc(52% * var(--base-chroma)) 32%);
+  --metal-2: hsl(var(--base-hue) calc(58% * var(--base-chroma)) 42%);
+  --metal-3: hsl(calc(var(--base-hue) + 4) calc(62% * var(--base-chroma)) 54%);
+  --metal-4: hsl(var(--base-hue) calc(58% * var(--base-chroma)) 42%);
+  --metal-5: hsl(calc(var(--base-hue) - 2) calc(52% * var(--base-chroma)) 32%);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: hsl(var(--base-hue) calc(46% * var(--base-chroma)) 11%);
+  --sidebar-foreground: hsl(calc(var(--base-hue) + 14) calc(50% * var(--base-chroma)) 88%);
+  --sidebar-primary: hsl(calc(var(--base-hue) + 2) calc(62% * var(--base-chroma)) 50%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 8%);
+  --sidebar-accent: hsl(var(--base-hue) calc(42% * var(--base-chroma)) 28%);
+  --sidebar-accent-foreground: hsl(calc(var(--base-hue) + 14) calc(55% * var(--base-chroma)) 93%);
+  --sidebar-border: hsl(calc(var(--base-hue) + 6) calc(50% * var(--base-chroma)) 58% / 34%);
+  --sidebar-ring: hsl(calc(var(--base-hue) + 6) calc(70% * var(--base-chroma)) 60%);
+}
+
+/* Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+[data-theme='gabinet'] {
+  font-family: 'Source Serif 4 Variable', Georgia, serif;
+}
+
+[data-theme='gabinet'] :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title']) {
+  font-family: 'Playfair Display Variable', Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* The logo is branded into the leather: latte with a pressed-in shadow. */
+[data-theme='gabinet'] .font-logo {
+  color: hsl(calc(var(--base-hue) + 18) calc(55% * var(--base-chroma)) 72%);
+  text-shadow: 0 1px 0 hsl(var(--base-hue) 55% 4% / 85%);
+}
+
+/* Leather boxes: a row of stitches inside the edge, and a soft pressed-in shadow. */
+[data-theme='gabinet'] .bg-card {
+  outline: 1px dashed hsl(calc(var(--base-hue) + 8) calc(45% * var(--base-chroma)) 62% / 40%);
+  outline-offset: -5px;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 6%),
+    0 2px 6px hsl(var(--base-hue) 50% 4% / 55%);
+}
+
+/* Cognac buttons: a top-lit gradient on the leather fill. */
+[data-theme='gabinet'] [data-slot='button'].bg-primary {
+  background-image: linear-gradient(180deg, hsl(0 0% 100% / 18%), transparent 55%);
+  box-shadow: 0 1px 0 hsl(var(--base-hue) 50% 5% / 70%);
+}
+
+/*
+ * A wood-grain table (static): turbulence stretched along x gives long streaks, in dark and light
+ * brown, under a warm lamp glow from the top.
+ */
+[data-theme='gabinet'] body {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .09' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .28 0 0 0 0 .12 0 0 0 1.2 -.4'/%3E%3C/filter%3E%3Crect width='600' height='400' filter='url(%23w)' opacity='.1'/%3E%3C/svg%3E"),
+    radial-gradient(
+      110% 60% at 50% 0%,
+      hsl(calc(var(--base-hue) + 4) calc(60% * var(--base-chroma)) 20% / 70%),
+      transparent 75%
+    );
+  background-attachment: fixed;
+}

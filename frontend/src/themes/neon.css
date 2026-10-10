@@ -1,0 +1,155 @@
+/*
+ * Theme: neon (synthwave: near-black violet, hot glowing accents). Every colour is derived from the
+ * base hue (`--base-hue`, see color.ts; hot pink by default), with the second neon (charts, the
+ * glow's far end) a fixed offset away. The glow is a static shadow: only transform/opacity are
+ * animated (see components/motion/README.md).
+ */
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/orbitron/700.css';
+:root[data-theme='neon'] {
+  --base-hue: 325;
+}
+
+[data-theme='neon'] {
+  --background: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 6%);
+  --foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 94%);
+  --card: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 11%);
+  --card-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 94%);
+  --popover: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 8%);
+  --popover-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 94%);
+  --primary: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60%);
+  --primary-foreground: hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 8%);
+  --secondary: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 18%);
+  --secondary-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 94%);
+  --muted: hsl(calc(var(--base-hue) - 60) calc(55% * var(--base-chroma)) 13%);
+  --muted-foreground: hsl(calc(var(--base-hue) - 60) calc(25% * var(--base-chroma)) 70%);
+  --accent: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 24%);
+  --accent-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 96%);
+  --destructive: oklch(0.7 0.24 25);
+  --border: hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 60% / 35%);
+  --input: hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 60% / 35%);
+  --ring: hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 60%);
+  --chart-1: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60%);
+  --chart-2: hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 60%);
+  --chart-3: hsl(calc(var(--base-hue) - 60) calc(90% * var(--base-chroma)) 65%);
+  --chart-4: hsl(calc(var(--base-hue) + 80) calc(100% * var(--base-chroma)) 60%);
+  --chart-5: hsl(calc(var(--base-hue) + 35) calc(100% * var(--base-chroma)) 60%);
+  --radius: 0.5rem;
+  --positive: oklch(0.85 0.2 160);
+  --negative: oklch(0.72 0.25 15);
+  --neutral: oklch(0.75 0.05 290);
+  --metal-1: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 58%);
+  --metal-2: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 58%);
+  --metal-3: hsl(calc(var(--base-hue) - 60) calc(100% * var(--base-chroma)) 62%);
+  --metal-4: hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 60%);
+  --metal-5: hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 60%);
+  --metal: linear-gradient(135deg, var(--metal-1) 0%, var(--metal-3) 50%, var(--metal-5) 100%);
+  --sidebar: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 8%);
+  --sidebar-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 94%);
+  --sidebar-primary: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60%);
+  --sidebar-primary-foreground: hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 8%);
+  --sidebar-accent: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 24%);
+  --sidebar-accent-foreground: hsl(calc(var(--base-hue) - 60) calc(60% * var(--base-chroma)) 96%);
+  --sidebar-border: hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 60% / 35%);
+  --sidebar-ring: hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 60%);
+}
+
+/* A sunset glow at the bottom edge and a faint horizon line, fixed so it does not scroll. */
+[data-theme='neon'] body {
+  background-image:
+    radial-gradient(
+      100% 50% at 50% 100%,
+      hsl(var(--base-hue) calc(100% * var(--base-chroma)) 40% / 28%),
+      transparent 70%
+    ),
+    radial-gradient(
+      80% 40% at 50% 0%,
+      hsl(calc(var(--base-hue) - 135) calc(100% * var(--base-chroma)) 40% / 18%),
+      transparent 70%
+    );
+  background-attachment: fixed;
+}
+
+/* Neon tubes: primary buttons and cards glow in their own colour. */
+[data-theme='neon'] .bg-primary {
+  box-shadow: 0 0 14px hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60% / 55%);
+}
+
+[data-theme='neon'] [data-slot='card'] {
+  box-shadow:
+    0 0 0 1px hsl(calc(var(--base-hue) - 60) calc(80% * var(--base-chroma)) 60% / 30%),
+    0 0 22px hsl(calc(var(--base-hue) - 60) calc(100% * var(--base-chroma)) 50% / 12%);
+}
+
+/* Characterisation. Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+[data-theme='neon'] {
+  font-family: 'Space Grotesk Variable', system-ui, sans-serif;
+}
+
+[data-theme='neon'] :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title']) {
+  font-family: 'Space Grotesk Variable', system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+[data-theme='neon'] :is(h1, h2) {
+  text-shadow: 0 0 12px hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60% / 45%);
+}
+
+/* The logo is a neon sign with a tube that flickers (opacity only). */
+[data-theme='neon'] .font-logo {
+  font-family: Orbitron, sans-serif;
+  color: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 78%);
+  text-shadow:
+    0 0 6px hsl(var(--base-hue) calc(100% * var(--base-chroma)) 70%),
+    0 0 18px hsl(var(--base-hue) calc(100% * var(--base-chroma)) 55%),
+    0 0 40px hsl(var(--base-hue) calc(100% * var(--base-chroma)) 50% / 70%);
+  animation: neon-flicker 6s linear infinite;
+}
+
+@keyframes neon-flicker {
+  0%,
+  18%,
+  22%,
+  62%,
+  64%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  63% {
+    opacity: 0.55;
+  }
+}
+
+/* Buttons are lit tubes: outlines and links glow on hover instead of filling. */
+[data-theme='neon'] [data-slot='button'] {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* A retro grid floor receding to the horizon (static; a perspective plane pinned to the bottom). */
+[data-theme='neon'] body::before {
+  content: '';
+  position: fixed;
+  left: -50%;
+  right: -50%;
+  bottom: 0;
+  height: 45vh;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60% / 35%) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      hsl(var(--base-hue) calc(100% * var(--base-chroma)) 60% / 35%) 1px,
+      transparent 1px
+    );
+  background-size: 48px 48px;
+  transform: perspective(380px) rotateX(62deg);
+  transform-origin: 50% 100%;
+  mask-image: linear-gradient(to top, black, transparent 85%);
+}

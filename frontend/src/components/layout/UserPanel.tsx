@@ -10,13 +10,15 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
-import { selectableThemes, type ThemeId } from '@/themes'
+import { hasFixedColors, selectableThemes, themeGroups, type ThemeId } from '@/themes'
 import { MAX_CHROMA } from '@/themes/color'
 import { useTheme } from '@/themes/context'
 import { useBaseChroma, useBaseHue } from '@/themes/useBaseHue'
@@ -39,6 +41,8 @@ function AppearanceSettings() {
   const { hue, custom, setHue, reset: resetHue } = useBaseHue()
   const saturation = useBaseChroma()
   const locked = theme !== selected
+  // A theme with a fixed palette ignores the sliders; they stay in view only under the lock notice.
+  const showColors = locked || !hasFixedColors(theme)
   const lockedLabel = themes.find((t) => t.id === theme)?.label
 
   return (
@@ -64,54 +68,63 @@ function AppearanceSettings() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false}>
-              {selectableThemes.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.label}
-                </SelectItem>
+              {themeGroups.map((group) => (
+                <SelectGroup key={group.tone}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.themes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <Label>Kolor</Label>
-            {custom && (
-              <Button variant="ghost" size="xs" onClick={resetHue}>
-                Domyślny
-              </Button>
-            )}
-          </div>
-          <Slider
-            aria-label="Kolor"
-            min={0}
-            max={360}
-            step={1}
-            value={hue}
-            onValueChange={(v) => setHue(Array.isArray(v) ? v[0] : v)}
-            style={{ '--hue-gradient': HUE_GRADIENT } as React.CSSProperties}
-            className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <Label>Nasycenie</Label>
-            {saturation.custom && (
-              <Button variant="ghost" size="xs" onClick={saturation.reset}>
-                Domyślne
-              </Button>
-            )}
-          </div>
-          <Slider
-            aria-label="Nasycenie"
-            min={0}
-            max={MAX_CHROMA * 100}
-            step={1}
-            value={Math.round(saturation.chroma * 100)}
-            onValueChange={(v) => saturation.setChroma((Array.isArray(v) ? v[0] : v) / 100)}
-            style={{ '--hue-gradient': CHROMA_GRADIENT } as React.CSSProperties}
-            className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
-          />
-        </div>
+        {showColors && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Kolor</Label>
+                {custom && (
+                  <Button variant="ghost" size="xs" onClick={resetHue}>
+                    Domyślny
+                  </Button>
+                )}
+              </div>
+              <Slider
+                aria-label="Kolor"
+                min={0}
+                max={360}
+                step={1}
+                value={hue}
+                onValueChange={(v) => setHue(Array.isArray(v) ? v[0] : v)}
+                style={{ '--hue-gradient': HUE_GRADIENT } as React.CSSProperties}
+                className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Nasycenie</Label>
+                {saturation.custom && (
+                  <Button variant="ghost" size="xs" onClick={saturation.reset}>
+                    Domyślne
+                  </Button>
+                )}
+              </div>
+              <Slider
+                aria-label="Nasycenie"
+                min={0}
+                max={MAX_CHROMA * 100}
+                step={1}
+                value={Math.round(saturation.chroma * 100)}
+                onValueChange={(v) => saturation.setChroma((Array.isArray(v) ? v[0] : v) / 100)}
+                style={{ '--hue-gradient': CHROMA_GRADIENT } as React.CSSProperties}
+                className="**:data-[slot=slider-range]:hidden **:data-[slot=slider-track]:h-2 **:data-[slot=slider-track]:bg-(image:--hue-gradient)"
+              />
+            </div>
+          </>
+        )}
       </div>
       {locked && (
         <div className="absolute inset-0 flex items-center justify-center p-2">
@@ -169,7 +182,7 @@ export function UserPanel({ inManage = false }: { inManage?: boolean }) {
         aria-label={`Konto: ${me.username}`}
         className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <UserAvatar username={me.username} src={me.avatar_url} />
+        <UserAvatar username={me.username} src={me.avatar_url} decorated />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 items-center gap-3 p-4 text-center">
         <UserAvatar username={me.username} src={me.avatar_url} size="lg" />

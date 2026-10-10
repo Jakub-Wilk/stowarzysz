@@ -1,0 +1,121 @@
+/*
+ * Theme: capybara-dusk (the capybara theme in the evening: a sky going from indigo through plum to
+ * a glowing orange horizon, a sun half set behind the spring, warm lamplight). Dark. Picked from the
+ * picker like capybara, never automatic; its palette is fixed. Everything it does not say here
+ * (fonts, the sleeping capybara, the bamboo rail, the avatar's orange, the oranges and steam) comes
+ * from capybara.css, which targets both themes. Import order matters: this file overrides it.
+ */
+[data-theme='capybara-dusk'] {
+  --background: oklch(0.2 0.045 300);
+  --foreground: oklch(0.94 0.03 70);
+  --card: oklch(0.26 0.06 310);
+  --card-foreground: oklch(0.94 0.03 70);
+  --popover: oklch(0.23 0.055 305);
+  --popover-foreground: oklch(0.94 0.03 70);
+  --primary: oklch(0.75 0.17 55);
+  --primary-foreground: oklch(0.22 0.06 40);
+  --secondary: oklch(0.33 0.08 335);
+  --secondary-foreground: oklch(0.94 0.03 70);
+  --muted: oklch(0.24 0.05 305);
+  --muted-foreground: oklch(0.76 0.06 60);
+  --accent: oklch(0.37 0.1 20);
+  --accent-foreground: oklch(0.97 0.02 70);
+  --destructive: oklch(0.7 0.2 25);
+  --border: oklch(0.95 0.03 70 / 16%);
+  --input: oklch(0.95 0.03 70 / 22%);
+  --ring: oklch(0.78 0.14 35);
+  --chart-1: oklch(0.75 0.17 55);
+  --chart-2: oklch(0.7 0.14 340);
+  --chart-3: oklch(0.68 0.12 290);
+  --chart-4: oklch(0.82 0.12 85);
+  --chart-5: oklch(0.72 0.1 195);
+  --radius: 1rem;
+  --positive: oklch(0.78 0.14 165);
+  --negative: oklch(0.7 0.2 25);
+  --neutral: oklch(0.74 0.04 60);
+  /* Avatars and other `bg-(image:--metal)` fills: an orange lit from the setting sun. */
+  --metal-1: oklch(0.6 0.17 45);
+  --metal-2: oklch(0.7 0.17 52);
+  --metal-3: oklch(0.8 0.15 68);
+  --metal-4: oklch(0.7 0.17 52);
+  --metal-5: oklch(0.58 0.17 42);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: oklch(0.23 0.055 305);
+  --sidebar-foreground: oklch(0.94 0.03 70);
+  --sidebar-primary: oklch(0.75 0.17 55);
+  --sidebar-primary-foreground: oklch(0.22 0.06 40);
+  --sidebar-accent: oklch(0.37 0.1 20);
+  --sidebar-accent-foreground: oklch(0.97 0.02 70);
+  --sidebar-border: oklch(0.95 0.03 70 / 16%);
+  --sidebar-ring: oklch(0.78 0.14 35);
+}
+
+[data-theme='capybara-dusk'] .font-logo {
+  color: oklch(0.82 0.14 60);
+  text-shadow: 0 0 12px oklch(0.7 0.18 45 / 45%);
+}
+
+[data-theme='capybara-dusk'] .bg-card {
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 6%);
+}
+
+/*
+ * The sky, fixed to the screen: stars at the top, indigo fading through plum and rose to an orange
+ * horizon at 70% (where the water starts), and the sun half set at the horizon, left of centre.
+ */
+[data-theme='capybara-dusk'] body {
+  background-image:
+    radial-gradient(
+      circle at 24% 70%,
+      #fff1c2 0 34px,
+      #ffb872 35px 62px,
+      #ff965040 63px 130px,
+      transparent 280px
+    ),
+    radial-gradient(circle at 8% 6%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 17% 13%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 29% 5%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 38% 17%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 47% 8%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 58% 14%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 66% 4%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 74% 11%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 83% 18%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 91% 7%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 96% 15%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 52% 22%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 22% 24%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 78% 26%, #fff 0 1px, transparent 1.6px),
+    linear-gradient(
+      180deg,
+      #17163a 0%,
+      #34255e 28%,
+      #7a3a74 48%,
+      #d4566a 62%,
+      #f58f4b 70%,
+      #f58f4b 100%
+    );
+  background-attachment: fixed;
+}
+
+/* The water is a deep evening blue, paler at the surface where it catches the last light. */
+[data-theme='capybara-dusk'] body::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='16'%3E%3Cpath fill='%238fb8e0' d='M0 8Q10 0 20 8T40 8T60 8T80 8V16H0Z'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #8fb8e0, #4f86c4 25%, #2f5a9f 60%, #1b3470);
+}
+
+/* The capybara in the spa sits in dimmer light, with its water band in the same blue. */
+[data-theme='capybara-dusk'] body::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 110'%3E%3Cdefs%3E%3CradialGradient id='o' cx='.35' cy='.3' r='.8'%3E%3Cstop offset='0' stop-color='%23ffc15e'/%3E%3Cstop offset='.6' stop-color='%23f58f14'/%3E%3Cstop offset='1' stop-color='%23cf6a06'/%3E%3C/radialGradient%3E%3ClinearGradient id='w' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%234a82c0' stop-opacity='.85'/%3E%3Cstop offset='.45' stop-color='%234a82c0' stop-opacity='.55'/%3E%3Cstop offset='1' stop-color='%234a82c0' stop-opacity='.12'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='%238f5d38' d='M70 74C70 52 100 44 130 50 150 54 158 66 158 74Z'/%3E%3Cpath fill='%23a8734a' d='M18 54C18 40 30 33 48 33 70 33 85 40 91 54L93 74H22C18 68 18 60 18 54Z'/%3E%3Cellipse cx='30' cy='60' rx='13' ry='10' fill='%23c49366'/%3E%3Cellipse cx='21' cy='51' rx='3' ry='4' fill='%233a2418'/%3E%3Ccircle cx='52' cy='47' r='3.2' fill='%2326150c'/%3E%3Ccircle cx='53' cy='46' r='1' fill='%23fff'/%3E%3Ccircle cx='79' cy='38' r='7' fill='%238f5d38'/%3E%3Ccircle cx='79' cy='38' r='3.5' fill='%23c49366'/%3E%3Cpath d='M24 66Q31 69 38 66' fill='none' stroke='%236b4426' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='60' cy='26' r='13' fill='url(%23o)'/%3E%3Cellipse cx='64' cy='13' rx='7' ry='3.4' fill='%234f9a3c' transform='rotate(-25 64 13)'/%3E%3Cellipse cx='55' cy='21' rx='3.6' ry='2.2' fill='%23fff' fill-opacity='.35' transform='rotate(-30 55 21)'/%3E%3Cpath d='M20 69Q30 65 40 69T60 69T80 69T100 69T120 69T140 69T160 69V84A40 26 0 0 1 120 110H60A40 26 0 0 1 20 84Z' fill='url(%23w)'/%3E%3Cg fill='none' stroke='%23d6eaff' stroke-opacity='.75' stroke-width='1.2'%3E%3Cellipse cx='56' cy='72' rx='46' ry='3.4'/%3E%3Cellipse cx='56' cy='72' rx='60' ry='5' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  filter: brightness(0.86) saturate(0.95);
+}
+
+/* The sleeping capybara in the header catches a little lamplight. */
+[data-theme='capybara-dusk'] header.sticky::before {
+  filter: drop-shadow(0 0 7px oklch(0.78 0.16 55 / 40%));
+}
+
+[data-theme='capybara-dusk'] .capy-steam {
+  background: radial-gradient(closest-side, oklch(0.92 0.07 45 / 45%), transparent);
+}

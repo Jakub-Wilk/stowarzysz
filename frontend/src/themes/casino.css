@@ -1,0 +1,103 @@
+/*
+ * Theme: casino (green felt, cream text, a chip-red accent). Styling only: every colour is derived
+ * from the base hue (`--base-hue`, see color.ts; felt green by default), the primary sits a fixed
+ * offset away so it stays the "chip" whatever the hue is.
+ */
+@import '@fontsource-variable/playfair-display';
+@import '@fontsource/limelight';
+:root[data-theme='casino'] {
+  --base-hue: 150;
+}
+
+[data-theme='casino'] {
+  --background: hsl(var(--base-hue) calc(62% * var(--base-chroma)) 12%);
+  --foreground: hsl(48 40% 90%);
+  --card: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 17%);
+  --card-foreground: hsl(48 40% 90%);
+  --popover: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 10%);
+  --popover-foreground: hsl(48 40% 90%);
+  --primary: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 50%);
+  --primary-foreground: hsl(48 60% 96%);
+  --secondary: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 24%);
+  --secondary-foreground: hsl(48 40% 90%);
+  --muted: hsl(var(--base-hue) calc(50% * var(--base-chroma)) 15%);
+  --muted-foreground: hsl(var(--base-hue) calc(18% * var(--base-chroma)) 68%);
+  --accent: hsl(var(--base-hue) calc(50% * var(--base-chroma)) 28%);
+  --accent-foreground: hsl(48 50% 94%);
+  --destructive: oklch(0.7 0.2 28);
+  --border: hsl(48 55% 62% / 35%);
+  --input: hsl(48 55% 62% / 35%);
+  --ring: hsl(48 80% 62%);
+  --chart-1: hsl(48 80% 62%);
+  --chart-2: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 55%);
+  --chart-3: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 50%);
+  --chart-4: hsl(calc(var(--base-hue) + 100) calc(55% * var(--base-chroma)) 60%);
+  --chart-5: hsl(calc(var(--base-hue) - 100) calc(55% * var(--base-chroma)) 60%);
+  --radius: 0.75rem;
+  --positive: oklch(0.78 0.17 150);
+  --negative: oklch(0.7 0.2 25);
+  --neutral: oklch(0.74 0.03 90);
+  --metal-1: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 40%);
+  --metal-2: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 50%);
+  --metal-3: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 58%);
+  --metal-4: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 50%);
+  --metal-5: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 40%);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 10%);
+  --sidebar-foreground: hsl(48 40% 90%);
+  --sidebar-primary: hsl(calc(var(--base-hue) + 205) calc(75% * var(--base-chroma)) 50%);
+  --sidebar-primary-foreground: hsl(48 60% 96%);
+  --sidebar-accent: hsl(var(--base-hue) calc(50% * var(--base-chroma)) 28%);
+  --sidebar-accent-foreground: hsl(48 50% 94%);
+  --sidebar-border: hsl(48 55% 62% / 35%);
+  --sidebar-ring: hsl(48 80% 62%);
+}
+
+/* Felt: the lit table lives in the body rule below, with the suits. */
+[data-theme='casino'] body {
+  background-attachment: fixed;
+}
+
+/*
+ * Characterisation. Fonts are set on the elements directly: `font-sans` is inlined into the
+ * utilities by `@theme inline`, so overriding the variable would not reach them.
+ */
+[data-theme='casino'] :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title']) {
+  font-family: 'Playfair Display Variable', Georgia, serif;
+  letter-spacing: 0.01em;
+}
+
+/* A lit marquee: the logo in art-deco bulbs and gold. */
+[data-theme='casino'] .font-logo {
+  font-family: Limelight, 'Cinzel Decorative', serif;
+  font-weight: 400;
+  color: hsl(48 90% 68%);
+  text-shadow:
+    0 0 10px hsl(48 100% 55% / 55%),
+    0 2px 0 hsl(35 80% 30%);
+}
+
+/* Table-top cards: a gold inner frame, like the edge of a playing card. */
+[data-theme='casino'] .bg-card {
+  box-shadow:
+    inset 0 0 0 3px var(--card),
+    inset 0 0 0 4px hsl(48 55% 62% / 35%);
+}
+
+/* Primary buttons are chips: round, with a notched edge. */
+[data-theme='casino'] [data-slot='button'].bg-primary {
+  border-radius: 9999px;
+  border: 2px dashed hsl(0 0% 100% / 60%);
+  background-image: radial-gradient(circle at 30% 25%, hsl(0 0% 100% / 22%), transparent 60%);
+}
+
+/* Card suits scattered over the felt, very faintly. */
+[data-theme='casino'] body {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='%23fff' fill-opacity='.045' font-size='26' font-family='serif'%3E%3Ctext x='18' y='42'%3E%E2%99%A0%3C/text%3E%3Ctext x='98' y='82'%3E%E2%99%A5%3C/text%3E%3Ctext x='24' y='122'%3E%E2%99%A6%3C/text%3E%3Ctext x='104' y='154'%3E%E2%99%A3%3C/text%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(
+      90% 55% at 50% 0%,
+      hsl(var(--base-hue) calc(60% * var(--base-chroma)) 22% / 80%),
+      transparent 75%
+    );
+}

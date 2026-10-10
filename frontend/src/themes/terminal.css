@@ -1,0 +1,119 @@
+/*
+ * Theme: terminal (phosphor on black, monospace everywhere, square corners). Every colour is derived
+ * from the base hue (`--base-hue`, see color.ts; green phosphor by default). Characterised by JetBrains
+ * Mono, a prompt before section titles, a blinking cursor after the page title and dashed boxes.
+ */
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/700.css';
+:root[data-theme='terminal'] {
+  --base-hue: 135;
+}
+
+[data-theme='terminal'] {
+  --font-sans:
+    ui-monospace, 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+  --background: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 4%);
+  --foreground: hsl(var(--base-hue) calc(80% * var(--base-chroma)) 70%);
+  --card: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 7%);
+  --card-foreground: hsl(var(--base-hue) calc(80% * var(--base-chroma)) 70%);
+  --popover: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 5%);
+  --popover-foreground: hsl(var(--base-hue) calc(80% * var(--base-chroma)) 70%);
+  --primary: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 6%);
+  --secondary: hsl(var(--base-hue) calc(40% * var(--base-chroma)) 13%);
+  --secondary-foreground: hsl(var(--base-hue) calc(80% * var(--base-chroma)) 70%);
+  --muted: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 9%);
+  --muted-foreground: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 50%);
+  --accent: hsl(var(--base-hue) calc(50% * var(--base-chroma)) 17%);
+  --accent-foreground: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 78%);
+  --destructive: oklch(0.68 0.2 27);
+  --border: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 45% / 45%);
+  --input: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 45% / 45%);
+  --ring: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --chart-1: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --chart-2: hsl(calc(var(--base-hue) + 60) calc(80% * var(--base-chroma)) 55%);
+  --chart-3: hsl(calc(var(--base-hue) + 120) calc(70% * var(--base-chroma)) 55%);
+  --chart-4: hsl(calc(var(--base-hue) - 60) calc(70% * var(--base-chroma)) 55%);
+  --chart-5: hsl(calc(var(--base-hue) - 120) calc(60% * var(--base-chroma)) 55%);
+  --radius: 0;
+  --positive: oklch(0.8 0.2 145);
+  --negative: oklch(0.7 0.21 25);
+  --neutral: oklch(0.7 0.04 150);
+  --metal-1: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --metal-2: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --metal-3: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --metal-4: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --metal-5: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --metal: linear-gradient(
+    hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%),
+    hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%)
+  );
+  --sidebar: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 5%);
+  --sidebar-foreground: hsl(var(--base-hue) calc(80% * var(--base-chroma)) 70%);
+  --sidebar-primary: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 6%);
+  --sidebar-accent: hsl(var(--base-hue) calc(50% * var(--base-chroma)) 17%);
+  --sidebar-accent-foreground: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 78%);
+  --sidebar-border: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 45% / 45%);
+  --sidebar-ring: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+}
+
+/* Phosphor glow on text and faint CRT scanlines over everything (pointer-events off). */
+[data-theme='terminal'] body {
+  text-shadow: 0 0 6px hsl(var(--base-hue) calc(90% * var(--base-chroma)) 50% / 35%);
+}
+
+[data-theme='terminal'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(0deg, hsl(0 0% 0% / 18%) 0 1px, transparent 1px 3px);
+}
+
+/* Characterisation. Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+[data-theme='terminal'] {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  caret-shape: block;
+}
+
+[data-theme='terminal']
+  :is(h1, h2, h3, h4, h5, h6, .font-heading, .font-logo, [data-slot$='title']) {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Section titles read as a prompt; the page title ends in a blinking cursor (opacity only). */
+[data-theme='terminal'] :is(h2, h3)::before {
+  content: '> ';
+  opacity: 0.6;
+}
+
+[data-theme='terminal'] h1::after {
+  content: '█';
+  margin-left: 0.15em;
+  animation: terminal-blink 1.1s steps(1) infinite;
+}
+
+@keyframes terminal-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Boxes are drawn with dashes, like ASCII frames. */
+[data-theme='terminal'] .bg-card {
+  border-style: dashed;
+}
+
+[data-theme='terminal'] [data-slot='button'] {
+  text-transform: lowercase;
+}
+
+/* Selecting text inverts it, like a terminal does. */
+[data-theme='terminal'] ::selection {
+  background: hsl(var(--base-hue) calc(90% * var(--base-chroma)) 58%);
+  color: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 6%);
+  text-shadow: none;
+}

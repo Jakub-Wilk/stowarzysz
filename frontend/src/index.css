@@ -5,9 +5,20 @@
 @import '@fontsource/cinzel-decorative/700.css';
 @import './themes/royal.css';
 @import './themes/christmas.css';
+@import './themes/halloween.css';
+@import './themes/polska.css';
+@import './themes/easter.css';
+@import './themes/capybara.css';
+@import './themes/capybara-dusk.css';
 @import './themes/claymorphic.css';
 @import './themes/boring-dark.css';
 @import './themes/boring-light.css';
+@import './themes/casino.css';
+@import './themes/neon.css';
+@import './themes/terminal.css';
+@import './themes/parchment.css';
+@import './themes/gazetka.css';
+@import './themes/gabinet.css';
 
 /* Themes are arbitrary (src/themes/); there is no light/dark mode, so keep `dark:` utilities inert. */
 @custom-variant dark (&:is(.dark *));

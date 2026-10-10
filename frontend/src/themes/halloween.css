@@ -1,0 +1,249 @@
+/*
+ * Theme: halloween (a violet-black night, pumpkin orange, blood red, green accents, bone-white text). Seasonal,
+ * like christmas: it is not in the picker and its colours are fixed, not derived from the base hue
+ * (see `getSeasonalTheme`). Decorations: cobwebs and blood on the header, a swinging spider, a glowing
+ * tab bar, and bats and embers drifting over the page (`HalloweenLayer`). All motion is
+ * transform/opacity only, and pointer-events are off on everything decorative.
+ */
+@import '@fontsource/creepster/400.css';
+
+[data-theme='halloween'] {
+  --background: oklch(0.16 0.04 300);
+  --foreground: oklch(0.94 0.02 90);
+  --card: oklch(0.22 0.06 305);
+  --card-foreground: oklch(0.94 0.02 90);
+  --popover: oklch(0.19 0.055 303);
+  --popover-foreground: oklch(0.94 0.02 90);
+  --primary: oklch(0.72 0.18 55);
+  --primary-foreground: oklch(0.2 0.05 300);
+  --secondary: oklch(0.29 0.08 305);
+  --secondary-foreground: oklch(0.94 0.02 90);
+  --muted: oklch(0.2 0.05 303);
+  --muted-foreground: oklch(0.74 0.05 300);
+  --accent: oklch(0.33 0.1 305);
+  --accent-foreground: oklch(0.97 0.02 90);
+  --destructive: oklch(0.68 0.22 22);
+  --border: oklch(0.72 0.16 55 / 24%);
+  --input: oklch(0.72 0.16 55 / 28%);
+  --ring: oklch(0.86 0.2 135);
+  --chart-1: oklch(0.72 0.18 55);
+  --chart-2: oklch(0.62 0.2 305);
+  --chart-3: oklch(0.8 0.2 135);
+  --chart-4: oklch(0.9 0.04 90);
+  --chart-5: oklch(0.62 0.22 22);
+  --radius: 0.5rem;
+  --positive: oklch(0.8 0.2 140);
+  --negative: oklch(0.68 0.22 22);
+  --neutral: oklch(0.72 0.05 300);
+  /* Avatars and other `bg-(image:--metal)` fills: a pumpkin with a lit top. */
+  --metal-1: oklch(0.6 0.18 48);
+  --metal-2: oklch(0.7 0.18 52);
+  --metal-3: oklch(0.8 0.17 62);
+  --metal-4: oklch(0.7 0.18 52);
+  --metal-5: oklch(0.58 0.18 46);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: oklch(0.19 0.055 303);
+  --sidebar-foreground: oklch(0.94 0.02 90);
+  --sidebar-primary: oklch(0.72 0.18 55);
+  --sidebar-primary-foreground: oklch(0.2 0.05 300);
+  --sidebar-accent: oklch(0.33 0.1 305);
+  --sidebar-accent-foreground: oklch(0.97 0.02 90);
+  --sidebar-border: oklch(0.72 0.16 55 / 24%);
+  --sidebar-ring: oklch(0.86 0.2 135);
+}
+
+/* A violet haze rising from the top and an orange glow from the bottom, like a lit horizon. */
+[data-theme='halloween'] body {
+  background-image:
+    radial-gradient(100% 45% at 50% 100%, oklch(0.5 0.16 50 / 22%), transparent 70%),
+    radial-gradient(120% 50% at 50% 0%, oklch(0.3 0.1 305), transparent 70%);
+  background-attachment: fixed;
+}
+
+[data-theme='halloween'] .font-logo {
+  font-family: Creepster, 'Cinzel Decorative', serif;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: oklch(0.78 0.18 58);
+  text-shadow:
+    0 0 10px oklch(0.7 0.2 50 / 70%),
+    0 2px 0 oklch(0.25 0.08 300);
+}
+
+[data-theme='halloween'] :is(h1, h2) {
+  text-shadow: 0 0 14px oklch(0.7 0.2 50 / 30%);
+}
+
+/* Cards glow faintly from within, like a candle behind glass. */
+[data-theme='halloween'] .bg-card {
+  box-shadow:
+    inset 0 0 24px oklch(0.6 0.18 50 / 7%),
+    0 0 0 1px oklch(0.72 0.16 55 / 10%);
+}
+
+[data-theme='halloween'] .bg-primary {
+  box-shadow: 0 0 14px oklch(0.72 0.18 55 / 45%);
+}
+
+/*
+ * Decorations, scoped to the sticky app `header` and the bottom `nav[aria-label]` like christmas's.
+ * Header: cobweb in the corner (::before), blood dripping from its lower edge (::after) and a spider
+ * on a thread (first child's ::after).
+ */
+[data-theme='halloween'] header.sticky::before,
+[data-theme='halloween'] header.sticky::after,
+[data-theme='halloween'] header.sticky > :first-child::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+[data-theme='halloween'] header.sticky::before {
+  top: 0;
+  left: 0;
+  width: 70px;
+  height: 70px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' fill='none' stroke='%23d8d0f0' stroke-opacity='.4' stroke-width='1'%3E%3Cpath d='M0 0L70 0M0 0L66 26M0 0L50 50M0 0L26 66M0 0L0 70M21 0Q18.0 3.4 20 8Q15.3 10.0 15 15Q10.0 15.3 8 20Q3.4 18.0 0 21M38 0Q32.9 6.3 36 14Q28.1 18.4 28 28Q18.4 28.1 14 36Q6.3 32.9 0 38M56 0Q47.9 9.2 53 21Q40.8 26.8 40 40Q26.8 40.8 21 53Q9.2 47.9 0 56M70 0Q59.8 11.4 66 26Q51.0 33.4 50 50Q33.4 51.0 26 66Q11.4 59.8 0 70'/%3E%3C/svg%3E")
+    no-repeat;
+}
+
+[data-theme='halloween'] header.sticky::after {
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='24'%3E%3Cg fill='%23a3111c'%3E%3Crect width='120' height='5'/%3E%3Crect x='10' y='3' width='6' height='11' rx='3'/%3E%3Ccircle cx='13' cy='15' r='4'/%3E%3Crect x='50' y='3' width='7' height='17' rx='3.5'/%3E%3Ccircle cx='53.5' cy='20' r='4'/%3E%3Crect x='88' y='3' width='6' height='7' rx='3'/%3E%3Ccircle cx='91' cy='11' r='4.5'/%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.35'%3E%3Crect x='1' y='1' width='118' height='1.5'/%3E%3Ccircle cx='12' cy='14' r='1.2'/%3E%3Ccircle cx='52' cy='19' r='1.2'/%3E%3Ccircle cx='90' cy='10' r='1.2'/%3E%3C/g%3E%3C/svg%3E")
+    repeat-x;
+  filter: drop-shadow(0 0 6px oklch(0.55 0.25 25 / 45%));
+}
+
+[data-theme='halloween'] header.sticky > :first-child::after {
+  top: 100%;
+  left: 58%;
+  width: 40px;
+  height: 72px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='72'%3E%3Cpath d='M20 0V40' stroke='%23cfc8e6' stroke-opacity='.6'/%3E%3Cpath d='M13 46L4 40L2 48M27 46L36 40L38 48M13 49L3 50L3 58M27 49L37 50L37 58M13 52L6 60L9 67M27 52L34 60L31 67M14 44L8 36L3 38M26 44L32 36L37 38' fill='none' stroke='%23cfc8e6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cellipse cx='20' cy='51' rx='8' ry='10' fill='%231b1428' stroke='%238b7fb0'/%3E%3Ccircle cx='20' cy='42' r='5' fill='%231b1428' stroke='%238b7fb0'/%3E%3Ccircle cx='18' cy='41' r='1.3' fill='%23ff4d3a'/%3E%3Ccircle cx='22' cy='41' r='1.3' fill='%23ff4d3a'/%3E%3Cpath d='M20 46v10' stroke='%23ff8a1f' stroke-width='1.5'/%3E%3C/svg%3E")
+    no-repeat;
+  transform-origin: 50% 0;
+  animation: spider-swing 4.5s ease-in-out infinite;
+}
+
+/* Tab bar: a pumpkin-orange glow along its top edge. */
+[data-theme='halloween'] nav[aria-label]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, oklch(0.75 0.18 55), transparent);
+  box-shadow: 0 -4px 18px oklch(0.72 0.18 55 / 45%);
+  pointer-events: none;
+}
+
+@keyframes spider-swing {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+/* Bats cross the screen at their own height and speed (`--bat-bob` is how far they bob). */
+.halloween-bat {
+  position: absolute;
+  left: 0;
+  animation: bat-fly var(--bat-duration, 20s) linear infinite both;
+}
+
+.halloween-bat svg {
+  display: block;
+  fill: oklch(0.38 0.1 300);
+  filter: drop-shadow(0 0 4px oklch(0.6 0.22 305 / 70%));
+  animation: bat-flap 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes bat-fly {
+  0% {
+    transform: translate3d(-12vw, 0, 0);
+  }
+  25% {
+    transform: translate3d(22vw, var(--bat-bob, 20px), 0);
+  }
+  50% {
+    transform: translate3d(50vw, calc(var(--bat-bob, 20px) * -1), 0);
+  }
+  75% {
+    transform: translate3d(78vw, var(--bat-bob, 20px), 0);
+  }
+  100% {
+    transform: translate3d(112vw, 0, 0);
+  }
+}
+
+@keyframes bat-flap {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0.45);
+  }
+}
+
+/* Embers rise from the bottom and fade out. */
+.halloween-ember {
+  position: absolute;
+  bottom: 0;
+  border-radius: 9999px;
+  background: oklch(0.8 0.2 60);
+  box-shadow: 0 0 6px 1px oklch(0.75 0.2 55 / 80%);
+  animation: ember-rise var(--ember-duration, 12s) linear infinite both;
+}
+
+@keyframes ember-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 5vh, 0);
+  }
+  15%,
+  70% {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(var(--ember-drift, 3vw), -105vh, 0);
+  }
+}
+
+/*
+ * The signed-in user's own picture in the header (`UserAvatar decorated`) is covered by a solid
+ * jack-o-lantern: the picture is not shown at all. The pumpkin is a little wider than the avatar
+ * and has a stem. `UserAvatar` renders the (otherwise hidden) overlay only when `decorated`.
+ */
+[data-theme='halloween'] [data-slot='avatar-overlay'] {
+  display: block;
+  position: absolute;
+  inset: -6% -14%;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 112'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff9a2e'/%3E%3Cstop offset='1' stop-color='%23e0580c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='url(%23g)' stroke='%238a3200' stroke-width='2.2'%3E%3Cellipse cx='27' cy='58' rx='26' ry='44'/%3E%3Cellipse cx='101' cy='58' rx='26' ry='44'/%3E%3Cellipse cx='44' cy='58' rx='28' ry='51'/%3E%3Cellipse cx='84' cy='58' rx='28' ry='51'/%3E%3Cellipse cx='64' cy='58' rx='26' ry='54'/%3E%3C/g%3E%3Cg fill='%230d0503'%3E%3Cpath d='M35 54 57 54 46 33Z'/%3E%3Cpath d='M71 54 93 54 82 33Z'/%3E%3Cpath d='M64 59 57 70 71 70Z'/%3E%3Cpath d='M29 73 38 70 44 81 52 72 60 83 68 72 76 81 84 70 93 73Q90 93 64 97Q38 93 29 73Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 2px 3px oklch(0.1 0.05 300 / 60%));
+}
+
+[data-theme='halloween'] [data-slot='avatar-overlay']::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -5%;
+  width: 20%;
+  height: 22%;
+  transform: translateX(-50%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 24C7 14 8 8 6 2L18 0C16 8 17 15 17 24Z' fill='%235b7a1f'/%3E%3Cpath d='M17 4C21 3 23 6 22 9' stroke='%237aa02a' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Cpath d='M7 24C7 14 8 8 6 2' stroke='%232f4410' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}

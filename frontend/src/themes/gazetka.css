@@ -1,0 +1,112 @@
+/*
+ * Theme: gazetka (a newspaper: newsprint, black ink, one red for the headline). Every colour is
+ * derived from the base hue (`--base-hue`, see color.ts; warm newsprint by default), the red accent
+ * sits a fixed offset away. Characterised by serif type (Old Standard TT headlines, Source Serif
+ * text, a blackletter masthead), square corners, ruled boxes and a halftone dot screen.
+ */
+@import '@fontsource-variable/source-serif-4';
+@import '@fontsource/old-standard-tt/400.css';
+@import '@fontsource/old-standard-tt/700.css';
+@import '@fontsource/unifrakturcook/700.css';
+
+:root[data-theme='gazetka'] {
+  --base-hue: 45;
+}
+
+[data-theme='gazetka'] {
+  --background: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 89%);
+  --foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --card: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 93%);
+  --card-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --popover: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 95%);
+  --popover-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --primary: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --primary-foreground: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 94%);
+  --secondary: hsl(var(--base-hue) calc(22% * var(--base-chroma)) 80%);
+  --secondary-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 12%);
+  --muted: hsl(var(--base-hue) calc(22% * var(--base-chroma)) 84%);
+  --muted-foreground: hsl(var(--base-hue) calc(10% * var(--base-chroma)) 36%);
+  --accent: hsl(calc(var(--base-hue) - 45) calc(75% * var(--base-chroma)) 90%);
+  --accent-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --destructive: oklch(0.5 0.22 28);
+  --border: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 12% / 80%);
+  --input: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 12% / 80%);
+  --ring: hsl(calc(var(--base-hue) - 45) calc(80% * var(--base-chroma)) 45%);
+  --chart-1: hsl(calc(var(--base-hue) - 45) calc(80% * var(--base-chroma)) 42%);
+  --chart-2: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 18%);
+  --chart-3: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 40%);
+  --chart-4: hsl(calc(var(--base-hue) + 150) calc(30% * var(--base-chroma)) 38%);
+  --chart-5: hsl(var(--base-hue) calc(8% * var(--base-chroma)) 52%);
+  --radius: 0;
+  --positive: oklch(0.48 0.12 150);
+  --negative: oklch(0.5 0.2 28);
+  --neutral: hsl(var(--base-hue) calc(8% * var(--base-chroma)) 40%);
+  --metal-1: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --metal-2: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --metal-3: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --metal-4: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --metal-5: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --metal: linear-gradient(
+    hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%),
+    hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%)
+  );
+  --sidebar: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 91%);
+  --sidebar-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --sidebar-primary: hsl(var(--base-hue) calc(12% * var(--base-chroma)) 10%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(30% * var(--base-chroma)) 94%);
+  --sidebar-accent: hsl(calc(var(--base-hue) - 45) calc(75% * var(--base-chroma)) 90%);
+  --sidebar-accent-foreground: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 9%);
+  --sidebar-border: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 12% / 80%);
+  --sidebar-ring: hsl(calc(var(--base-hue) - 45) calc(80% * var(--base-chroma)) 45%);
+}
+
+/* Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+[data-theme='gazetka'] {
+  font-family: 'Source Serif 4 Variable', Georgia, serif;
+}
+
+/* Headlines: bold, upper case, tightly set. */
+[data-theme='gazetka'] :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title']) {
+  font-family: 'Old Standard TT', Georgia, serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* The masthead is blackletter, with a red kicker rule under it. */
+[data-theme='gazetka'] .font-logo {
+  font-family: UnifrakturCook, 'Old Standard TT', serif;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  border-bottom: 3px double var(--foreground);
+  padding-bottom: 0.1em;
+}
+
+/* Boxes are ruled like newspaper columns: a heavy double rule on top, hairlines elsewhere. */
+[data-theme='gazetka'] .bg-card {
+  border-width: 1px;
+  border-top: 4px double var(--foreground);
+}
+
+[data-theme='gazetka'] [data-slot='button'] {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8em;
+}
+
+/* The headline red: primary buttons turn red when pressed or hovered, like a stop-press. */
+[data-theme='gazetka'] [data-slot='button'].bg-primary:hover:not(:disabled) {
+  background-color: hsl(calc(var(--base-hue) - 45) calc(80% * var(--base-chroma)) 40%);
+  color: hsl(0 0% 100%);
+}
+
+/* Halftone: a fine dot screen over the newsprint, static. */
+[data-theme='gazetka'] body {
+  background-image: radial-gradient(
+    hsl(var(--base-hue) calc(15% * var(--base-chroma)) 12% / 9%) 0.8px,
+    transparent 1.2px
+  );
+  background-size: 5px 5px;
+  background-attachment: fixed;
+}

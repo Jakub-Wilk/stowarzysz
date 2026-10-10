@@ -1,0 +1,97 @@
+/*
+ * Theme: parchment (a light, old-ledger look: warm paper, ink-brown text, serif headings). Every
+ * colour is derived from the base hue (`--base-hue`, see color.ts; sepia by default), the primary is
+ * a fixed offset away so it reads as a wax seal. Typeset in EB Garamond with small-caps headings, double-ruled boxes and a paper grain.
+ */
+@import '@fontsource-variable/eb-garamond';
+:root[data-theme='parchment'] {
+  --base-hue: 38;
+}
+
+[data-theme='parchment'] {
+  --background: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 88%);
+  --foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 14%);
+  --card: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 93%);
+  --card-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 14%);
+  --popover: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 95%);
+  --popover-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 14%);
+  --primary: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 32%);
+  --primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 94%);
+  --secondary: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 80%);
+  --secondary-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 18%);
+  --muted: hsl(var(--base-hue) calc(40% * var(--base-chroma)) 83%);
+  --muted-foreground: hsl(var(--base-hue) calc(25% * var(--base-chroma)) 34%);
+  --accent: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 78%);
+  --accent-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 16%);
+  --destructive: oklch(0.5 0.2 25);
+  --border: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 40% / 40%);
+  --input: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 40% / 40%);
+  --ring: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 40%);
+  --chart-1: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 38%);
+  --chart-2: hsl(var(--base-hue) calc(70% * var(--base-chroma)) 42%);
+  --chart-3: hsl(calc(var(--base-hue) + 80) calc(40% * var(--base-chroma)) 36%);
+  --chart-4: hsl(calc(var(--base-hue) + 180) calc(40% * var(--base-chroma)) 38%);
+  --chart-5: hsl(calc(var(--base-hue) - 80) calc(40% * var(--base-chroma)) 40%);
+  --radius: 0.25rem;
+  --positive: oklch(0.5 0.13 150);
+  --negative: oklch(0.5 0.18 25);
+  --neutral: hsl(var(--base-hue) calc(15% * var(--base-chroma)) 42%);
+  --metal-1: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 26%);
+  --metal-2: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 32%);
+  --metal-3: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 38%);
+  --metal-4: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 32%);
+  --metal-5: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 26%);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 90%);
+  --sidebar-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 14%);
+  --sidebar-primary: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 32%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(60% * var(--base-chroma)) 94%);
+  --sidebar-accent: hsl(var(--base-hue) calc(55% * var(--base-chroma)) 78%);
+  --sidebar-accent-foreground: hsl(var(--base-hue) calc(45% * var(--base-chroma)) 16%);
+  --sidebar-border: hsl(var(--base-hue) calc(35% * var(--base-chroma)) 40% / 40%);
+  --sidebar-ring: hsl(calc(var(--base-hue) - 38) calc(65% * var(--base-chroma)) 40%);
+}
+
+/* Characterisation. Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
+[data-theme='parchment'] {
+  font-family: 'EB Garamond Variable', Garamond, Georgia, serif;
+  font-size-adjust: 0.5;
+}
+
+[data-theme='parchment'] :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title']) {
+  font-family: 'EB Garamond Variable', Garamond, Georgia, serif;
+  font-variant: small-caps;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Ruled boxes: a double rule, as on a ledger page. */
+[data-theme='parchment'] .bg-card {
+  border-style: double;
+  border-width: 3px;
+}
+
+/* Wax seals: round, glossy primary buttons. */
+[data-theme='parchment'] [data-slot='button'].bg-primary {
+  border-radius: 9999px;
+  background-image: radial-gradient(circle at 32% 24%, hsl(0 0% 100% / 28%), transparent 55%);
+  box-shadow: 0 2px 0 hsl(var(--base-hue) 50% 12% / 45%);
+}
+
+[data-theme='parchment'] input,
+[data-theme='parchment'] textarea {
+  font-family: inherit;
+  font-size: 1.05em;
+}
+
+/* Paper grain (static noise) under the vignette. */
+[data-theme='parchment'] body {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .8 -.05'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"),
+    radial-gradient(
+      120% 90% at 50% 40%,
+      transparent 55%,
+      hsl(var(--base-hue) calc(60% * var(--base-chroma)) 40% / 28%)
+    );
+  background-attachment: fixed;
+}
