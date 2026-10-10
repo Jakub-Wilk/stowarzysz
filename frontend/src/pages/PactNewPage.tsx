@@ -125,7 +125,7 @@ export function PactNewPage() {
 
   return (
     <>
-      <BackLink to="/pacts">Zakłady</BackLink>
+      <BackLink to="/pacts">Umowy</BackLink>
       <h2 className="mb-6 text-2xl font-semibold">Nowy zakład</h2>
 
       <form onSubmit={submit} className="flex max-w-md flex-col gap-6">

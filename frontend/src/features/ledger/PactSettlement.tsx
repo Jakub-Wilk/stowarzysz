@@ -5,7 +5,7 @@ import { who } from '@/features/ledger/format'
 import { usePactEntries } from '@/features/ledger/hooks'
 import { formatDebt } from '@/lib/money'
 
-/** What a settled pact put in Rozliczenia, linking there: the pact side of the integration. */
+/** What a settled pact put in Kasa Skarbowa, linking there: the pact side of the integration. */
 export function PactSettlement({ pactId, myId }: { pactId: number; myId: number | undefined }) {
   const entries = usePactEntries(pactId)
   const rows = (entries.data ?? []).filter((e) => e.status === 'confirmed')
@@ -35,7 +35,7 @@ export function PactSettlement({ pactId, myId }: { pactId: number; myId: number 
               </li>
             ))}
           </ul>
-          <ChevronRight className="size-5 shrink-0" aria-label="Zobacz w Rozliczeniach" />
+          <ChevronRight className="size-5 shrink-0" aria-label="Zobacz w Kasie Skarbowej" />
         </Link>
       ))}
     </section>

@@ -20,7 +20,7 @@ import { ListSkeleton } from '@/features/ledger/LoadStates'
 import { usePeople } from '@/features/voting/hooks'
 import type { DebtInput, ExpenseInput, LedgerEntry, UserBrief } from '@/lib/api-types'
 
-/** What can be added from the Rozliczenia tab, and edited later. */
+/** What can be added from the Kasa Skarbowa tab, and edited later. */
 const FORM_KINDS = ['expense', 'income', 'debt'] as const
 type FormKind = (typeof FORM_KINDS)[number]
 const isFormKind = (key: string | undefined): key is FormKind => FORM_KINDS.some((k) => k === key)
@@ -111,7 +111,7 @@ export function EntryEditorPage() {
 
   return (
     <>
-      <BackLink to={back}>{entry ? kindOf(entry).label : 'Rozliczenia'}</BackLink>
+      <BackLink to={back}>{entry ? kindOf(entry).label : 'Kasa Skarbowa'}</BackLink>
       <h2 className="mb-6 text-2xl font-semibold">{heading}</h2>
       {loading || !shared.meta ? (
         <ListSkeleton label="Ładowanie formularza" />

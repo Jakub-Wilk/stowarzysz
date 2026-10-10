@@ -119,7 +119,7 @@ export function PactDetailPage() {
 
   return (
     <>
-      <BackLink to="/pacts">Zakłady</BackLink>
+      <BackLink to="/pacts">Umowy</BackLink>
       {isPending && <span className="text-sm text-muted-foreground">Ładowanie…</span>}
       {error && !isPending && (
         <div className="flex flex-col items-start gap-2">

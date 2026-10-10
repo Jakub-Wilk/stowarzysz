@@ -46,7 +46,7 @@ export function PactsPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold">Zakłady</h2>
+        <h2 className="text-2xl font-semibold">Umowy</h2>
         <Button nativeButton={false} render={<Link to="/pacts/new" />}>
           <Plus /> Zakład
         </Button>
@@ -90,7 +90,7 @@ export function PactsPage() {
           <>
             {running.length === 0 && (
               <p className="mt-10 text-center text-base text-muted-foreground">
-                Brak trwających zakładów. Zaproponuj pierwszy!
+                Brak trwających umów. Zaproponuj pierwszy!
               </p>
             )}
             {needsYou.length > 0 && (

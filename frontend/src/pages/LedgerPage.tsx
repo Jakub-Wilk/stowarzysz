@@ -94,7 +94,7 @@ function Feed({ myId }: { myId: number | undefined }) {
   )
 }
 
-/** Rozliczenia, as in Tricount: shared expenses, debts from pacts and paybacks, plus the Bilans
+/** Kasa Skarbowa, as in Tricount: shared expenses, debts from pacts and paybacks, plus the Bilans
  * with who should pay whom. */
 export function LedgerPage() {
   const { data: me } = useMe()
@@ -102,7 +102,7 @@ export function LedgerPage() {
 
   return (
     <>
-      <h2 className="text-2xl font-semibold">Rozliczenia</h2>
+      <h2 className="text-2xl font-semibold">Kasa Skarbowa</h2>
       <nav className="mt-4 grid grid-cols-3 gap-2" aria-label="Dodaj">
         {ADD.map(({ kind, label, icon: Icon }) => (
           <Button

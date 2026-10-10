@@ -22,7 +22,7 @@ export function PactStatsBlock({ stats }: { stats: PactStats }) {
 
   return (
     <section className="mt-10 flex max-w-md flex-col gap-3 border-t pt-6">
-      <h3 className="font-semibold">Zakłady</h3>
+      <h3 className="font-semibold">Umowy</h3>
       {empty ? (
         <p className="text-sm text-muted-foreground">
           Brak rozstrzygniętych zakładów z udziałem tej osoby.

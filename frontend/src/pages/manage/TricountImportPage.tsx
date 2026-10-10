@@ -181,7 +181,7 @@ export function TricountImportPage() {
         open={confirming}
         onOpenChange={setConfirming}
         title="Zaimportować wpisy?"
-        description="Wpisy pojawią się w Rozliczeniach wszystkich posłów i zmienią bilans. Nikt nie dostanie powiadomienia."
+        description="Wpisy pojawią się w Kasie Skarbowej wszystkich posłów i zmienią bilans. Nikt nie dostanie powiadomienia."
         confirmLabel="Importuj"
         pending={run.isPending}
         onConfirm={() => run.mutate()}

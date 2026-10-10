@@ -89,7 +89,7 @@ export function TermsFields({
             {kind.money === 'wager' ? 'Albo opis stawki' : 'Opis stawki (opcjonalnie)'}
           </Label>
           <span className="text-sm text-muted-foreground">
-            Sama stawka opisowa (bez kwoty) po rozstrzygnięciu staje się długiem w Rozliczeniach.
+            Sama stawka opisowa (bez kwoty) po rozstrzygnięciu staje się długiem w Kasie Skarbowej.
           </span>
           <Input
             id={`${idPrefix}-note`}

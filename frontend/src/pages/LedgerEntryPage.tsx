@@ -106,7 +106,7 @@ export function LedgerEntryPage() {
 
   return (
     <>
-      <BackLink to="/ledger">Rozliczenia</BackLink>
+      <BackLink to="/ledger">Kasa Skarbowa</BackLink>
       {isPending && <span className="text-sm text-muted-foreground">Ładowanie…</span>}
       {error && !isPending && <LoadError what="wpisu" onRetry={() => void refetch()} />}
       {entry && (
