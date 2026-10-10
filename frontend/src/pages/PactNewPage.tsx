@@ -141,6 +141,7 @@ export function PactNewPage() {
               }}
               options={[
                 { value: 'self', label: `Ja (${me.username})` },
+                { value: String(me.id), label: `Ja (${me.username}), stary zakład` },
                 ...(people.data ?? [])
                   .filter((p) => p.id !== me.id)
                   .map((p) => ({ value: String(p.id), label: p.username })),
