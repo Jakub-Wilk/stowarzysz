@@ -9,6 +9,7 @@ import { chromaKey, hueKey, LEGACY_KEYS, syncThemeColor } from '@/themes/color'
 export const themes = [
   { id: 'royal', label: 'Królewski', tone: 'dark' },
   { id: 'christmas', label: 'Boże Narodzenie', tone: 'dark' },
+  { id: 'newyear', label: 'Sylwester', tone: 'dark' },
   { id: 'halloween', label: 'Halloween', tone: 'dark' },
   { id: 'polska', label: 'Polska', tone: 'dark' },
   { id: 'easter', label: 'Wielkanoc', tone: 'light' },
@@ -121,6 +122,11 @@ export function applyTheme(id: ThemeId): void {
 const JULY = 6
 const OCTOBER = 9
 
+/** New Year's Eve: 31 December. */
+function isNewYearsEve(now: Date): boolean {
+  return now.getMonth() === 11 && now.getDate() === 31
+}
+
 /** International Capybara Day: 10 July. */
 function isCapybaraDay(now: Date): boolean {
   return now.getMonth() === JULY && now.getDate() === 10
@@ -176,7 +182,8 @@ export function birthdayFor(selected: ThemeId | undefined): ThemeId {
 }
 
 /**
- * A theme forced by the calendar, otherwise `null`: capybara on 10 July (light or dusk to match
+ * A theme forced by the calendar, otherwise `null`: newyear on New Year's Eve (31 December, ahead
+ * of christmas), capybara on 10 July (light or dusk to match
  * `selected`, the theme the user picked), easter from Palm Sunday to Easter Monday, polska on
  * 1-3 May and 11 November, christmas all of December, halloween from 17 October to Halloween
  * (local time). The birthday themes are not here: they follow the members' birthdays, which only the
@@ -184,6 +191,7 @@ export function birthdayFor(selected: ThemeId | undefined): ThemeId {
  * here.
  */
 export function getSeasonalTheme(now: Date = new Date(), selected?: ThemeId): ThemeId | null {
+  if (isNewYearsEve(now)) return 'newyear'
   if (isCapybaraDay(now)) return capybaraFor(selected)
   if (isEaster(now)) return 'easter'
   if (isPolishHoliday(now)) return 'polska'
@@ -195,6 +203,7 @@ export function getSeasonalTheme(now: Date = new Date(), selected?: ThemeId): Th
 /** Themes that only apply by themselves (a season or an event), so they are not in the picker. */
 const AUTOMATIC_THEMES: ThemeId[] = [
   'christmas',
+  'newyear',
   'halloween',
   'polska',
   'easter',

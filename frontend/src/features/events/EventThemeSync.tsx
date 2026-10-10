@@ -7,6 +7,7 @@ import { BirthdayLayer } from '@/themes/BirthdayLayer'
 import { CapybaraLayer } from '@/themes/CapybaraLayer'
 import { EasterLayer } from '@/themes/EasterLayer'
 import { HalloweenLayer } from '@/themes/HalloweenLayer'
+import { NewYearLayer } from '@/themes/NewYearLayer'
 import { PolandLayer } from '@/themes/PolandLayer'
 import { SnowLayer } from '@/themes/SnowLayer'
 
@@ -38,7 +39,7 @@ function pickEventTheme(events: [EventStatus, ThemeId][]): ThemeId | null | unde
 /**
  * Forces the running event's theme over whatever the user picked; their pick comes back when the
  * event ends. The override is remembered, so a reload paints it before the status has been fetched.
- * Also renders the effective theme's decorations (snow for christmas, bats and embers for halloween, petals for polska, eggs for easter, steam and oranges for capybara, balloons for birthday).
+ * Also renders the effective theme's decorations (snow for christmas, bats and embers for halloween, petals for polska, eggs for easter, steam and oranges for capybara, balloons for birthday, fireworks for newyear).
  */
 export function EventThemeSync() {
   const { theme, setOverride } = useTheme()
@@ -49,6 +50,7 @@ export function EventThemeSync() {
   }, [eventTheme, setOverride])
 
   if (theme === 'christmas') return <SnowLayer />
+  if (theme === 'newyear') return <NewYearLayer />
   if (theme === 'halloween') return <HalloweenLayer />
   if (theme === 'polska') return <PolandLayer />
   if (theme === 'easter') return <EasterLayer />

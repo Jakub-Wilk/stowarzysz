@@ -1,4 +1,5 @@
 import { UserPanel } from '@/components/layout/UserPanel'
+import { NewYearCountdown } from '@/themes/NewYearCountdown'
 
 interface AppHeaderProps {
   /** Shown next to the logo, e.g. "Zarządzanie". */
@@ -12,6 +13,7 @@ export function AppHeader({ section }: AppHeaderProps) {
         <h1 className="font-logo text-2xl font-bold tracking-wider uppercase">stowarzysz</h1>
         {section && <span className="text-sm text-muted-foreground">{section}</span>}
       </div>
+      <NewYearCountdown />
       <UserPanel inManage={section !== undefined} />
     </header>
   )
