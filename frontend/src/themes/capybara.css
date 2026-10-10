@@ -8,7 +8,7 @@
  * the header avatar, and steam and floating oranges over the page (`CapybaraLayer`). All motion is
  * transform/opacity only, and pointer-events are off on everything decorative.
  */
-@import '@fontsource-variable/fredoka';
+@import '@fontsource-variable/nunito';
 
 [data-theme='capybara'] {
   --background: oklch(0.965 0.025 80);
@@ -57,20 +57,31 @@
 
 /* Fonts are set on the elements: `@theme inline` freezes the `font-sans` utility. */
 :is([data-theme='capybara'], [data-theme='capybara-dusk']) {
-  font-family: 'Fredoka Variable', system-ui, sans-serif;
+  font-family: 'Nunito Variable', system-ui, sans-serif;
+  font-weight: 800;
 }
 
 :is([data-theme='capybara'], [data-theme='capybara-dusk'])
   :is(h1, h2, h3, h4, h5, h6, .font-heading, [data-slot$='title'], .font-logo) {
-  font-family: 'Fredoka Variable', system-ui, sans-serif;
+  font-family: 'Nunito Variable', system-ui, sans-serif;
+  font-weight: 900;
 }
 
 :is([data-theme='capybara'], [data-theme='capybara-dusk']) .font-logo {
-  font-weight: 600;
+  font-weight: 900;
   text-transform: lowercase;
   letter-spacing: 0.04em;
   color: oklch(0.5 0.1 50);
   text-shadow: 0 2px 0 oklch(0.9 0.08 70);
+}
+
+/* Nunito is thinner than Fredoka at the same weight: push the utilities up a step to compensate. */
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) .font-medium {
+  font-weight: 800;
+}
+
+:is([data-theme='capybara'], [data-theme='capybara-dusk']) :is(.font-semibold, .font-bold) {
+  font-weight: 900;
 }
 
 :is([data-theme='capybara'], [data-theme='capybara-dusk']) .bg-card {
