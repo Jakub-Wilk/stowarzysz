@@ -112,7 +112,10 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
+    # Rotation slides the 365-day window, but the old token stays valid: a phone that is killed
+    # before it stores the rotated token (common for an Android PWA) must not be logged out.
+    # Logout and deactivation still blacklist tokens explicitly.
+    "BLACKLIST_AFTER_ROTATION": False,
     # Tolerate small clock steps (NTP / WSL2 resyncs): otherwise a token can be stamped "in the
     # future" relative to the next check and rejected as not yet valid (iat).
     "LEEWAY": 10,
