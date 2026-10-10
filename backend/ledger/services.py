@@ -5,12 +5,10 @@ The ledger is public, like Tricount: every change refreshes everyone's view over
 and push goes only to the people it concerns. Other apps write to it only via `record_debts`.
 """
 
-from dataclasses import replace
 from datetime import date
 from typing import Any
 from uuid import uuid4
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import Http404
 from django.utils import timezone
@@ -18,10 +16,10 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.avatars import process_photo
 from core import events
-from ledger import rates, tricount
+from ledger import rates
 from ledger.kinds import Conflict, DebtKind, Draft, EntryKind, Push, get_kind
 from ledger.models import EntryAttachment, LedgerEntry, Obligation
-from ledger.money import BASE_CURRENCY, CURRENCIES, Debt, to_base
+from ledger.money import BASE_CURRENCY, Debt
 from push.sender import send_push
 
 Status = LedgerEntry.Status
@@ -190,86 +188,3 @@ def delete_attachment(entry_id: int, attachment_id: int, user: Any) -> None:
             raise PermissionDenied("Zdjęcie może usunąć jego autor albo autor wpisu.")
         attachment.delete()
         _announce(entry, [])
-
-
-def import_tricount(parsed: tricount.ParsedTricount, mapping: dict[str, int]) -> dict[str, int]:
-    """Load a parsed Tricount into the ledger, quietly: everything counts at once, authored by
-    whoever paid, and nobody gets a push (one refresh is broadcast at the end). Entries already
-    imported (same Tricount id) are skipped, so a dump can be imported again. All or nothing.
-    `mapping` is Tricount name -> user id and must cover every participant."""
-    missing = [name for name in parsed.participants if name not in mapping]
-    if missing:
-        raise ValidationError({"mapping": f"Przypisz osoby: {', '.join(missing)}."})
-    if len(set(mapping.values())) != len(mapping):
-        raise ValidationError({"mapping": "Każda osoba może być przypisana tylko raz."})
-    users = {u.pk: u for u in get_user_model().objects.members().filter(pk__in=mapping.values())}
-    if len(users) != len(mapping):
-        raise ValidationError({"mapping": "Nieznany lub nieaktywny poseł."})
-    done = set(
-        LedgerEntry.objects.filter(source_type=tricount.SOURCE_TYPE).values_list(
-            "source_id", flat=True
-        )
-    )
-    todo = [e for e in parsed.entries if e.source_id not in done]
-    # Validate and fetch rates before opening the transaction (rates may hit the network).
-    prepared: list[tuple[Any, EntryKind, Draft, rates.Rate | None, Any]] = []
-    for entry in todo:
-        author = users[mapping[entry.payer]]
-        kind = get_kind(entry.kind)
-        if entry.kind == "payment":
-            kind_data = _payment_data(entry, mapping)
-            if entry.currency != BASE_CURRENCY:  # payments are base currency only: convert
-                rate = rates.rate_for(entry.currency, entry.occurred_on)
-                converted = to_base(entry.total, rate.value, CURRENCIES[entry.currency])
-                kind_data["amount"] = max(converted, 1)
-        else:
-            kind_data = {
-                "title": entry.title,
-                "occurred_on": entry.occurred_on,
-                "note": "",
-                "currency": entry.currency,
-                "category": entry.category,
-                "payers": [{"user_id": author.pk, "amount": entry.total}],
-                "items": [
-                    {
-                        "name": entry.title[:100],
-                        "amount": entry.total,
-                        "split": "exact",
-                        "shares": [
-                            {"user_id": mapping[n], "weight": a} for n, a in entry.shares.items()
-                        ],
-                    }
-                ],
-            }
-        draft = kind.clean(kind_data, author)
-        rate = _rate(draft)  # a payment is always base currency: no rate
-        draft = replace(draft, source_type=tricount.SOURCE_TYPE, source_id=entry.source_id)
-        prepared.append((entry, kind, draft, rate, author))
-    with transaction.atomic():
-        for _, kind, draft, rate, author in prepared:
-            row = LedgerEntry(
-                kind=kind.key,
-                status=Status.CONFIRMED,
-                created_by=author,
-                updated_by=author,
-                decided_at=timezone.now() if kind.starts_pending else None,
-            )
-            _apply(row, kind, draft, rate)
-        if prepared:
-            transaction.on_commit(lambda: events.broadcast("ledger.updated", {"entry_id": None}))
-    return {
-        "imported": len(prepared),
-        "skipped_existing": len(parsed.entries) - len(todo),
-        "skipped_deleted": parsed.skipped_deleted,
-    }
-
-
-def _payment_data(entry: tricount.ParsedEntry, mapping: dict[str, int]) -> dict[str, Any]:
-    (receiver,) = entry.shares
-    return {
-        "occurred_on": entry.occurred_on,
-        "amount": entry.total,
-        "item": "",
-        "note": f"Import z Tricount: {entry.title}"[:500],
-        "to_user_id": mapping[receiver],
-    }

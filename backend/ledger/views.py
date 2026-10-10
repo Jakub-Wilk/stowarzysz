@@ -1,12 +1,11 @@
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
 from google.genai import errors as genai_errors
 from rest_framework import status
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException
 from rest_framework.pagination import CursorPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -14,9 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.avatars import process_photo
-from accounts.permissions import IsSuperuser
 from core import events
-from ledger import rates, receipt_ocr, services, stats, tricount
+from ledger import rates, receipt_ocr, services, stats
 from ledger.balances import balances
 from ledger.kinds import Conflict, get_kind
 from ledger.models import LedgerEntry
@@ -33,10 +31,6 @@ from ledger.serializers import (
     ReceiptOcrUploadSerializer,
     StatsQuerySerializer,
     StatsSerializer,
-    TricountImportRequestSerializer,
-    TricountPreviewRequestSerializer,
-    TricountPreviewSerializer,
-    TricountResultSerializer,
     people_for,
 )
 
@@ -265,60 +259,3 @@ class ReceiptOcrView(APIView):
         except (RuntimeError, genai_errors.APIError) as exc:
             raise OcrUnavailable from exc
         return Response(result.model_dump(mode="json"))
-
-
-def _parse_dump(dump: Any) -> tricount.ParsedTricount:
-    try:
-        return tricount.parse(dump)
-    except tricount.TricountError as exc:
-        raise ValidationError({"dump": str(exc)}) from exc
-
-
-class TricountPreviewView(APIView):
-    """Superusers: what a Tricount dump holds and who its people might be."""
-
-    permission_classes = (IsSuperuser,)
-
-    @extend_schema(request=TricountPreviewRequestSerializer, responses=TricountPreviewSerializer)
-    def post(self, request: Request) -> Response:
-        serializer = TricountPreviewRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        parsed = _parse_dump(serializer.validated_data["dump"])
-        by_name = {u.username.lower(): u.pk for u in get_user_model().objects.members()}
-        done = set(
-            LedgerEntry.objects.filter(source_type=tricount.SOURCE_TYPE).values_list(
-                "source_id", flat=True
-            )
-        )
-        days = [e.occurred_on for e in parsed.entries]
-        count = lambda kind: sum(1 for e in parsed.entries if e.kind == kind)  # noqa: E731
-        body = {
-            "title": parsed.title,
-            "participants": [
-                {"name": n, "user_id": by_name.get(n.lower())} for n in parsed.participants
-            ],
-            "expenses": count("expense"),
-            "incomes": count("income"),
-            "payments": count("payment"),
-            "already_imported": sum(1 for e in parsed.entries if e.source_id in done),
-            "skipped_deleted": parsed.skipped_deleted,
-            "attachments": sum(e.attachments for e in parsed.entries),
-            "currencies": sorted(parsed.currencies),
-            "first_date": min(days, default=None),
-            "last_date": max(days, default=None),
-        }
-        return Response(TricountPreviewSerializer(body).data)
-
-
-class TricountImportView(APIView):
-    """Superusers: import a Tricount dump into the ledger, quietly (no push). Repeatable."""
-
-    permission_classes = (IsSuperuser,)
-
-    @extend_schema(request=TricountImportRequestSerializer, responses=TricountResultSerializer)
-    def post(self, request: Request) -> Response:
-        serializer = TricountImportRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        parsed = _parse_dump(serializer.validated_data["dump"])
-        result = services.import_tricount(parsed, serializer.validated_data["mapping"])
-        return Response(TricountResultSerializer(result).data)

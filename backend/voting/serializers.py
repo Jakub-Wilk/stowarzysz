@@ -165,22 +165,3 @@ class BallotRequestSerializer(serializers.Serializer):
 
 class ReactionRequestSerializer(serializers.Serializer):
     emoji = serializers.ChoiceField(choices=REACTION_EMOJI)
-
-
-class ArchivePicturesSerializer(serializers.Serializer):
-    """TEMPORARY: restore the pictures of avatar votes closed before they were kept."""
-
-    previous = serializers.ImageField(write_only=True, required=False)
-    proposed = serializers.ImageField(write_only=True, required=False)
-    copy_current = serializers.ChoiceField(
-        choices=["previous", "proposed"],
-        write_only=True,
-        required=False,
-        help_text="Copy the target's current picture into this slot instead of uploading one.",
-    )
-
-    def validate_previous(self, value: Any) -> Any:
-        return process_avatar(value)
-
-    def validate_proposed(self, value: Any) -> Any:
-        return process_avatar(value)

@@ -12,10 +12,8 @@ import { EntryEditorPage } from '@/pages/EntryEditorPage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LedgerEntryPage } from '@/pages/LedgerEntryPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { AvatarArchivePage } from '@/pages/manage/AvatarArchivePage'
 import { ManageIndexPage } from '@/pages/manage/ManageIndexPage'
 import { SantaManagePage } from '@/pages/manage/SantaManagePage'
-import { TricountImportPage } from '@/pages/manage/TricountImportPage'
 import { UserFormPage } from '@/pages/manage/UserFormPage'
 import { UsersPage } from '@/pages/manage/UsersPage'
 import { PactDetailPage } from '@/pages/PactDetailPage'
@@ -64,8 +62,6 @@ export default function App() {
                 <Route path="users/new" element={<UserFormPage />} />
                 <Route path="users/:id" element={<UserFormPage />} />
                 <Route path="secret-santa" element={<SantaManagePage />} />
-                <Route path="tricount-import" element={<TricountImportPage />} />
-                <Route path="avatar-archive" element={<AvatarArchivePage />} />
               </Route>
             </Route>
           </Route>

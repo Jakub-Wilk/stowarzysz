@@ -1,9 +1,7 @@
-from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from django.http import Http404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -72,12 +70,6 @@ class PactListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         creator = request.user
-        if "creator_id" in data:  # TEMPORARY: admins entering old pacts for someone
-            if not request.user.is_superuser:
-                raise PermissionDenied("Tylko administrator może tworzyć zakłady w czyimś imieniu.")
-            creator = get_user_model().objects.members().filter(pk=data["creator_id"]).first()
-            if creator is None:
-                raise ValidationError({"creator_id": "Nieznany lub nieaktywny poseł."})
         pact = services.create_pact(
             creator,
             kind_key=data["kind"],
@@ -88,7 +80,6 @@ class PactListCreateView(APIView):
             config=data["config"],
             host=_terms(creator.pk, data["host"]) if "host" in data else None,
             opponents=[_terms(o["user_id"], o) for o in data["opponents"]],
-            backfill="creator_id" in data,
         )
         return Response(_detail(request, pact.pk), status=status.HTTP_201_CREATED)
 

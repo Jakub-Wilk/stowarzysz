@@ -353,8 +353,6 @@ export interface PactCreatePayload {
   /** The creator's own side and stake (group bets). */
   host?: PactTerms
   opponents: PactInvitee[]
-  /** TEMPORARY, superusers only: create the pact as this member (an old pact, entered by hand). */
-  creator_id?: number
 }
 
 export interface PactRespondPayload extends PactTerms {
@@ -667,30 +665,4 @@ export interface ScannedItem {
 export interface OcrRequestEvent {
   job_id: string
   attempt: number
-}
-
-export interface TricountParticipant {
-  name: string
-  /** Suggested member (same username), if any. */
-  user_id: number | null
-}
-
-export interface TricountPreview {
-  title: string
-  participants: TricountParticipant[]
-  expenses: number
-  incomes: number
-  payments: number
-  already_imported: number
-  skipped_deleted: number
-  attachments: number
-  currencies: string[]
-  first_date: string | null
-  last_date: string | null
-}
-
-export interface TricountResult {
-  imported: number
-  skipped_existing: number
-  skipped_deleted: number
 }

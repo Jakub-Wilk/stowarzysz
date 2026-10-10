@@ -1,22 +1,16 @@
-from uuid import uuid4
-
-from django.core.files.base import ContentFile
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.pagination import CursorPagination
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import User
-from accounts.permissions import IsSuperuser
 from voting import services
 from voting.models import Poll
 from voting.serializers import (
-    ArchivePicturesSerializer,
     BallotRequestSerializer,
     PollCreateSerializer,
     PollDetailSerializer,
@@ -131,48 +125,3 @@ class PollReactionView(APIView):
         poll = get_object_or_404(Poll, pk=poll_id)
         services.send_reaction(poll, request.user, serializer.validated_data["emoji"])
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class AvatarArchiveListView(APIView):
-    """TEMPORARY: closed profile-picture votes, for restoring their pictures by hand."""
-
-    permission_classes = (IsSuperuser,)
-
-    @extend_schema(responses={200: PollDetailSerializer(many=True)})
-    def get(self, request: Request) -> Response:
-        polls = polls_queryset().filter(kind="avatar", status=Poll.Status.CLOSED)
-        data = PollDetailSerializer(
-            polls.order_by("-created_at", "-id"), many=True, context={"request": request}
-        ).data
-        return Response(data)
-
-
-class AvatarArchiveView(APIView):
-    """TEMPORARY: attach the original before/after pictures to a closed profile-picture vote."""
-
-    permission_classes = (IsSuperuser,)
-    parser_classes = (MultiPartParser,)
-
-    @extend_schema(request=ArchivePicturesSerializer, responses={200: PollDetailSerializer})
-    def put(self, request: Request, poll_id: int) -> Response:
-        poll = get_object_or_404(Poll, pk=poll_id, kind="avatar", status=Poll.Status.CLOSED)
-        serializer = ArchivePicturesSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        images = {n: serializer.validated_data.get(n) for n in ("previous", "proposed")}
-        copy_to = serializer.validated_data.get("copy_current")
-        if copy_to:
-            target = User.objects.filter(pk=poll.config.get("target_user_id")).first()
-            if target is None or not target.avatar:
-                raise serializers.ValidationError(
-                    {"copy_current": "Ten poseł nie ma teraz zdjęcia."}
-                )
-            with target.avatar_file.open("rb") as current:
-                images[copy_to] = ContentFile(current.read())
-        for name, image in images.items():
-            if image is None:
-                continue
-            field = getattr(poll, f"{name}_avatar_file")
-            field.delete(save=False)  # drop any earlier upload
-            field.save(f"{uuid4().hex}.webp", image, save=False)
-        poll.save(update_fields=["previous_avatar", "proposed_avatar"])
-        return Response(_detail(poll.pk, request))

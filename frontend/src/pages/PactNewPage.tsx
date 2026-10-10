@@ -3,7 +3,6 @@ import { useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 
 import { BackLink } from '@/components/layout/BackLink'
-import { SelectField } from '@/components/SelectField'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -48,15 +47,10 @@ export function PactNewPage() {
   const [host, setHost] = useState<TermsState>(emptyTerms)
   const [invited, setInvited] = useState<ReadonlyMap<number, TermsState>>(new Map())
   const [localError, setLocalError] = useState<string | null>(null)
-  // TEMPORARY (admins entering old pacts by hand): create the pact as someone else
-  const [asUser, setAsUser] = useState('')
 
   const kind = getPactKind(kindKey)
-  const backfill = me?.is_superuser === true && asUser !== ''
-  const creatorId = backfill ? Number(asUser) : me?.id
-  const others = (people.data ?? []).filter((p) => p.id !== creatorId)
-  // an old pact has everyone in already, so each invitee's own side and stake are needed up front
-  const invitesNeedTerms = kind.money === 'wager' || (backfill && kind.sided)
+  const others = (people.data ?? []).filter((p) => p.id !== me?.id)
+  const invitesNeedTerms = kind.money === 'wager'
   const cleanSides = sides.map((s) => s.trim())
   const errors = formErrors(create.error)
 
@@ -117,7 +111,6 @@ export function PactNewPage() {
         config: kind.sided ? { sides: cleanSides } : {},
         host: hostTerms,
         opponents,
-        creator_id: backfill ? creatorId : undefined,
       },
       { onSuccess: (pact) => navigate(`/pacts/${pact.id}`, { replace: true }) },
     )
@@ -129,33 +122,6 @@ export function PactNewPage() {
       <h2 className="mb-6 text-2xl font-semibold">Nowy zakład</h2>
 
       <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
-        {me?.is_superuser && (
-          <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3">
-            <Label htmlFor="as-user">Utwórz jako (tymczasowo, tylko administrator)</Label>
-            <SelectField
-              id="as-user"
-              value={asUser || 'self'}
-              onChange={(value) => {
-                setAsUser(value === 'self' ? '' : value)
-                setInvited(new Map()) // the creator can't invite themselves
-              }}
-              options={[
-                { value: 'self', label: `Ja (${me.username})` },
-                { value: String(me.id), label: `Ja (${me.username}), stary zakład` },
-                ...(people.data ?? [])
-                  .filter((p) => p.id !== me.id)
-                  .map((p) => ({ value: String(p.id), label: p.username })),
-              ]}
-            />
-            {backfill && (
-              <span className="text-sm text-muted-foreground">
-                Stary zakład: może mieć termin z przeszłości, a zaproszeni od razu biorą w nim
-                udział (podaj ich stronę i stawkę). Nikt nie dostanie powiadomienia.
-              </span>
-            )}
-          </div>
-        )}
-
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-base font-medium">Rodzaj</legend>
           <div className="grid grid-cols-2 gap-2">
@@ -212,7 +178,7 @@ export function PactNewPage() {
           <Input
             id="due"
             type="date"
-            min={backfill ? undefined : tomorrowInput()}
+            min={tomorrowInput()}
             value={due}
             onChange={(e) => setDue(e.target.value)}
           />

@@ -230,8 +230,6 @@ class PactCreateSerializer(serializers.Serializer):
     config = serializers.JSONField(required=False, default=dict)
     host = TermsSerializer(required=False)  # the creator's own side/stake (group bets)
     opponents = InviteeSerializer(many=True, required=False, default=list)
-    # TEMPORARY, superusers only: create the pact as this member (see `services.create_pact`)
-    creator_id = serializers.IntegerField(required=False)
 
 
 class RespondSerializer(TermsSerializer):

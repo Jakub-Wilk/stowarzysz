@@ -348,38 +348,3 @@ class StatsSerializer(serializers.Serializer):
     categories = StatsCategorySerializer(many=True)
     people = StatsPersonSerializer(many=True)
     series = StatsPointSerializer(many=True)
-
-
-class TricountPreviewRequestSerializer(serializers.Serializer):
-    dump = serializers.JSONField(help_text="The file saved by `tricount-exporter --save-response`.")
-
-
-class TricountImportRequestSerializer(TricountPreviewRequestSerializer):
-    mapping = serializers.DictField(
-        child=serializers.IntegerField(), help_text="Tricount name -> member id, for everyone."
-    )
-
-
-class TricountParticipantSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    user_id = serializers.IntegerField(allow_null=True, help_text="Suggested member, if any.")
-
-
-class TricountPreviewSerializer(serializers.Serializer):
-    title = serializers.CharField()
-    participants = TricountParticipantSerializer(many=True)
-    expenses = serializers.IntegerField()
-    incomes = serializers.IntegerField()
-    payments = serializers.IntegerField()
-    already_imported = serializers.IntegerField()
-    skipped_deleted = serializers.IntegerField()
-    attachments = serializers.IntegerField(help_text="Pictures in the dump (not imported).")
-    currencies = serializers.ListField(child=serializers.CharField())
-    first_date = serializers.DateField(allow_null=True)
-    last_date = serializers.DateField(allow_null=True)
-
-
-class TricountResultSerializer(serializers.Serializer):
-    imported = serializers.IntegerField()
-    skipped_existing = serializers.IntegerField()
-    skipped_deleted = serializers.IntegerField()

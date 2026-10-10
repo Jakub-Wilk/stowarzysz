@@ -124,14 +124,8 @@ def create_pact(
     config: dict[str, Any] | None = None,
     host: Terms | None = None,
     opponents: list[Terms],
-    backfill: bool = False,
 ) -> Pact:
-    """Create a pact for `creator`.
-
-    TEMPORARY `backfill` (admins entering old pacts for someone): the deadline may be in the
-    past and the invitees are already in with their terms, so the pact starts at once and nobody
-    is notified. Remove together with `creator_id` on the create endpoint.
-    """
+    """Create a pact for `creator`."""
     kind = get_kind(kind_key)
     if kind.judged_by_everyone and opponents:
         raise ValidationError(
@@ -139,11 +133,11 @@ def create_pact(
         )
     if kind.needs_due_date and due_at is None:
         raise ValidationError("Podaj termin.")
-    if due_at is not None and due_at <= timezone.now() and not backfill:
+    if due_at is not None and due_at <= timezone.now():
         raise ValidationError("Termin musi być w przyszłości.")
     clean_config = kind.validate_config(config or {})
     host_terms = kind.validate_terms(host or Terms(creator.pk), clean_config, host=True, final=True)
-    cleaned = [kind.validate_terms(t, clean_config, host=False, final=backfill) for t in opponents]
+    cleaned = [kind.validate_terms(t, clean_config, host=False, final=False) for t in opponents]
     ids = [terms.user_id for terms in cleaned]
     if len(set(ids)) != len(ids):
         raise ValidationError("Ta sama osoba jest zaproszona więcej niż raz.")
@@ -180,17 +174,15 @@ def create_pact(
                 stake_amount=terms.stake_amount,
                 stake_note=terms.stake_note,
                 side=terms.side,
-                state=State.ACTIVE if backfill else State.INVITED,
+                state=State.INVITED,
             )
             for terms in cleaned
         )
-        if backfill:
-            _refresh_status(pact)
         _announce(
             pact,
             "Nowy zakład",
             f"{creator.username} zaprasza Cię: {title}",
-            push_to=[] if backfill else ids,
+            push_to=ids,
             event="pact.created",
         )
     return pact
