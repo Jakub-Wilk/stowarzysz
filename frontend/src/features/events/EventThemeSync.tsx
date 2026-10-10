@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
 
+import { useBirthdays } from '@/features/birthdays/hooks'
 import { useSanta } from '@/features/secretsanta/hooks'
-import type { ThemeId } from '@/themes'
+import { birthdayFor, type ThemeId } from '@/themes'
 import { useTheme } from '@/themes/context'
+import { BirthdayLayer } from '@/themes/BirthdayLayer'
 import { CapybaraLayer } from '@/themes/CapybaraLayer'
 import { EasterLayer } from '@/themes/EasterLayer'
 import { HalloweenLayer } from '@/themes/HalloweenLayer'
@@ -18,7 +20,12 @@ type EventStatus = boolean | undefined
  */
 function useEventThemes(): [EventStatus, ThemeId][] {
   const santa = useSanta().data?.active
-  return [[santa, 'christmas']]
+  const birthdays = useBirthdays().data
+  const { selected } = useTheme()
+  return [
+    [santa, 'christmas'],
+    [birthdays && birthdays.length > 0, birthdayFor(selected)],
+  ]
 }
 
 /**
@@ -36,7 +43,7 @@ function pickEventTheme(events: [EventStatus, ThemeId][]): ThemeId | null | unde
 /**
  * Forces the running event's theme over whatever the user picked; their pick comes back when the
  * event ends. The override is remembered, so a reload paints it before the status has been fetched.
- * Also renders the effective theme's decorations (snow for christmas, bats and embers for halloween, petals for polska, eggs for easter, steam and oranges for capybara).
+ * Also renders the effective theme's decorations (snow for christmas, bats and embers for halloween, petals for polska, eggs for easter, steam and oranges for capybara, balloons for birthday).
  */
 export function EventThemeSync() {
   const { theme, setOverride } = useTheme()
@@ -50,6 +57,7 @@ export function EventThemeSync() {
   if (theme === 'halloween') return <HalloweenLayer />
   if (theme === 'polska') return <PolandLayer />
   if (theme === 'easter') return <EasterLayer />
+  if (theme === 'birthday' || theme === 'birthday-dusk') return <BirthdayLayer />
   if (theme === 'capybara' || theme === 'capybara-dusk') return <CapybaraLayer />
   return null
 }

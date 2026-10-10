@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from accounts.birthdays import birthday_users
 from accounts.models import ActivationToken, User
 from accounts.permissions import IsSuperuser
 from accounts.serializers import (
@@ -62,6 +63,16 @@ class PeopleListView(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.members().order_by("username")
+
+
+class BirthdaysTodayView(generics.ListAPIView):
+    """Members whose birthday is today (Warsaw time): the birthday theme and avatar border."""
+
+    serializer_class = PersonSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return birthday_users(timezone.localdate())
 
 
 class UserListCreateView(generics.ListCreateAPIView):

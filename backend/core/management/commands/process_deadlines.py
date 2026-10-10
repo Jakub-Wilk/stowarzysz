@@ -3,11 +3,11 @@ from typing import Any
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
-COMMANDS = ("process_poll_deadlines", "process_pact_deadlines")
+COMMANDS = ("process_poll_deadlines", "process_pact_deadlines", "process_birthdays")
 
 
 class Command(BaseCommand):
-    help = "Run every deadline job (polls, pacts). This is what cron runs, every ~5 minutes."
+    help = "Run every deadline job (polls, pacts, birthdays). Cron runs this every ~5 minutes."
 
     def handle(self, *args: Any, **options: Any) -> None:
         failed = []

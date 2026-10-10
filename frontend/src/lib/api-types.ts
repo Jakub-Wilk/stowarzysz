@@ -42,6 +42,8 @@ export interface ManagedUser {
   /** False until the user has set a password via an activation link. */
   has_password: boolean
   avatar_url: string | null
+  /** ISO date (YYYY-MM-DD), `null` when unknown. */
+  birthday: string | null
   voting: VotingStats
   pacts: PactStats
 }

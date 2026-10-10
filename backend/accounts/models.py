@@ -51,6 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
     avatar = models.ImageField(upload_to="avatars/", blank=True)
+    birthday = models.DateField(null=True, blank=True)
+    # The day the birthday push last went out, so the job can run every few minutes.
+    birthday_reminded_on = models.DateField(null=True, blank=True, editable=False)
 
     objects = UserManager()
 

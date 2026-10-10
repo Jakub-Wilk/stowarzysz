@@ -1,8 +1,10 @@
+from datetime import date
 from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
@@ -52,6 +54,7 @@ class ManagedUserSerializer(serializers.ModelSerializer):
             "is_superuser",
             "has_password",
             "avatar_url",
+            "birthday",
             "voting",
             "pacts",
         )
@@ -70,6 +73,11 @@ class ManagedUserSerializer(serializers.ModelSerializer):
 
     def get_has_password(self, obj: Any) -> bool:
         return obj.has_usable_password()
+
+    def validate_birthday(self, value: date | None) -> date | None:
+        if value is not None and value > timezone.localdate():
+            raise serializers.ValidationError("Data urodzin nie może być z przyszłości.")
+        return value
 
     def get_avatar_url(self, obj: Any) -> str | None:
         return avatar_url(obj)

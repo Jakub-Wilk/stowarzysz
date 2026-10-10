@@ -1,0 +1,57 @@
+/*
+ * Theme: birthday-dusk (the birthday party after dark: the same confetti, bunting, badge and
+ * balloons as birthday.css, on a deep plum ground). Applied instead of birthday when the user's
+ * pick is a dark theme (`birthdayFor`); seasonal, so not in the picker, with fixed colours.
+ */
+[data-theme='birthday-dusk'] {
+  --background: oklch(0.2 0.045 320);
+  --foreground: oklch(0.96 0.015 340);
+  --card: oklch(0.26 0.06 320);
+  --card-foreground: oklch(0.96 0.015 340);
+  --popover: oklch(0.23 0.055 320);
+  --popover-foreground: oklch(0.96 0.015 340);
+  --primary: oklch(0.7 0.21 350);
+  --primary-foreground: oklch(0.2 0.05 330);
+  --secondary: oklch(0.33 0.08 300);
+  --secondary-foreground: oklch(0.96 0.015 340);
+  --muted: oklch(0.24 0.05 320);
+  --muted-foreground: oklch(0.76 0.05 330);
+  --accent: oklch(0.38 0.09 85);
+  --accent-foreground: oklch(0.96 0.05 95);
+  --destructive: oklch(0.7 0.18 25);
+  --border: oklch(0.96 0.015 340 / 16%);
+  --input: oklch(0.96 0.015 340 / 22%);
+  --ring: oklch(0.75 0.15 300);
+  --chart-1: oklch(0.72 0.2 350);
+  --chart-2: oklch(0.82 0.15 90);
+  --chart-3: oklch(0.72 0.13 240);
+  --chart-4: oklch(0.72 0.16 300);
+  --chart-5: oklch(0.76 0.15 160);
+  --radius: 1rem;
+  --positive: oklch(0.76 0.16 155);
+  --negative: oklch(0.7 0.2 25);
+  --neutral: oklch(0.74 0.04 330);
+  --metal-1: oklch(0.55 0.22 350);
+  --metal-2: oklch(0.6 0.23 350);
+  --metal-3: oklch(0.7 0.2 352);
+  --metal-4: oklch(0.6 0.23 350);
+  --metal-5: oklch(0.54 0.22 350);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: oklch(0.23 0.055 320);
+  --sidebar-foreground: oklch(0.96 0.015 340);
+  --sidebar-primary: oklch(0.7 0.21 350);
+  --sidebar-primary-foreground: oklch(0.2 0.05 330);
+  --sidebar-accent: oklch(0.38 0.09 85);
+  --sidebar-accent-foreground: oklch(0.96 0.05 95);
+  --sidebar-border: oklch(0.96 0.015 340 / 16%);
+  --sidebar-ring: oklch(0.75 0.15 300);
+}
+
+[data-theme='birthday-dusk'] .font-logo {
+  color: oklch(0.8 0.17 350);
+  text-shadow: 0 0 12px oklch(0.7 0.21 350 / 50%);
+}
+
+[data-theme='birthday-dusk'] .bg-card {
+  box-shadow: 0 1px 0 oklch(1 0 0 / 5%) inset;
+}

@@ -12,6 +12,8 @@ export const themes = [
   { id: 'halloween', label: 'Halloween', tone: 'dark' },
   { id: 'polska', label: 'Polska', tone: 'dark' },
   { id: 'easter', label: 'Wielkanoc', tone: 'light' },
+  { id: 'birthday', label: 'Urodziny', tone: 'light' },
+  { id: 'birthday-dusk', label: 'Urodziny po zmierzchu', tone: 'dark' },
   { id: 'capybara', label: 'Kapibara', tone: 'light' },
   { id: 'capybara-dusk', label: 'Kapibara o zmierzchu', tone: 'dark' },
   { id: 'claymorphic', label: 'Obły', tone: 'light' },
@@ -168,11 +170,17 @@ function capybaraFor(selected: ThemeId | undefined): ThemeId {
   return themes.find((t) => t.id === selected)?.tone === 'dark' ? 'capybara-dusk' : 'capybara'
 }
 
+/** The birthday theme that matches the user's pick: the light one for a light theme, dusk for a dark one. */
+export function birthdayFor(selected: ThemeId | undefined): ThemeId {
+  return themes.find((t) => t.id === selected)?.tone === 'dark' ? 'birthday-dusk' : 'birthday'
+}
+
 /**
  * A theme forced by the calendar, otherwise `null`: capybara on 10 July (light or dusk to match
  * `selected`, the theme the user picked), easter from Palm Sunday to Easter Monday, polska on
  * 1-3 May and 11 November, christmas all of December, halloween from 17 October to Halloween
- * (local time). Takes priority over an event override (`getStoredOverride`), so add new seasons
+ * (local time). The birthday themes are not here: they follow the members' birthdays, which only the
+ * server knows (`EventThemeSync`). Takes priority over an event override (`getStoredOverride`), so add new seasons
  * here.
  */
 export function getSeasonalTheme(now: Date = new Date(), selected?: ThemeId): ThemeId | null {
@@ -185,7 +193,14 @@ export function getSeasonalTheme(now: Date = new Date(), selected?: ThemeId): Th
 }
 
 /** Themes that only apply by themselves (a season or an event), so they are not in the picker. */
-const AUTOMATIC_THEMES: ThemeId[] = ['christmas', 'halloween', 'polska', 'easter']
+const AUTOMATIC_THEMES: ThemeId[] = [
+  'christmas',
+  'halloween',
+  'polska',
+  'easter',
+  'birthday',
+  'birthday-dusk',
+]
 
 /**
  * Themes with their own fixed palette (the seasonal ones), not derived from `--base-hue`: the hue

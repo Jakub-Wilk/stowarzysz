@@ -1,0 +1,165 @@
+/*
+ * Themes: birthday (Urodziny: a bright party on a cream ground, confetti, a bunting of pennants)
+ * and birthday-dusk, its dark twin (birthday-dusk.css; the one that fits the user's pick, like capybara).
+ * Seasonal, like christmas and halloween: it is not in the picker and its colours are fixed, not
+ * derived from the base hue. It applies for the whole day whenever it is a member's birthday (the
+ * server says so, see `EventThemeSync`) and loses to the calendar seasons. Decorations: confetti
+ * on the page, a bunting under the header, a badge on the header avatar and balloons rising over
+ * the page (`BirthdayLayer`). The gift-wrap border of the birthday person's picture is not part of
+ * the theme (`.gift-wrap` in index.css). All motion is transform/opacity only, and pointer-events
+ * are off on everything decorative.
+ */
+[data-theme='birthday'] {
+  --background: oklch(0.985 0.018 85);
+  --foreground: oklch(0.3 0.07 330);
+  --card: oklch(0.998 0.006 85);
+  --card-foreground: oklch(0.3 0.07 330);
+  --popover: oklch(0.998 0.006 85);
+  --popover-foreground: oklch(0.3 0.07 330);
+  --primary: oklch(0.6 0.23 350);
+  --primary-foreground: oklch(0.99 0.008 85);
+  --secondary: oklch(0.93 0.05 300);
+  --secondary-foreground: oklch(0.35 0.12 300);
+  --muted: oklch(0.96 0.03 85);
+  --muted-foreground: oklch(0.5 0.06 330);
+  --accent: oklch(0.92 0.1 95);
+  --accent-foreground: oklch(0.36 0.09 70);
+  --destructive: oklch(0.55 0.21 27);
+  --border: oklch(0.89 0.045 340);
+  --input: oklch(0.85 0.06 340);
+  --ring: oklch(0.65 0.18 300);
+  --chart-1: oklch(0.62 0.22 350);
+  --chart-2: oklch(0.7 0.15 85);
+  --chart-3: oklch(0.62 0.15 250);
+  --chart-4: oklch(0.65 0.17 300);
+  --chart-5: oklch(0.68 0.15 160);
+  --radius: 1rem;
+  --positive: oklch(0.5 0.14 155);
+  --negative: oklch(0.55 0.21 25);
+  --neutral: oklch(0.55 0.05 330);
+  /* Avatars and other `bg-(image:--metal)` fills: candy pink with a lit top. */
+  --metal-1: oklch(0.52 0.22 350);
+  --metal-2: oklch(0.58 0.23 350);
+  --metal-3: oklch(0.68 0.2 352);
+  --metal-4: oklch(0.58 0.23 350);
+  --metal-5: oklch(0.52 0.22 350);
+  --metal: linear-gradient(180deg, var(--metal-1) 0%, var(--metal-3) 45%, var(--metal-5) 100%);
+  --sidebar: oklch(0.975 0.025 85);
+  --sidebar-foreground: oklch(0.3 0.07 330);
+  --sidebar-primary: oklch(0.6 0.23 350);
+  --sidebar-primary-foreground: oklch(0.99 0.008 85);
+  --sidebar-accent: oklch(0.92 0.1 95);
+  --sidebar-accent-foreground: oklch(0.36 0.09 70);
+  --sidebar-border: oklch(0.89 0.045 340);
+  --sidebar-ring: oklch(0.65 0.18 300);
+}
+
+/* Confetti scattered over the page, fixed so it does not scroll. */
+[data-theme^='birthday'] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cg opacity='.55'%3E%3Crect x='18' y='24' width='9' height='4' rx='1' fill='%23ec4899' transform='rotate(30 22 26)'/%3E%3Crect x='96' y='12' width='9' height='4' rx='1' fill='%23facc15' transform='rotate(-40 100 14)'/%3E%3Ccircle cx='160' cy='40' r='3' fill='%2338bdf8'/%3E%3Crect x='190' y='96' width='9' height='4' rx='1' fill='%23a78bfa' transform='rotate(60 194 98)'/%3E%3Ccircle cx='40' cy='100' r='3' fill='%2334d399'/%3E%3Crect x='120' y='120' width='9' height='4' rx='1' fill='%23ec4899' transform='rotate(-20 124 122)'/%3E%3Ccircle cx='72' cy='176' r='3' fill='%23facc15'/%3E%3Crect x='170' y='180' width='9' height='4' rx='1' fill='%2338bdf8' transform='rotate(45 174 182)'/%3E%3Crect x='20' y='190' width='9' height='4' rx='1' fill='%23a78bfa' transform='rotate(-55 24 192)'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+[data-theme='birthday'] .font-logo {
+  color: oklch(0.55 0.23 350);
+  text-shadow: 0 2px 0 oklch(0.92 0.1 95);
+}
+
+[data-theme='birthday'] .bg-card {
+  box-shadow: 0 2px 6px oklch(0.6 0.15 340 / 14%);
+}
+
+/*
+ * Decorations, scoped to the sticky app `header` like the other seasons': a bunting of pennants in
+ * party colours hanging from its lower edge, swaying a little.
+ */
+[data-theme^='birthday'] header.sticky::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='30'%3E%3Cpath d='M0 2Q48 12 96 2' fill='none' stroke='%23a98f6b' stroke-width='1'/%3E%3Cpath d='M6 4 26 6.6 16 24Z' fill='%23ec4899' stroke='%23be185d' stroke-width='1' stroke-linejoin='round'/%3E%3Cpath d='M34 6.8 54 7.4 44 25Z' fill='%23facc15' stroke='%23ca8a04' stroke-width='1' stroke-linejoin='round'/%3E%3Cpath d='M62 7.2 82 6.2 72 24Z' fill='%2338bdf8' stroke='%230284c7' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: left top;
+  background-repeat: repeat-x;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  animation: birthday-sway 6s ease-in-out infinite;
+}
+
+@keyframes birthday-sway {
+  0%,
+  100% {
+    transform: skewX(-0.7deg);
+  }
+  50% {
+    transform: skewX(0.7deg);
+  }
+}
+
+/*
+ * The signed-in user's own picture in the header (`UserAvatar decorated`) gets a party badge in its
+ * corner. `UserAvatar` renders the (otherwise hidden) overlay only when `decorated`.
+ */
+[data-theme^='birthday'] [data-slot='avatar-overlay'] {
+  display: block;
+  position: absolute;
+  right: -14%;
+  bottom: -10%;
+  width: 44%;
+  height: 44%;
+  border-radius: 9999px;
+  border: 1.5px solid oklch(0.99 0.008 85);
+  background-color: oklch(0.62 0.23 350);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 3.5l1.9 4.1 4.4.5-3.3 3 .9 4.4L10 13.2 6.1 15.5 7 11.1l-3.3-3 4.4-.5Z' fill='%23fde047' stroke='%23fff' stroke-width='.8' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 80%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 3px oklch(0.3 0.1 340 / 40%);
+  pointer-events: none;
+}
+
+/* Balloons: glossy, on a string, wobbling as they float up. */
+.birthday-balloon {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%;
+  background-color: var(--balloon-color, oklch(0.7 0.2 350));
+  background-image: radial-gradient(circle at 32% 28%, oklch(1 0 0 / 55%), transparent 38%);
+  animation: balloon-rise var(--balloon-duration, 18s) ease-in infinite both;
+}
+
+.birthday-balloon::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 1px;
+  height: 140%;
+  background: oklch(0.5 0.03 330 / 45%);
+}
+
+@keyframes balloon-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 5vh, 0) rotate(-4deg);
+  }
+  10%,
+  85% {
+    opacity: 0.85;
+  }
+  25% {
+    transform: translate3d(calc(var(--balloon-drift, 3vw) * 0.6), -25vh, 0) rotate(4deg);
+  }
+  50% {
+    transform: translate3d(var(--balloon-drift, 3vw), -55vh, 0) rotate(-4deg);
+  }
+  75% {
+    transform: translate3d(calc(var(--balloon-drift, 3vw) * 0.6), -85vh, 0) rotate(4deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -115vh, 0) rotate(-4deg);
+  }
+}

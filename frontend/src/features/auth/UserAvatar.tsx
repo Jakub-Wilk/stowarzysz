@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useIsBirthday } from '@/features/birthdays/hooks'
 import { cn } from '@/lib/utils'
 
 // The shadcn Avatar's own `size` variants win over className, so sizes are defined here instead.
@@ -22,7 +23,8 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ username, src, size = 'default', decorated }: UserAvatarProps) {
-  return (
+  const birthday = useIsBirthday(username)
+  const avatar = (
     <Avatar className={sizes[size]}>
       {src && <AvatarImage src={src} alt="" />}
       <AvatarFallback
@@ -37,5 +39,12 @@ export function UserAvatar({ username, src, size = 'default', decorated }: UserA
       {/* Hidden unless the theme dresses pictures up (halloween's pumpkin, see halloween.css). */}
       {src && decorated && <span aria-hidden data-slot="avatar-overlay" className="hidden" />}
     </Avatar>
+  )
+  // On their birthday, everyone's picture of them is gift-wrapped (see `.gift-wrap` in index.css).
+  if (!birthday) return avatar
+  return (
+    <span className="gift-wrap" data-size={size}>
+      {avatar}
+    </span>
   )
 }

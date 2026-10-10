@@ -22,11 +22,16 @@ import { useMe } from '@/features/auth/hooks'
 import { formErrors } from '@/lib/api-errors'
 import type { ActivationLink, ManagedUser, ManagedUserPayload } from '@/lib/api-types'
 
-const EMPTY: ManagedUserPayload = { username: '', is_active: true, is_superuser: false }
+const EMPTY: ManagedUserPayload = {
+  username: '',
+  is_active: true,
+  is_superuser: false,
+  birthday: null,
+}
 
 function payloadOf(user: ManagedUser): ManagedUserPayload {
-  const { username, is_active, is_superuser } = user
-  return { username, is_active, is_superuser }
+  const { username, is_active, is_superuser, birthday } = user
+  return { username, is_active, is_superuser, birthday }
 }
 
 function TextField({
@@ -54,6 +59,37 @@ function TextField({
         aria-invalid={error !== undefined}
         onChange={(e) => onChange(e.target.value)}
       />
+      {error && (
+        <span role="alert" className="text-sm text-destructive">
+          {error}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function BirthdayField({
+  value,
+  onChange,
+  error,
+}: {
+  value: string | null
+  onChange: (value: string | null) => void
+  error?: string
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="birthday">Data urodzin</Label>
+      <Input
+        id="birthday"
+        type="date"
+        value={value ?? ''}
+        aria-invalid={error !== undefined}
+        onChange={(e) => onChange(e.target.value || null)}
+      />
+      <span className="text-sm text-muted-foreground">
+        W dniu urodzin pozostali dostają przypomnienie o 20:00, a aplikacja się przystraja.
+      </span>
       {error && (
         <span role="alert" className="text-sm text-destructive">
           {error}
@@ -178,6 +214,11 @@ export function UserForm({ user }: { user?: ManagedUser }) {
           onChange={(v) => set('username', v)}
           error={errors.fields.username}
           required
+        />
+        <BirthdayField
+          value={form.birthday}
+          onChange={(v) => set('birthday', v)}
+          error={errors.fields.birthday}
         />
         <SwitchField
           label="Aktywny"
