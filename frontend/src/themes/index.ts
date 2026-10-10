@@ -9,6 +9,8 @@ export const themes = [
   { id: 'royal', label: 'Królewski' },
   { id: 'christmas', label: 'Boże Narodzenie' },
   { id: 'claymorphic', label: 'Miękki' },
+  { id: 'boring-dark', label: 'Nudny czarnuch' },
+  { id: 'boring-light', label: 'Nudny białas' },
 ] as const
 
 export type ThemeId = (typeof themes)[number]['id']

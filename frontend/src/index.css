@@ -6,6 +6,8 @@
 @import './themes/royal.css';
 @import './themes/christmas.css';
 @import './themes/claymorphic.css';
+@import './themes/boring-dark.css';
+@import './themes/boring-light.css';
 
 /* Themes are arbitrary (src/themes/); there is no light/dark mode, so keep `dark:` utilities inert. */
 @custom-variant dark (&:is(.dark *));

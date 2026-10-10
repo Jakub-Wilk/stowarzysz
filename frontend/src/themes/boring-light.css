@@ -1,0 +1,52 @@
+/*
+ * Theme: boring-light (stock shadcn neutral, light). Only the accent colors (primary, ring, accent,
+ * charts) are derived from the base hue (`--base-hue` / `--base-chroma`, see color.ts); surfaces,
+ * text and borders are the untouched shadcn greys. Text on the primary flips between black and white
+ * by its lightness (relative color syntax; the line above each is the fallback for old browsers).
+ */
+/* Full-saturation amber (#fac300 is hue 47) unless the user picked a hue; `:root[...]` beats the royal fallback. */
+:root[data-theme='boring-light'] {
+  --base-hue: 47;
+}
+
+[data-theme='boring-light'] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 49%);
+  --primary-foreground: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 8%);
+  --primary-foreground: oklch(from var(--primary) clamp(0, (0.68 - l) * 1000, 1) 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 90%);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 49%);
+  --chart-1: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 49%);
+  --chart-2: hsl(calc(var(--base-hue) + 40) calc(100% * var(--base-chroma)) 50%);
+  --chart-3: hsl(calc(var(--base-hue) + 80) calc(100% * var(--base-chroma)) 45%);
+  --chart-4: hsl(calc(var(--base-hue) - 40) calc(100% * var(--base-chroma)) 50%);
+  --chart-5: hsl(calc(var(--base-hue) - 80) calc(100% * var(--base-chroma)) 45%);
+  --radius: 0.625rem;
+  --positive: oklch(0.55 0.16 150);
+  --negative: oklch(0.55 0.22 25);
+  --neutral: oklch(0.55 0.01 280);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 49%);
+  --sidebar-primary-foreground: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 8%);
+  --sidebar-primary-foreground: oklch(
+    from var(--sidebar-primary) clamp(0, (0.68 - l) * 1000, 1) 0 0
+  );
+  --sidebar-accent: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 90%);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: hsl(var(--base-hue) calc(100% * var(--base-chroma)) 49%);
+}
