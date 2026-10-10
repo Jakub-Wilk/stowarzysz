@@ -642,3 +642,27 @@ export interface LedgerStats {
   /** `period` is `YYYY-MM-DD` (a day) or `YYYY-MM` (a month). */
   series: { period: string; spent: number }[]
 }
+
+/** What the receipt scan reads off a photo: every field can be missing; amounts are decimals as printed. */
+export interface ScannedReceipt {
+  merchant: { name: string | null } | null
+  items: ScannedItem[] | null
+  total: number | null
+  /** ISO 4217 code, when the model could tell. */
+  currency: string | null
+  /** ISO 639-1 code of the receipt's language. */
+  language: string | null
+}
+
+export interface ScannedItem {
+  name: string | null
+  quantity: number | null
+  unit_price: number | null
+  total: number | null
+}
+
+/** SSE `ledger.ocr.request`: the server just sent request number `attempt` for scan `job_id`. */
+export interface OcrRequestEvent {
+  job_id: string
+  attempt: number
+}

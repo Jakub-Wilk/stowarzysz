@@ -128,6 +128,7 @@ Fill in `.env.prod`:
 | `FRONTEND_URL`                          | Public URL, e.g. `https://stowarzysz.example.com` (no trailing slash). Used for activation links and CORS |
 | `ALLOWED_HOSTS`                         | Comma-separated hostnames, e.g. `stowarzysz.example.com`                                 |
 | `WEB_PORT`                              | Host port for the `web` container (default `8080`)                                       |
+| `GEMINI_API_KEY`                        | Optional. Google AI Studio key for receipt OCR (`GEMINI_MODEL` overrides the model)      |
 | `VAPID_*`                               | Web Push keys, see [step 2](#2-generate-vapid-keys-web-push)                             |
 
 ### 2. Generate VAPID keys (Web Push)

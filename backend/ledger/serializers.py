@@ -119,6 +119,12 @@ class EntryAttachmentUploadSerializer(serializers.Serializer):
     image = serializers.ImageField()
 
 
+class ReceiptOcrUploadSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+    # chosen by the client so it can tell which `ledger.ocr.request` events are its own
+    job_id = serializers.UUIDField()
+
+
 class RateQuerySerializer(serializers.Serializer):
     currency = serializers.ChoiceField(choices=list(CURRENCIES))
     date = serializers.DateField(default=timezone.localdate)

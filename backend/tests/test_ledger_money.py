@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from ledger.money import Breakdown, Debt, allocate, format_amount, settle_up, to_base
+from ledger.money import Breakdown, Debt, allocate, format_amount, settle_up, split_items, to_base
 
 
 @pytest.mark.parametrize(
@@ -22,6 +22,38 @@ def test_allocate_always_sums_to_the_total(total: int, weights: list[int]) -> No
 def test_allocate_matches_the_documented_example_and_gives_ties_to_the_first() -> None:
     assert allocate(2000, [3000, 5000]) == [750, 1250]
     assert allocate(100, [1, 1, 1]) == [34, 33, 33]
+
+
+def test_split_items_balances_the_rounding_across_a_receipt() -> None:
+    everyone = {1: 1, 2: 1, 3: 1, 4: 1}
+    lines = [1950, 1400, 3700, 1950, 1800]  # 108 zł, so 27 zł each
+    assert split_items([(amount, everyone) for amount in lines]) == dict.fromkeys(everyone, 2700)
+
+
+def test_split_items_of_one_item_is_plain_allocate() -> None:
+    assert split_items([(100, {1: 1, 2: 1, 3: 1})]) == {1: 34, 2: 33, 3: 33}
+    assert split_items([(999, {1: 7, 2: 11, 3: 13})]) == dict(
+        zip((1, 2, 3), allocate(999, [7, 11, 13]), strict=True)
+    )
+
+
+def test_split_items_is_exact_and_stays_within_a_grosz_of_the_exact_share() -> None:
+    rng = random.Random(7)
+    for _ in range(300):
+        items = [
+            (
+                rng.randint(1, 5000),
+                {u: rng.randint(1, 4) for u in rng.sample(range(1, 6), rng.randint(1, 5))},
+            )
+            for _ in range(rng.randint(1, 12))
+        ]
+        owed = split_items(items)
+        assert sum(owed.values()) == sum(amount for amount, _ in items)
+        exact: dict[int, Decimal] = defaultdict(Decimal)
+        for amount, weights in items:
+            for u, w in weights.items():
+                exact[u] += Decimal(amount * w) / sum(weights.values())
+        assert all(abs(owed[u] - exact[u]) < 1 for u in exact)
 
 
 def nets_after(debts: list[Debt]) -> dict[int, int]:

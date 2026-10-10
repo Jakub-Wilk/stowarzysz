@@ -17,7 +17,6 @@ and the generic services don't change.
 """
 
 from abc import ABC, abstractmethod
-from collections import Counter
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, replace
 from datetime import date
@@ -33,9 +32,9 @@ from ledger.money import (
     CURRENCIES,
     Breakdown,
     Debt,
-    allocate,
     format_amount,
     settle_up,
+    split_items,
     to_base,
 )
 
@@ -224,22 +223,14 @@ class ExpenseKind(EntryKind):
         }
 
     def breakdown(self, entry: LedgerEntry) -> Breakdown:
-        owed: Counter[int] = Counter()
-        for position, item in enumerate(entry.details["items"]):
-            owed.update(self._owed(item, position))
+        owed = split_items(
+            [
+                (item["amount"], {s["user_id"]: s["weight"] for s in item["shares"]})
+                for item in entry.details["items"]
+            ]
+        )
         paid = {p["user_id"]: p["amount"] for p in entry.details["payers"]}
-        return Breakdown(paid, dict(owed))
-
-    @staticmethod
-    def _owed(item: dict[str, Any], position: int) -> dict[int, int]:
-        """One item divided among its sharers. An odd grosz goes to whoever is first, and the
-        first place rotates from item to item, so on a long receipt it doesn't always land on
-        the same person."""
-        weights = {s["user_id"]: s["weight"] for s in item["shares"]}
-        ids = sorted(weights)
-        turn = position % len(ids)
-        ids = ids[turn:] + ids[:turn]
-        return dict(zip(ids, allocate(item["amount"], [weights[u] for u in ids]), strict=True))
+        return Breakdown(paid, owed)
 
     def base_breakdown(self, entry: LedgerEntry) -> Breakdown:
         return self.breakdown(entry).to_base(entry.rate or Decimal(1), CURRENCIES[entry.currency])

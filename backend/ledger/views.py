@@ -3,14 +3,18 @@ from typing import Any
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, PolymorphicProxySerializer, extend_schema
+from google.genai import errors as genai_errors
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.pagination import CursorPagination
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ledger import rates, services, stats
+from accounts.avatars import process_photo
+from core import events
+from ledger import rates, receipt_ocr, services, stats
 from ledger.balances import balances
 from ledger.kinds import Conflict, get_kind
 from ledger.models import LedgerEntry
@@ -24,6 +28,7 @@ from ledger.serializers import (
     MetaSerializer,
     RateQuerySerializer,
     RateSerializer,
+    ReceiptOcrUploadSerializer,
     StatsQuerySerializer,
     StatsSerializer,
     people_for,
@@ -220,3 +225,37 @@ class MetaView(APIView):
             ],
         }
         return Response(MetaSerializer(data).data)
+
+
+class OcrUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "Nie udało się odczytać paragonu, spróbuj ponownie."
+    default_code = "ocr_unavailable"
+
+
+class ReceiptOcrView(APIView):
+    """Read a receipt photo (multipart `image` + `job_id`) with Gemini.
+
+    Blocks until the result is ready. Each request sent to Gemini (a 503 is retried) is announced
+    to the caller over SSE as `ledger.ocr.request {job_id, attempt}` so the form can show
+    progress; the HTTP response is what carries the result.
+    """
+
+    parser_classes = (MultiPartParser,)
+
+    @extend_schema(request=ReceiptOcrUploadSerializer, responses={200: receipt_ocr.Receipt})
+    def post(self, request: Request) -> Response:
+        serializer = ReceiptOcrUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        job_id = str(serializer.validated_data["job_id"])
+        photo = process_photo(serializer.validated_data["image"])
+
+        def announce(attempt: int) -> None:
+            data = {"job_id": job_id, "attempt": attempt}
+            events.notify_user(request.user.id, "ledger.ocr.request", data)
+
+        try:
+            result = receipt_ocr.ocr_receipt(photo.read(), "image/webp", on_request_sent=announce)
+        except (RuntimeError, genai_errors.APIError) as exc:
+            raise OcrUnavailable from exc
+        return Response(result.model_dump(mode="json"))

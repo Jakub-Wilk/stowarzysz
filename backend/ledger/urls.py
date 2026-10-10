@@ -10,6 +10,7 @@ from ledger.views import (
     EntryListView,
     MetaView,
     RateView,
+    ReceiptOcrView,
     RejectView,
     StatsView,
 )
@@ -32,6 +33,7 @@ urlpatterns = [
     ),
     path("balances/", BalancesView.as_view(), name="ledger_balances"),
     path("rates/", RateView.as_view(), name="ledger_rate"),
+    path("receipt-ocr/", ReceiptOcrView.as_view(), name="ledger_receipt_ocr"),
     path("stats/", StatsView.as_view(), name="ledger_stats"),
     path("meta/", MetaView.as_view(), name="ledger_meta"),
 ]

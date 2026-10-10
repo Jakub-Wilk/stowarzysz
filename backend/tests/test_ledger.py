@@ -189,11 +189,11 @@ def test_an_itemized_receipt_charges_each_item_to_its_own_people(alice, bob, car
     )
     assert resp.status_code == 201, resp.json()
     owed = {r["user"]["username"]: r["owed"] for r in resp.json()["breakdown"]}
-    # Napiwek: 301 = 100 + 100 + 101; the odd grosz takes turns, and on the third item it is the
-    # third person's (carol's) turn
-    assert owed == {"alice": 500 + 100 + 1000, "bob": 1200 + 250 + 100, "carol": 250 + 101 + 2000}
+    # Napiwek: 301 = 100 + 100 + 101; nobody is behind on rounding yet, so the odd grosz goes to
+    # the lowest user id (alice)
+    assert owed == {"alice": 500 + 101 + 1000, "bob": 1200 + 250 + 100, "carol": 250 + 100 + 2000}
     assert sum(owed.values()) == resp.json()["amount"] == 5501
-    assert nets(bilans(alice)) == {"alice": 3901, "carol": -2351, "bob": -1550}
+    assert nets(bilans(alice)) == {"alice": 3900, "carol": -2350, "bob": -1550}
 
 
 def test_several_people_can_pay_one_expense(alice, bob, carol) -> None:

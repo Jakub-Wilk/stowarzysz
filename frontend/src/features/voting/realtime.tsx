@@ -6,8 +6,14 @@ import { EventThemeSync } from '@/features/events/EventThemeSync'
 import { ledgerKey } from '@/features/ledger/hooks'
 import { pactsKey } from '@/features/pacts/hooks'
 import { santaKey } from '@/features/secretsanta/hooks'
+import { emitOcr } from '@/features/ledger/expense/ocrBus'
 import { emitReaction } from '@/features/voting/reactionBus'
-import { REACTION_EMOJI, type ReactionEmoji, type ReactionEvent } from '@/lib/api-types'
+import {
+  REACTION_EMOJI,
+  type OcrRequestEvent,
+  type ReactionEmoji,
+  type ReactionEvent,
+} from '@/lib/api-types'
 import { useEventStream } from '@/lib/use-event-stream'
 
 function isReactionEvent(data: unknown): data is ReactionEvent {
@@ -18,6 +24,12 @@ function isReactionEvent(data: unknown): data is ReactionEvent {
     typeof d.user_id === 'number' &&
     REACTION_EMOJI.includes(d.emoji as ReactionEmoji)
   )
+}
+
+function isOcrEvent(data: unknown): data is OcrRequestEvent {
+  if (typeof data !== 'object' || data === null) return false
+  const d = data as Record<string, unknown>
+  return typeof d.job_id === 'string' && typeof d.attempt === 'number'
 }
 
 /**
@@ -36,6 +48,11 @@ export function RealtimeShell() {
       // settling a pact also creates debts
       void queryClient.invalidateQueries({ queryKey: pactsKey })
       void queryClient.invalidateQueries({ queryKey: ledgerKey })
+      return
+    }
+    if (type === 'ledger.ocr.request') {
+      // progress of a receipt scan: not a change to any entry, so nothing to refetch
+      if (isOcrEvent(data)) emitOcr(data)
       return
     }
     if (type.startsWith('ledger.')) {

@@ -142,6 +142,11 @@ VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
 VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
 VAPID_SUBJECT = env("VAPID_SUBJECT", default="mailto:admin@localhost")
 
+# --- Gemini (receipt OCR) ---
+# Google AI Studio key. Optional: without it the OCR features are unavailable.
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-3.6-flash")
+
 # --- Secret Santa ---
 # Fernet key that encrypts who draws whom while an event is running, so the DB alone never
 # reveals the pairing. Generate with:

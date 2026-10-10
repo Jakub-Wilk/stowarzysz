@@ -4,10 +4,11 @@ Amounts are integers in a currency's minor units (grosze for PLN, whole yen for 
 goods, a quantity of an item. Every function here sums exactly: nothing is ever lost to rounding.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from heapq import heapify, heappop, heappush
+from math import lcm
 
 BASE_CURRENCY = "PLN"  # what balances are kept in; a constant, since changing it rewrites history
 
@@ -72,6 +73,39 @@ def allocate(total: int, weights: list[int]) -> list[int]:
     for i in by_remainder[:leftover]:
         shares[i] += 1
     return shares
+
+
+def split_items(items: Sequence[tuple[int, Mapping[int, int]]]) -> dict[int, int]:
+    """Divide each item (`amount`, `{user id: weight}`) among its people and total what each owes.
+
+    Every item sums exactly, and its odd grosze go to whoever is furthest behind their exact share
+    so far on the whole receipt (ties: lower user id), so the rounding evens out from item to item
+    (four people sharing 108 zł of lines each owe 27 zł) instead of piling up on anyone. A single
+    item is plain largest-remainder `allocate`. Errors are tracked in whole units of 1/scale grosz,
+    so no floating point is involved."""
+    scale = lcm(*(sum(weights.values()) for _, weights in items if weights), 1)
+    behind: dict[int, int] = {}  # assigned minus exact share, times scale
+    owed: dict[int, int] = {}
+    for amount, weights in items:
+        total_weight = sum(weights.values())
+        if total_weight == 0:
+            continue
+        unit = scale // total_weight
+        shares = {u: amount * w // total_weight for u, w in sorted(weights.items())}
+        leftover = amount - sum(shares.values())
+        # exact share minus what the floor gave; those with nothing to round are left out
+        error = {
+            u: behind.get(u, 0) + (shares[u] * total_weight - amount * w) * unit
+            for u, w in sorted(weights.items())
+            if amount * w % total_weight
+        }
+        for u in sorted(error, key=lambda u: (error[u], u))[:leftover]:
+            shares[u] += 1
+            error[u] += scale
+        for u, share in shares.items():
+            owed[u] = owed.get(u, 0) + share
+            behind[u] = error.get(u, behind.get(u, 0))
+    return owed
 
 
 def settle_up(nets: Mapping[int, int], item: str = "") -> list[Debt]:

@@ -21,22 +21,49 @@ export function allocate(total: number, weights: number[]): number[] {
   return shares
 }
 
-/** Mirrors `ExpenseKind._owed`: each item divided among its sharers, the odd grosz taking turns
- * from item to item. Returns what each person owes in total. */
+const gcd = (a: bigint, b: bigint): bigint => (b === 0n ? a : gcd(b, a % b))
+
+/** Mirrors `ledger.money.split_items`: each item divided among its sharers, the odd grosze going
+ * to whoever is furthest behind their exact share so far on the whole receipt (ties: lower user
+ * id), so rounding evens out from item to item. Returns what each person owes in total. BigInt
+ * keeps the bookkeeping exact (errors are counted in 1/scale grosz). */
 export function owedFor(items: ExpenseItem[]): Map<number, number> {
+  const sumOf = (item: ExpenseItem) => BigInt(item.shares.reduce((sum, s) => sum + s.weight, 0))
+  let scale = 1n
+  for (const item of items) {
+    const sum = sumOf(item)
+    if (sum > 0n) scale = (scale / gcd(scale, sum)) * sum
+  }
+  const behind = new Map<number, bigint>() // assigned minus exact share, times scale
   const owed = new Map<number, number>()
-  items.forEach((item, position) => {
-    if (item.shares.length === 0) return
-    const weights = new Map(item.shares.map((s) => [s.user_id, s.weight]))
-    const ids = [...weights.keys()].sort((a, b) => a - b)
-    const turn = position % ids.length
-    const rotated = [...ids.slice(turn), ...ids.slice(0, turn)]
-    const split =
-      item.split === 'equal' ? rotated.map(() => 1) : rotated.map((u) => weights.get(u) ?? 0)
-    allocate(item.amount, split).forEach((amount, i) => {
-      owed.set(rotated[i], (owed.get(rotated[i]) ?? 0) + amount)
-    })
-  })
+  for (const item of items) {
+    const totalWeight = sumOf(item)
+    if (totalWeight === 0n) continue
+    const amount = BigInt(item.amount)
+    const unit = scale / totalWeight
+    const people = [...item.shares].sort((a, b) => a.user_id - b.user_id)
+    const shares = new Map(
+      people.map((s) => [s.user_id, (amount * BigInt(s.weight)) / totalWeight] as const),
+    )
+    let leftover = Number(amount) - [...shares.values()].reduce((sum, v) => sum + Number(v), 0)
+    const error = new Map<number, bigint>()
+    for (const { user_id: id, weight } of people) {
+      const exact = amount * BigInt(weight)
+      if (exact % totalWeight === 0n) continue
+      const given = (shares.get(id) ?? 0n) * totalWeight
+      error.set(id, (behind.get(id) ?? 0n) + (given - exact) * unit)
+    }
+    const order = [...error].sort(([ia, ea], [ib, eb]) => (ea === eb ? ia - ib : ea < eb ? -1 : 1))
+    for (const [id, err] of order) {
+      if (leftover-- <= 0) break
+      shares.set(id, (shares.get(id) ?? 0n) + 1n)
+      error.set(id, err + scale)
+    }
+    for (const [id, share] of shares) {
+      owed.set(id, (owed.get(id) ?? 0) + Number(share))
+      behind.set(id, error.get(id) ?? behind.get(id) ?? 0n)
+    }
+  }
   return owed
 }
 

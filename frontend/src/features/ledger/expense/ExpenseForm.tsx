@@ -1,4 +1,5 @@
-import { useState, type SubmitEvent } from 'react'
+import { Camera, LoaderCircle } from 'lucide-react'
+import { useRef, useState, type SubmitEvent } from 'react'
 
 import { SelectField } from '@/components/SelectField'
 import { Button } from '@/components/ui/button'
@@ -6,6 +7,9 @@ import { Input } from '@/components/ui/input'
 import { ItemsEditor } from '@/features/ledger/expense/ItemsEditor'
 import { PayersField } from '@/features/ledger/expense/PayersField'
 import { newRow, type Row, sharesOf } from '@/features/ledger/expense/rows'
+import { ScanProgress } from '@/features/ledger/expense/ScanProgress'
+import { scannedCurrency, scannedRows } from '@/features/ledger/expense/scannedRows'
+import { useReceiptScan } from '@/features/ledger/expense/useReceiptScan'
 import { allocate, owedFor, parseWeight } from '@/features/ledger/expense/split'
 import { SplitEditor } from '@/features/ledger/expense/SplitEditor'
 import { WORDING } from '@/features/ledger/expense/wording'
@@ -13,7 +17,9 @@ import { AmountField } from '@/features/ledger/form/AmountField'
 import { DateField, FormProblem, FormSection, Segmented } from '@/features/ledger/form/controls'
 import { Extras } from '@/features/ledger/form/Extras'
 import { todayInput, useMoney } from '@/features/ledger/format'
+import { MAX_PHOTOS } from '@/features/ledger/hooks'
 import { isItemized } from '@/features/ledger/kinds/helpers'
+import { ApiError } from '@/lib/api'
 import { MutationError } from '@/features/pacts/MutationError'
 import type {
   ExpenseInput,
@@ -136,6 +142,9 @@ export function ExpenseForm({
       : null,
   )
   const [localError, setLocalError] = useState<string | null>(null)
+  const receiptScan = useReceiptScan()
+  const [scanError, setScanError] = useState<unknown>(null)
+  const scanInput = useRef<HTMLInputElement>(null)
   const exponent = money.exponent(currency)
   const split: SplitKind = method === 'items' ? 'equal' : method
 
@@ -195,6 +204,34 @@ export function ExpenseForm({
       }
     }
     setMethod(next)
+  }
+
+  /** Read a receipt photo: its lines replace the receipt, split among everyone in for now. */
+  const scanReceipt = async (file: File) => {
+    setScanError(null)
+    try {
+      const receipt = await receiptScan.scan(file)
+      // the lines are in the receipt's currency: read them with its exponent, not the form's
+      const receiptCurrency = scannedCurrency(receipt, meta.currencies) ?? currency
+      const scanned = scannedRows(
+        receipt,
+        money.exponent(receiptCurrency),
+        people.map((p) => p.id),
+      )
+      if (scanned.length === 0) {
+        setScanError(
+          new ApiError(422, { detail: 'Nie znaleziono na paragonie żadnych pozycji z ceną.' }),
+        )
+        return
+      }
+      setCurrency(receiptCurrency)
+      setRows(scanned)
+      setMethod('items')
+      if (!title.trim() && receipt.merchant?.name) setTitle(receipt.merchant.name)
+      setPhotos((current) => (current.length < MAX_PHOTOS ? [...current, file] : current))
+    } catch (error) {
+      setScanError(error)
+    }
   }
 
   const problem = (): string | null => {
@@ -305,6 +342,32 @@ export function ExpenseForm({
           )
         }
       >
+        <div className="flex flex-col gap-2">
+          <input
+            ref={scanInput}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void scanReceipt(file)
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={receiptScan.pending}
+            onClick={() => scanInput.current?.click()}
+          >
+            {receiptScan.pending ? <LoaderCircle className="animate-spin" /> : <Camera />}
+            {receiptScan.pending ? 'Odczytywanie paragonu…' : 'Skanuj paragon'}
+          </Button>
+          {(receiptScan.pending || receiptScan.quarters > 0) && (
+            <ScanProgress quarters={receiptScan.quarters} />
+          )}
+          <MutationError error={scanError} />
+        </div>
         <Segmented
           label="Sposób podziału"
           size="sm"
