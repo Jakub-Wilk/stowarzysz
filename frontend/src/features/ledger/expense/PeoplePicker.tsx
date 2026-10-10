@@ -10,10 +10,22 @@ interface PeoplePickerProps {
   /** Avatars only (a receipt line); otherwise avatars with names. */
   compact?: boolean
   label: string
+  /** A short note beside someone's avatar (their shares or amount). */
+  badges?: ReadonlyMap<number, string>
+  /** Leave out the "wszyscy" shortcut. */
+  hideAll?: boolean
 }
 
 /** Toggle who shares a cost, plus a shortcut for everyone. */
-export function PeoplePicker({ people, selected, onChange, compact, label }: PeoplePickerProps) {
+export function PeoplePicker({
+  people,
+  selected,
+  onChange,
+  compact,
+  label,
+  badges,
+  hideAll,
+}: PeoplePickerProps) {
   const everyone = people.length > 0 && people.every((p) => selected.has(p.id))
   const toggle = (id: number) => {
     const next = new Set(selected)
@@ -42,18 +54,25 @@ export function PeoplePicker({ people, selected, onChange, compact, label }: Peo
           >
             <UserAvatar username={person.username} src={person.avatar_url} size="sm" />
             {!compact && <span className="text-base">{person.username}</span>}
+            {on && badges?.get(person.id) && (
+              <span className="pr-2 text-xs font-semibold tabular-nums">
+                {badges.get(person.id)}
+              </span>
+            )}
           </button>
         )
       })}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-8 px-2"
-        onClick={() => onChange(everyone ? new Set() : new Set(people.map((p) => p.id)))}
-      >
-        {everyone ? 'nikt' : 'wszyscy'}
-      </Button>
+      {!hideAll && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2"
+          onClick={() => onChange(everyone ? new Set() : new Set(people.map((p) => p.id)))}
+        >
+          {everyone ? 'nikt' : 'wszyscy'}
+        </Button>
+      )}
     </div>
   )
 }

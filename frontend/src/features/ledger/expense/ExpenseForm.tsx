@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ItemsEditor } from '@/features/ledger/expense/ItemsEditor'
 import { PayersField } from '@/features/ledger/expense/PayersField'
-import { newRow, type Row, sharesOf } from '@/features/ledger/expense/rows'
+import { newRow, rowItem, rowOf, type Row, sharesOf } from '@/features/ledger/expense/rows'
 import { ScanProgress } from '@/features/ledger/expense/ScanProgress'
 import { scannedCurrency, scannedRows } from '@/features/ledger/expense/scannedRows'
 import { useReceiptScan } from '@/features/ledger/expense/useReceiptScan'
@@ -90,7 +90,7 @@ export function ExpenseForm({
   const asInput = (minor: number) => toMoneyInput(minor, startExponent)
   const startItems = entry?.details.items ?? []
   const startPayers = entry?.details.payers ?? []
-  // a single total can be split any way; a receipt's lines are always split evenly
+  // a single total is one item named like the entry; anything else is a receipt
   const single = entry && !isItemized(entry) ? startItems[0] : null
 
   const [title, setTitle] = useState(entry?.title ?? '')
@@ -120,18 +120,7 @@ export function ExpenseForm({
       ),
   )
   const [rows, setRows] = useState<Row[]>(() =>
-    single
-      ? []
-      : startItems.map((item) =>
-          newRow(
-            item.shares.map((s) => s.user_id),
-            {
-              name: item.name,
-              price: asInput(item.amount),
-              custom: item.split === 'equal' ? null : { split: item.split, shares: item.shares },
-            },
-          ),
-        ),
+    single ? [] : startItems.map((item) => rowOf(item, startExponent)),
   )
   const [payer, setPayer] = useState<number | null>(
     startPayers.length === 1 ? startPayers[0].user_id : myId,
@@ -162,12 +151,7 @@ export function ExpenseForm({
   // what the form says right now, in the API's shape
   const items: ExpenseItem[] =
     method === 'items'
-      ? rows.map((row) => ({
-          name: row.name.trim(),
-          amount: parseMoney(row.price, exponent) ?? 0,
-          split: row.custom?.split ?? 'equal',
-          shares: row.custom?.shares ?? sharesOf(row.people),
-        }))
+      ? rows.map((row) => rowItem(row, exponent))
       : [
           {
             name: title.trim() || words.noun,
@@ -242,6 +226,16 @@ export function ExpenseForm({
       return 'Każda pozycja potrzebuje nazwy i poprawnej ceny.'
     }
     if (items.some((item) => item.shares.length === 0)) return 'Zaznacz, kogo to dotyczy.'
+    if (
+      method === 'items' &&
+      items.some(
+        (item) =>
+          item.split === 'exact' &&
+          item.shares.reduce((sum, s) => sum + s.weight, 0) !== item.amount,
+      )
+    ) {
+      return 'Kwoty osób w każdej pozycji muszą dać razem jej cenę.'
+    }
     if (split === 'exact' && method !== 'items') {
       const assigned = typedShares.reduce((sum, s) => sum + s.weight, 0)
       if (assigned !== total) {
@@ -281,19 +275,6 @@ export function ExpenseForm({
     <form onSubmit={submit} className="flex max-w-md flex-col gap-8">
       {onKind && <Segmented label="Rodzaj wpisu" options={KINDS} value={kind} onChange={onKind} />}
 
-      <AmountField
-        id="entry-amount"
-        meta={meta}
-        currency={currency}
-        onCurrency={setCurrency}
-        date={date}
-        amount={amount}
-        onAmount={method === 'items' ? undefined : setAmount}
-        total={total}
-        caption="Suma pozycji z paragonu"
-        autoFocus={!entry}
-      />
-
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
           <SelectField
@@ -305,6 +286,7 @@ export function ExpenseForm({
           />
           <Input
             aria-label={words.titleLabel}
+            autoFocus={!entry}
             value={title}
             maxLength={200}
             placeholder={words.titlePlaceholder}
@@ -326,6 +308,20 @@ export function ExpenseForm({
         paid={paid}
         currency={currency}
       />
+
+      <FormSection title="Ile">
+        <AmountField
+          id="entry-amount"
+          meta={meta}
+          currency={currency}
+          onCurrency={setCurrency}
+          date={date}
+          amount={amount}
+          onAmount={method === 'items' ? undefined : setAmount}
+          total={total}
+          caption="Suma pozycji z paragonu"
+        />
+      </FormSection>
 
       <FormSection
         title={words.partHeading}
