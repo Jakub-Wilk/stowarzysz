@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 
 import { useBirthdays } from '@/features/birthdays/hooks'
-import { useSanta } from '@/features/secretsanta/hooks'
 import { birthdayFor, type ThemeId } from '@/themes'
 import { useTheme } from '@/themes/context'
 import { BirthdayLayer } from '@/themes/BirthdayLayer'
@@ -19,13 +18,9 @@ type EventStatus = boolean | undefined
  * read its active flag here. A seasonal theme still beats all of them (see `getSeasonalTheme`).
  */
 function useEventThemes(): [EventStatus, ThemeId][] {
-  const santa = useSanta().data?.active
   const birthdays = useBirthdays().data
   const { selected } = useTheme()
-  return [
-    [santa, 'christmas'],
-    [birthdays && birthdays.length > 0, birthdayFor(selected)],
-  ]
+  return [[birthdays && birthdays.length > 0, birthdayFor(selected)]]
 }
 
 /**

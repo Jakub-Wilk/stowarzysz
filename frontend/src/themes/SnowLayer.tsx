@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react'
 
-const FLAKES = Array.from({ length: 26 }, (_, i) => ({
+const FLAKES = Array.from({ length: 40 }, (_, i) => ({
   x: (i * 37) % 100,
-  size: 3 + ((i * 5) % 5),
-  duration: 12 + ((i * 7) % 11),
+  size: 2 + ((i * 5) % 7),
+  // Big flakes are nearer: they fall faster and are softly out of focus.
+  duration: 20 - ((i * 5) % 7) * 1.5 + ((i * 7) % 5),
   delay: -((i * 3) % 17),
   drift: ((i % 2 ? 1 : -1) * (2 + (i % 4))) as number,
 }))
@@ -22,6 +23,7 @@ export function SnowLayer() {
               width: f.size,
               height: f.size,
               animationDelay: `${f.delay}s`,
+              filter: f.size >= 6 ? 'blur(1.2px)' : undefined,
               '--snow-duration': `${f.duration}s`,
               '--snow-drift': `${f.drift}vw`,
             } as CSSProperties

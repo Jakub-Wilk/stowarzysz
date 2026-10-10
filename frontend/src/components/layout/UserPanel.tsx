@@ -34,7 +34,7 @@ const CHROMA_GRADIENT =
 
 /**
  * Theme picker and base color sliders. All are remembered per browser. While a theme is forced
- * over the user's pick (christmas during Secret Santa) they are shaded and inert.
+ * over the user's pick (a season or an event) they are shaded and inert.
  */
 function AppearanceSettings() {
   const { theme, selected, setTheme, themes } = useTheme()

@@ -88,7 +88,7 @@ export function getStoredTheme(): ThemeId {
 }
 
 /**
- * A theme forced over the user's pick by a running event (christmas during Secret Santa; see
+ * A theme forced over the user's pick by a running event (birthday themes; see
  * `EventThemeSync`). Remembered so a reload paints it before the app knows whether it still applies.
  */
 export function getStoredOverride(): ThemeId | null {
@@ -210,7 +210,7 @@ const FIXED_COLOR_THEMES: ThemeId[] = [...AUTOMATIC_THEMES, 'capybara', 'capybar
 
 export const hasFixedColors = (id: ThemeId): boolean => FIXED_COLOR_THEMES.includes(id)
 
-/** Themes the user can pick. Christmas applies by itself in December and during Secret Santa. */
+/** Themes the user can pick. Christmas applies by itself in December. */
 export const selectableThemes = themes.filter((t) => !AUTOMATIC_THEMES.includes(t.id))
 
 /** The picker's groups, in order: Jasne, then Ciemne. */
