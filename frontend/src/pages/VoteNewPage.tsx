@@ -87,7 +87,7 @@ export function VoteNewPage() {
           />
         </div>
       ) : (
-        <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
+        <form data-slot="entry-form" onSubmit={submit} className="flex max-w-md flex-col gap-6">
           <div className="flex flex-col gap-2">
             <Label htmlFor="title">Przedmiot głosowania</Label>
             <Input

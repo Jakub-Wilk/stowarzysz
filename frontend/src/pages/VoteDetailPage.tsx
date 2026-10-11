@@ -88,7 +88,7 @@ function OpenVote({ poll }: { poll: PollDetail }) {
       <Progress poll={poll} />
 
       {poll.can_vote && BallotInput && (
-        <section className="flex flex-col gap-4">
+        <section data-slot="glass-card" className="flex flex-col gap-4">
           <h3 className="text-lg font-semibold">Twój głos</h3>
           {poll.my.vetoed ? (
             <p className="rounded-lg border border-negative/60 bg-negative/10 p-4 text-base">

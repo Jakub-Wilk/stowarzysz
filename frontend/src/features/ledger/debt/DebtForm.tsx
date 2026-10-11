@@ -117,7 +117,7 @@ export function DebtForm({
   const label = entry ? 'Zapisz zmiany' : 'Zapisz dług'
 
   return (
-    <form onSubmit={submit} className="flex max-w-md flex-col gap-8">
+    <form data-slot="entry-form" onSubmit={submit} className="flex max-w-md flex-col gap-8">
       <Segmented label="Kto komu" options={DIRECTIONS} value={direction} onChange={setDirection} />
 
       <FormSection title={owed ? 'Kto jest Ci winien' : 'Komu jesteś winien(-na)'}>

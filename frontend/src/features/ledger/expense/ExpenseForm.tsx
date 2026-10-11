@@ -272,7 +272,7 @@ export function ExpenseForm({
   const label = entry ? 'Zapisz zmiany' : words.submit
 
   return (
-    <form onSubmit={submit} className="flex max-w-md flex-col gap-8">
+    <form data-slot="entry-form" onSubmit={submit} className="flex max-w-md flex-col gap-8">
       {onKind && <Segmented label="Rodzaj wpisu" options={KINDS} value={kind} onChange={onKind} />}
 
       <div className="flex flex-col gap-3">

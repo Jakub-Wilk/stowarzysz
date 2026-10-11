@@ -70,6 +70,7 @@ function CreateFormShell({
   const message = errors && (errors.general ?? Object.values(errors.fields).join(' '))
   return (
     <form
+      data-slot="entry-form"
       onSubmit={(e: SubmitEvent<HTMLFormElement>) => {
         e.preventDefault()
         if (canSubmit && !pending) onSubmit()
