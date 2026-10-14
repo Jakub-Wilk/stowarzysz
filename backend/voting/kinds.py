@@ -96,7 +96,6 @@ class ScoreKind(PollKind):
     key = "score"
     MIN = -5
     MAX = 5
-    NEUTRAL_LIMIT = Fraction(1, 2)  # |average| <= 0.5 is neutral
 
     def validate_config(self, config: Any) -> dict[str, Any]:
         if config not in ({}, None):
@@ -131,9 +130,9 @@ class ScoreKind(PollKind):
             return result
         mean = Fraction(sum(e.ballot["value"] for e in entries), len(entries))  # exact thresholds
         result["score"] = round(float(mean), 3)
-        if mean > self.NEUTRAL_LIMIT:
+        if mean > 0:
             result["tone"] = "positive"
-        elif mean < -self.NEUTRAL_LIMIT:
+        elif mean < 0:
             result["tone"] = "negative"
         else:
             result["tone"] = "neutral"
@@ -153,7 +152,7 @@ def _username_error(user: Any, username: str) -> str | None:
 class ProfileChangeKind(ScoreKind):
     """Base for votes to change another member's profile: everyone votes, nobody can cut it short.
 
-    Passes when the average score is at least 1; there is no veto. The change is applied in
+    Passes when the average score is positive; there is no veto. The change is applied in
     `on_close`, so it also happens when the poll expires.
     """
 
@@ -161,7 +160,6 @@ class ProfileChangeKind(ScoreKind):
     allows_abstain = False
     allows_early_close = False
     everyone_participates = True
-    APPROVAL_SCORE = 1
 
     def _target(self, config: Any) -> Any:
         """The active member the vote is about, or a `ValidationError`."""
@@ -179,10 +177,7 @@ class ProfileChangeKind(ScoreKind):
 
     def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
         result = super().compute_result(config, entries)
-        # `sum >= n` is the exact form of `average >= 1`
-        approved = bool(entries) and (
-            sum(e.ballot["value"] for e in entries) >= self.APPROVAL_SCORE * len(entries)
-        )
+        approved = bool(entries) and sum(e.ballot["value"] for e in entries) > 0
         result["approved"] = approved
         result["tone"] = "positive" if approved else "negative"
         return result

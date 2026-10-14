@@ -130,7 +130,7 @@ def test_nickname_rejects_unknown_and_inactive_target(alice: User, bob: User) ->
 
 def test_approved_nickname_vote_renames_the_target(alice: User, bob: User, carol: User) -> None:
     poll_id = propose_nickname(alice, bob).json()["id"]
-    vote_all(poll_id, {alice: 2, bob: 0, carol: 1})  # average 1: passes
+    vote_all(poll_id, {alice: 2, bob: 0, carol: 1})  # average > 0: passes
     poll = Poll.objects.get(pk=poll_id)
     assert poll.status == "closed" and poll.result["approved"] is True
     assert poll.result["applied"] is True
@@ -138,7 +138,7 @@ def test_approved_nickname_vote_renames_the_target(alice: User, bob: User, carol
     assert bob.username == "bobby"
 
 
-@pytest.mark.parametrize("scores", [(1, 0, 1), (-5, 5, 2), (0, 0, 0)])
+@pytest.mark.parametrize("scores", [(-1, 0, 1), (-5, 5, 0), (0, 0, 0)])
 def test_nickname_vote_below_threshold_changes_nothing(
     alice: User, bob: User, carol: User, scores: tuple[int, int, int]
 ) -> None:

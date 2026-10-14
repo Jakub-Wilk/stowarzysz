@@ -80,9 +80,8 @@ function CreateFormShell({
       <TargetPicker people={people} value={target} onChange={onTarget} />
       {target !== null && children}
       <p className="text-base text-muted-foreground">
-        Głosują wszyscy posłowie. Zmiana wejdzie w życie, jeśli średnia ocen wyniesie co najmniej 1,
-        a nikt nie użyje weta. Głosowanie kończy się po oddaniu wszystkich głosów albo po 72
-        godzinach.
+        Głosują wszyscy posłowie. Zmiana wejdzie w życie, jeśli średnia ocen będzie dodatnia, a nikt
+        nie użyje weta. Głosowanie kończy się po oddaniu wszystkich głosów albo po 72 godzinach.
       </p>
       {message && (
         <span role="alert" className="text-base text-destructive">

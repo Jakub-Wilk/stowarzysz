@@ -345,17 +345,18 @@ def test_early_end_with_no_ballots(poll: Poll, alice) -> None:
 @pytest.mark.parametrize(
     ("values", "tone"),
     [
-        ([1, 0], "neutral"),  # exactly +0.5
-        ([-1, 0], "neutral"),  # exactly -0.5
+        ([1, 0], "positive"),  # any positive average passes
+        ([-1, 0], "negative"),
         ([0], "neutral"),
-        ([2, 0, 0, 0], "neutral"),  # +0.5 again, with more voters
+        ([1, -1], "neutral"),  # exactly zero
+        ([1, 0, 0, 0], "positive"),
         ([1, 1, 0], "positive"),  # 0.667
         ([3, 0, 0, 0], "positive"),
         ([-1, -1, 0], "negative"),
         ([-3, 0, 0, 0], "negative"),
     ],
 )
-def test_tone_thresholds(values: list[int], tone: str) -> None:
+def test_tone_follows_sign_of_average(values: list[int], tone: str) -> None:
     entries = [Entry({"value": v}, False) for v in values]
     assert ScoreKind().compute_result({}, entries)["tone"] == tone
 
