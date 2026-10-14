@@ -3,6 +3,8 @@ import type { ComponentType } from 'react'
 import type { Ballot, PollCreatePayload, PollDetail, PollResult, UserBrief } from '@/lib/api-types'
 
 export interface BallotInputProps {
+  /** The vote being cast on (kinds with options read them from its config). */
+  poll: PollDetail
   /** The signed-in user's current ballot, if any. */
   value: Ballot | null
   pending: boolean

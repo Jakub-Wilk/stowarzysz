@@ -99,6 +99,7 @@ function OpenVote({ poll }: { poll: PollDetail }) {
             </p>
           ) : (
             <BallotInput
+              poll={poll}
               // remount when the server's copy changes so the picker follows other devices
               key={JSON.stringify(poll.my_ballot)}
               value={poll.my_ballot}

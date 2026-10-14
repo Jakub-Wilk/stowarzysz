@@ -3,20 +3,21 @@ import { useNavigate } from 'react-router'
 
 import { BackLink } from '@/components/layout/BackLink'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMe } from '@/features/auth/hooks'
-import { UserAvatar } from '@/features/auth/UserAvatar'
 import { useCreatePoll, usePeople } from '@/features/voting/hooks'
 import { getKindUI } from '@/features/voting/kinds'
+import { ParticipantsField } from '@/features/voting/ParticipantsField'
 import { formErrors } from '@/lib/api-errors'
-import { cn } from '@/lib/utils'
 
 const KIND_CHOICES = [
-  { key: 'score', label: 'Zwykłe' },
+  { key: 'score', label: 'Na minus pięć' },
   { key: 'nickname', label: 'Zmiana nicku' },
   { key: 'avatar', label: 'Zmiana zdjęcia' },
+  { key: 'single_choice', label: 'Wybierz 1' },
+  { key: 'multi_choice', label: 'Wybierz wiele' },
+  { key: 'ranked_choice', label: 'Ranking' },
 ] as const
 
 /**
@@ -33,14 +34,6 @@ export function VoteNewPage() {
   const [chosen, setChosen] = useState<ReadonlySet<number>>(new Set())
 
   const others = (people.data ?? []).filter((p) => p.id !== me?.id)
-  const allChosen = others.length > 0 && others.every((p) => chosen.has(p.id))
-
-  const toggle = (id: number) =>
-    setChosen((current) => {
-      const next = new Set(current)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
 
   const submit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -59,13 +52,16 @@ export function VoteNewPage() {
     <>
       <BackLink to="/voting">Sejmik</BackLink>
       <h2 className="mb-6 text-2xl font-semibold">Nowe głosowanie</h2>
-      <div className="mb-6 flex max-w-md gap-2" role="group" aria-label="Rodzaj głosowania">
+      <div
+        className="mb-6 grid max-w-md grid-cols-2 gap-2 sm:grid-cols-3"
+        role="group"
+        aria-label="Rodzaj głosowania"
+      >
         {KIND_CHOICES.map(({ key, label }) => (
           <Button
             key={key}
             type="button"
             variant={kindKey === key ? 'default' : 'outline'}
-            className={cn('flex-1')}
             aria-pressed={kindKey === key}
             onClick={() => {
               setKindKey(key)
@@ -105,51 +101,13 @@ export function VoteNewPage() {
             )}
           </div>
 
-          <fieldset className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <legend className="text-base font-medium">Którzy posłowie głosują?</legend>
-              {others.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    setChosen(allChosen ? new Set() : new Set(others.map((p) => p.id)))
-                  }
-                >
-                  {allChosen ? 'Odznacz wszystkich' : 'Zaznacz wszystkich'}
-                </Button>
-              )}
-            </div>
-            {me && (
-              <div className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 opacity-80">
-                <Checkbox checked disabled aria-label="Wnioskodawca" />
-                <UserAvatar username={me.username} src={me.avatar_url} size="md" />
-                <span className="text-metal text-lg font-medium">{me.username} (wnioskodawca)</span>
-              </div>
-            )}
-            {people.isPending && (
-              <span className="text-base text-muted-foreground">Ładowanie…</span>
-            )}
-            {others.map((person) => (
-              <label
-                key={person.id}
-                className="flex cursor-pointer items-center gap-4 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-accent"
-              >
-                <Checkbox
-                  checked={chosen.has(person.id)}
-                  onCheckedChange={() => toggle(person.id)}
-                  aria-label={person.username}
-                />
-                <UserAvatar username={person.username} src={person.avatar_url} size="md" />
-                <span className="text-metal text-lg font-medium">{person.username}</span>
-              </label>
-            ))}
-            {errors.fields.participant_ids && create.isError && (
-              <span role="alert" className="text-base text-destructive">
-                {errors.fields.participant_ids}
-              </span>
-            )}
-          </fieldset>
+          <ParticipantsField
+            people={others}
+            chosen={chosen}
+            onChange={setChosen}
+            loading={people.isPending}
+            error={create.isError ? errors.fields.participant_ids : undefined}
+          />
 
           {create.isError && errors.general && (
             <span role="alert" className="text-base text-destructive">

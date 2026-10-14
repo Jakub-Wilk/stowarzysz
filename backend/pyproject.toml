@@ -54,6 +54,7 @@ include = [
   "pacts/**",
   "ledger/**",
   "tests/test_pact_flows.py",
+  "tests/test_option_polls.py",
 ]
 
 [tool.ty.overrides.rules]

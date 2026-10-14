@@ -122,6 +122,10 @@ export interface PollDetail extends PollListItem {
   can_abstain: boolean
   /** The signed-in user's own veto or abstention reason. */
   my_reason: string
+  /** The creator can call a follow-up vote over the options that tied (option polls only). */
+  can_tie_break: boolean
+  /** Id of the follow-up vote called after a tie, if there is one. */
+  tie_break_poll: number | null
   /** Picture proposed by a profile-picture vote (kept after it closes). */
   proposed_avatar_url: string | null
   /** The picture an approved profile-picture vote replaced; null if none (or an older vote). */

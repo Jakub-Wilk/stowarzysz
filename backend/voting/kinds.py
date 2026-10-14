@@ -18,6 +18,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from rest_framework import serializers
 
+from voting import tally
+
 if TYPE_CHECKING:
     from voting.models import Poll
 
@@ -28,6 +30,16 @@ class Entry:
 
     ballot: dict[str, Any]
     vetoed: bool
+
+
+@dataclass(frozen=True)
+class ResolvedBallot:
+    """A validated ballot, plus the config change casting it caused (an option added to an open
+    pool), if any."""
+
+    ballot: dict[str, Any]
+    config: dict[str, Any] | None = None  # the poll's new config, when casting changed it
+    added_option: dict[str, str] | None = None  # `{"id", "label"}` of an option created by it
 
 
 class PollKind(ABC):
@@ -45,6 +57,11 @@ class PollKind(ABC):
     @abstractmethod
     def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
         """Return the cleaned ballot or raise a `serializers.ValidationError`."""
+
+    def resolve_ballot(self, poll: Poll, ballot: Any) -> ResolvedBallot:
+        """Validate a ballot being cast on `poll` (locked). Override when casting can change the
+        poll itself; the default just calls `validate_ballot`."""
+        return ResolvedBallot(self.validate_ballot(poll.config, ballot))
 
     @abstractmethod
     def veto_ballot(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -399,6 +416,249 @@ class ResolutionJudgmentKind(PollKind):
             return {"applied": False, "apply_error": "Nie udało się zastosować oceny."}
 
 
+MIN_OPTIONS = 2
+MAX_OPTIONS = 10  # when the poll is created
+MAX_OPTIONS_OPEN = 20  # once participants have added more to an open pool
+MAX_LABEL_LENGTH = 60
+
+
+def _clean_label(value: Any, field: str) -> str:
+    if not isinstance(value, str):
+        raise serializers.ValidationError({field: "Opcja musi być tekstem."})
+    label = " ".join(value.split())
+    if not label or len(label) > MAX_LABEL_LENGTH:
+        raise serializers.ValidationError(
+            {field: f"Opcja musi mieć od 1 do {MAX_LABEL_LENGTH} znaków."}
+        )
+    return label
+
+
+class OptionsKind(PollKind):
+    """Base for votes over options the creator defines (single, multi, ranked).
+
+    Config `{"options": [{"id", "label"}, ...]}`; the client sends plain labels and the ids are
+    assigned here (`o1`, `o2`, ...). With `open_options` (single and multi only) a participant
+    can add one new option with each vote: the ballot request then carries `new_option`, which
+    `resolve_ballot` turns into an id-only ballot and a longer option list. The ballots stored
+    and the result only ever mention option ids. Every result has `options` (`id`, `label`,
+    `count`), `winners` (ids), `tie` and `tone`.
+    """
+
+    allows_veto = False
+    ALLOWED_CONFIG: ClassVar[frozenset[str]] = frozenset({"options"})
+
+    def validate_config(self, config: Any) -> dict[str, Any]:
+        if not isinstance(config, dict):
+            raise serializers.ValidationError("Konfiguracja musi być obiektem.")
+        for key in config.keys() - self.ALLOWED_CONFIG:
+            message = (
+                "Ten rodzaj głosowania nie pozwala uczestnikom dodawać opcji."
+                if key == "open_options"
+                else f"Nieznane ustawienie: {key}."
+            )
+            raise serializers.ValidationError({key: message})
+        raw = config.get("options")
+        if not isinstance(raw, list) or not MIN_OPTIONS <= len(raw) <= MAX_OPTIONS:
+            raise serializers.ValidationError(
+                {"options": f"Podaj od {MIN_OPTIONS} do {MAX_OPTIONS} opcji."}
+            )
+        labels = [_clean_label(value, "options") for value in raw]
+        if len({label.casefold() for label in labels}) != len(labels):
+            raise serializers.ValidationError({"options": "Opcje muszą się różnić."})
+        cleaned: dict[str, Any] = {
+            "options": [{"id": f"o{n}", "label": label} for n, label in enumerate(labels, 1)]
+        }
+        open_options = config.get("open_options", False)
+        if not isinstance(open_options, bool):
+            raise serializers.ValidationError(
+                {"open_options": "Wartość musi być prawdą lub fałszem."}
+            )
+        if open_options:
+            cleaned["open_options"] = True
+        return cleaned | self.clean_extra_config(config, len(labels))
+
+    def clean_extra_config(self, config: dict[str, Any], option_count: int) -> dict[str, Any]:
+        """Kind-specific settings beyond the options (already limited to `ALLOWED_CONFIG`)."""
+        return {}
+
+    @staticmethod
+    def option_ids(config: dict[str, Any]) -> list[str]:
+        return [option["id"] for option in config["options"]]
+
+    def resolve_ballot(self, poll: Poll, ballot: Any) -> ResolvedBallot:
+        if not isinstance(ballot, dict):
+            raise serializers.ValidationError("Nieprawidłowy głos.")
+        if "new_option" not in ballot:
+            return super().resolve_ballot(poll, ballot)
+        config = poll.config
+        if not config.get("open_options"):
+            raise serializers.ValidationError("W tym głosowaniu nie można dodawać opcji.")
+        label = _clean_label(ballot["new_option"], "new_option")
+        options = config["options"]
+        existing = next((o for o in options if o["label"].casefold() == label.casefold()), None)
+        new_config: dict[str, Any] | None = None
+        added: dict[str, str] | None = None
+        if existing is not None:  # already there: the vote simply goes to it
+            option_id = existing["id"]
+        else:
+            if len(options) >= MAX_OPTIONS_OPEN:
+                raise serializers.ValidationError(
+                    {"new_option": f"Osiągnięto limit {MAX_OPTIONS_OPEN} opcji."}
+                )
+            added = {"id": f"o{max(int(o['id'][1:]) for o in options) + 1}", "label": label}
+            option_id = added["id"]
+            new_config = {**config, "options": [*options, added]}
+        rest = {key: value for key, value in ballot.items() if key != "new_option"}
+        cleaned = self.validate_ballot(new_config or config, self.with_option(rest, option_id))
+        return ResolvedBallot(cleaned, new_config, added)
+
+    def with_option(self, ballot: dict[str, Any], option_id: str) -> dict[str, Any]:
+        """`ballot` (without `new_option`) extended to include the option just added."""
+        raise serializers.ValidationError("W tym głosowaniu nie można dodawać opcji.")
+
+    def veto_ballot(self, config: dict[str, Any]) -> dict[str, Any]:
+        return {}  # never used: there is no veto
+
+    def picks_result(
+        self, config: dict[str, Any], votes_cast: int, counts: dict[str, int]
+    ) -> dict[str, Any]:
+        ids = self.option_ids(config)
+        order = {option_id: i for i, option_id in enumerate(ids)}
+        rows = sorted(
+            (
+                {"id": o["id"], "label": o["label"], "count": counts[o["id"]]}
+                for o in config["options"]
+            ),
+            key=lambda row: (-row["count"], order[row["id"]]),
+        )
+        winners = tally.top_ids(ids, counts)
+        return {
+            "votes_cast": votes_cast,
+            "options": rows,
+            "winners": winners,
+            "tie": len(winners) > 1,
+            "tone": "positive" if len(winners) == 1 else "neutral",
+        }
+
+
+class SingleChoiceKind(OptionsKind):
+    """Everyone picks one option; the most picked wins. Ballot `{"choice": "o2"}`."""
+
+    key = "single_choice"
+    ALLOWED_CONFIG = frozenset({"options", "open_options"})
+
+    def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
+        choice = ballot.get("choice") if isinstance(ballot, dict) else None
+        if not isinstance(choice, str) or choice not in self.option_ids(config):
+            raise serializers.ValidationError("Wybierz jedną z opcji.")
+        return {"choice": choice}
+
+    def with_option(self, ballot: dict[str, Any], option_id: str) -> dict[str, Any]:
+        if ballot.get("choice") is not None:
+            raise serializers.ValidationError(
+                "Wybierz istniejącą opcję albo dodaj nową, nie obie naraz."
+            )
+        return {"choice": option_id}
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        counts = tally.count_picks(self.option_ids(config), ([e.ballot["choice"]] for e in entries))
+        return self.picks_result(config, len(entries), counts)
+
+
+class MultiChoiceKind(OptionsKind):
+    """Everyone ticks the options they approve of (optionally at most `max_choices`); the most
+    approved win. Ballot `{"choices": ["o1", "o3"]}`."""
+
+    key = "multi_choice"
+    ALLOWED_CONFIG = frozenset({"options", "open_options", "max_choices"})
+
+    def clean_extra_config(self, config: dict[str, Any], option_count: int) -> dict[str, Any]:
+        if "max_choices" not in config:
+            return {}
+        limit = config["max_choices"]
+        if (
+            not isinstance(limit, int)
+            or isinstance(limit, bool)
+            or not 1 <= limit <= option_count - 1
+        ):
+            raise serializers.ValidationError(
+                {"max_choices": f"Limit wyborów musi być liczbą od 1 do {option_count - 1}."}
+            )
+        return {"max_choices": limit}
+
+    def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
+        choices = ballot.get("choices") if isinstance(ballot, dict) else None
+        ids = self.option_ids(config)
+        if (
+            not isinstance(choices, list)
+            or not choices
+            or not all(isinstance(c, str) and c in ids for c in choices)
+            or len(set(choices)) != len(choices)
+        ):
+            raise serializers.ValidationError("Wybierz co najmniej jedną z opcji, każdą raz.")
+        limit = config.get("max_choices")
+        if limit is not None and len(choices) > limit:
+            raise serializers.ValidationError(f"Możesz wybrać najwyżej {limit} opcji.")
+        return {"choices": [i for i in ids if i in choices]}
+
+    def with_option(self, ballot: dict[str, Any], option_id: str) -> dict[str, Any]:
+        choices = ballot.get("choices", [])
+        if not isinstance(choices, list):
+            raise serializers.ValidationError("Głos musi mieć postać {'choices': [...]}.")
+        return {"choices": choices if option_id in choices else [*choices, option_id]}
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        counts = tally.count_picks(self.option_ids(config), (e.ballot["choices"] for e in entries))
+        return self.picks_result(config, len(entries), counts)
+
+
+class RankedChoiceKind(OptionsKind):
+    """Everyone ranks the options, best first; counted with the Schulze method. Ballot
+    `{"ranking": ["o3", "o1", ...]}` (may leave options out: they count as tied for last)."""
+
+    key = "ranked_choice"
+
+    def validate_ballot(self, config: dict[str, Any], ballot: Any) -> dict[str, Any]:
+        ranking = ballot.get("ranking") if isinstance(ballot, dict) else None
+        ids = self.option_ids(config)
+        if (
+            not isinstance(ranking, list)
+            or not ranking
+            or not all(isinstance(r, str) and r in ids for r in ranking)
+            or len(set(ranking)) != len(ranking)
+        ):
+            raise serializers.ValidationError("Uszereguj opcje, każdą najwyżej raz.")
+        return {"ranking": ranking}
+
+    def compute_result(self, config: dict[str, Any], entries: Sequence[Entry]) -> dict[str, Any]:
+        ids = self.option_ids(config)
+        rankings = [e.ballot["ranking"] for e in entries]
+        outcome = tally.schulze(ids, rankings)
+        first_choices = tally.count_picks(ids, ([r[0]] for r in rankings))
+        order = {option_id: i for i, option_id in enumerate(ids)}
+        rows = sorted(
+            (
+                {
+                    "id": o["id"],
+                    "label": o["label"],
+                    "count": first_choices[o["id"]],
+                    "wins": outcome.wins[o["id"]],
+                }
+                for o in config["options"]
+            ),
+            key=lambda row: (-row["wins"], order[row["id"]]),
+        )
+        return {
+            "votes_cast": len(entries),
+            "options": rows,
+            "winners": outcome.winners,
+            "tie": len(outcome.winners) > 1,
+            "tone": "positive" if len(outcome.winners) == 1 else "neutral",
+            "pairwise": outcome.pairwise,
+            "condorcet_winner": outcome.condorcet_winner,
+        }
+
+
 KINDS: dict[str, PollKind] = {}
 
 
@@ -419,3 +679,6 @@ register(NicknameKind())
 register(AvatarKind())
 register(PactRulingKind())
 register(ResolutionJudgmentKind())
+register(SingleChoiceKind())
+register(MultiChoiceKind())
+register(RankedChoiceKind())

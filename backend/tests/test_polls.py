@@ -599,4 +599,11 @@ def test_everyone_abstaining_gives_no_score(poll: Poll, alice, bob, carol) -> No
 
 def test_only_score_style_kinds_allow_abstaining() -> None:
     allowed = {key for key, kind in kinds.KINDS.items() if kind.allows_abstain}
-    assert allowed == {"score", "pact_ruling", "resolution_judgment"}
+    assert allowed == {
+        "score",
+        "pact_ruling",
+        "resolution_judgment",
+        "single_choice",
+        "multi_choice",
+        "ranked_choice",
+    }

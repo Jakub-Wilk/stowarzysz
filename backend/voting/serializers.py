@@ -7,7 +7,7 @@ from accounts.avatars import process_avatar
 from accounts.serializers import PersonSerializer as UserBriefSerializer
 from voting.kinds import get_kind
 from voting.models import Poll, PollParticipant
-from voting.services import REACTION_EMOJI
+from voting.services import REACTION_EMOJI, find_tie_break, tied_winners
 
 
 class MySerializer(serializers.Serializer):
@@ -88,6 +88,8 @@ class PollDetailSerializer(PollSerializer):
     can_veto = serializers.SerializerMethodField()
     can_abstain = serializers.SerializerMethodField()
     my_reason = serializers.SerializerMethodField()
+    can_tie_break = serializers.SerializerMethodField()
+    tie_break_poll = serializers.SerializerMethodField()
     proposed_avatar_url = serializers.SerializerMethodField()
     previous_avatar_url = serializers.SerializerMethodField()
 
@@ -103,6 +105,8 @@ class PollDetailSerializer(PollSerializer):
             "can_veto",
             "can_abstain",
             "my_reason",
+            "can_tie_break",
+            "tie_break_poll",
             "proposed_avatar_url",
             "previous_avatar_url",
         )
@@ -155,6 +159,19 @@ class PollDetailSerializer(PollSerializer):
             and poll.creator_id == self.context["request"].user.pk
             and get_kind(poll.kind).allows_early_close
         )
+
+    def get_can_tie_break(self, poll: Poll) -> bool:
+        return (
+            poll.creator_id == self.context["request"].user.pk
+            and bool(tied_winners(poll))
+            and self.get_tie_break_poll(poll) is None
+        )
+
+    def get_tie_break_poll(self, poll: Poll) -> int | None:
+        if not tied_winners(poll):
+            return None
+        follow_up = find_tie_break(poll.pk)
+        return follow_up.pk if follow_up else None
 
     def get_proposed_avatar_url(self, poll: Poll) -> str | None:
         return poll.proposed_avatar.url if poll.proposed_avatar else None

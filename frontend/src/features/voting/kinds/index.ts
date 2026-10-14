@@ -17,6 +17,18 @@ import {
   RulingResultDisplay,
 } from '@/features/voting/kinds/ruling'
 import {
+  MultiBallotInput,
+  MultiCreateForm,
+  OptionsProposal,
+  OptionsResultChip,
+  RankedCreateForm,
+  RankedResultDisplay,
+  SingleBallotInput,
+  SingleCreateForm,
+  SingleResultDisplay,
+} from '@/features/voting/kinds/options'
+import { RankedBallotInput } from '@/features/voting/kinds/RankedBallot'
+import {
   ScoreBallotInput,
   ScoreResultChip,
   ScoreResultDisplay,
@@ -35,8 +47,25 @@ const score: PollKindUI = {
 /** Votes to change another member's profile: scored like any vote, applied when they pass. */
 const profileChange = { ...score, ResultDisplay: ProfileResultDisplay }
 
+/** Votes over options the creator defines; the pick-style differs, the rest is shared. */
+const singleChoice: PollKindUI = {
+  BallotInput: SingleBallotInput,
+  ResultDisplay: SingleResultDisplay,
+  ResultChip: OptionsResultChip,
+  Proposal: OptionsProposal,
+  CreateForm: SingleCreateForm,
+}
+
 const kinds: Record<string, PollKindUI> = {
   score,
+  single_choice: singleChoice,
+  multi_choice: { ...singleChoice, BallotInput: MultiBallotInput, CreateForm: MultiCreateForm },
+  ranked_choice: {
+    ...singleChoice,
+    BallotInput: RankedBallotInput,
+    ResultDisplay: RankedResultDisplay,
+    CreateForm: RankedCreateForm,
+  },
   nickname: { ...profileChange, Proposal: NicknameProposal, CreateForm: NicknameCreateForm },
   avatar: { ...profileChange, Proposal: AvatarProposal, CreateForm: AvatarCreateForm },
   /** Created by the server when the parties of a pact dispute a result; not in the create screen. */

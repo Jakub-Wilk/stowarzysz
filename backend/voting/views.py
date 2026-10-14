@@ -128,6 +128,17 @@ class PollCloseView(APIView):
         return Response(_detail(poll_id, request))
 
 
+class PollTieBreakView(APIView):
+    """The creator of a poll that ended in a tie calls a follow-up vote over the tied options."""
+
+    @extend_schema(request=None, responses={200: PollDetailSerializer, 201: PollDetailSerializer})
+    def post(self, request: Request, poll_id: int) -> Response:
+        get_object_or_404(Poll, pk=poll_id)
+        follow_up, created = services.create_tie_break(poll_id, request.user)
+        code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(_detail(follow_up.pk, request), status=code)
+
+
 class PollReactionView(APIView):
     """Deliberately unthrottled: reactions are meant to be spammed."""
 

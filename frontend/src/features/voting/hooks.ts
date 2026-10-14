@@ -109,6 +109,13 @@ export function useAbstain(id: number) {
   )
 }
 
+/** Calls (or finds) the follow-up vote over the options that tied; resolves to that vote. */
+export function useTieBreak(id: number) {
+  return useRefreshingPollMutation(() =>
+    apiFetch<PollDetail>(`/api/polls/${id}/tie-break/`, { method: 'POST' }),
+  )
+}
+
 export function useClosePoll(id: number) {
   return useRefreshingPollMutation(() =>
     apiFetch<PollDetail>(`/api/polls/${id}/close/`, { method: 'POST' }),

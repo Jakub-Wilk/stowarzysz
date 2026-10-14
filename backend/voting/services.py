@@ -108,12 +108,16 @@ def create_poll(
     config: Any,
     participant_ids: Iterable[int],
     image: ContentFile | None = None,
+    extra_config: dict[str, Any] | None = None,
 ) -> Poll:
+    """`extra_config` is set by the server only (e.g. the link of a tie-break to its original)
+    and joins the config after the kind has validated what the client sent."""
     kind = get_kind(kind_key)
     if image is not None and not kind.accepts_image:
         raise ValidationError({"image": "To głosowanie nie przyjmuje obrazu."})
     clean_config = kind.validate_config(config)
     kind.validate_proposal(clean_config, creator=creator, has_image=image is not None)
+    clean_config = clean_config | (extra_config or {})
     title = kind.generate_title(clean_config) or title.strip()
     if not title:
         raise ValidationError({"title": "Podaj tytuł głosowania."})
@@ -157,13 +161,37 @@ def cast_ballot(poll_id: int, user: Any, ballot: Any) -> Poll:
         participant = _participant(poll, user)
         if participant.vetoed:
             raise ValidationError("Zawetowano już to głosowanie; weta nie można cofnąć.")
-        participant.ballot = get_kind(poll.kind).validate_ballot(poll.config, ballot)
+        resolved = get_kind(poll.kind).resolve_ballot(poll, ballot)
+        participant.ballot = resolved.ballot
         participant.abstained = False  # a vote replaces an earlier abstention
         participant.reason = ""
         participant.voted_at = timezone.now()
         participant.save(update_fields=["ballot", "abstained", "reason", "voted_at"])
+        if resolved.config is not None:  # the vote added an option to an open pool
+            poll.config = resolved.config
+            poll.save(update_fields=["config"])
         _after_ballot(poll)
+        if resolved.added_option is not None and poll.status == Poll.Status.OPEN:
+            _announce_option(poll, resolved.added_option["label"], exclude=user)
     return poll
+
+
+def _announce_option(poll: Poll, label: str, *, exclude: Any) -> None:
+    """Tell everyone who has already voted that an option was added (not who added it: ballots
+    are secret until the end)."""
+    voters = list(
+        PollParticipant.objects.filter(poll=poll, voted_at__isnull=False, abstained=False)
+        .exclude(user=exclude)
+        .values_list("user_id", flat=True)
+    )
+    transaction.on_commit(
+        lambda: send_push(
+            voters,
+            title="Nowa opcja w głosowaniu",
+            body=f"Dodano opcję „{label}” w: {poll.title}. Możesz zmienić swój głos.",
+            url=f"/voting/{poll.pk}",
+        )
+    )
 
 
 def abstain(poll_id: int, user: Any, reason: str = "") -> Poll:
@@ -209,6 +237,56 @@ def close_early(poll_id: int, user: Any) -> Poll:
             raise ValidationError("Tego głosowania nie można zakończyć wcześniej.")
         _close(poll, Poll.CloseReason.CREATOR)
     return poll
+
+
+TIE_BREAK_KINDS = {  # the kind of the follow-up vote; a tied multi-select poll asks to pick one
+    "single_choice": "single_choice",
+    "multi_choice": "single_choice",
+    "ranked_choice": "ranked_choice",
+}
+
+
+def tied_winners(poll: Poll) -> list[str]:
+    """Option ids that tied for the win in a finished options poll (else an empty list)."""
+    winners = (poll.result or {}).get("winners") or []
+    return winners if poll.kind in TIE_BREAK_KINDS and len(winners) > 1 else []
+
+
+def find_tie_break(poll_id: int) -> Poll | None:
+    return Poll.objects.filter(config__tie_break_of=poll_id).first()
+
+
+def create_tie_break(poll_id: int, user: Any) -> tuple[Poll, bool]:
+    """The creator of a finished poll that ended in a tie calls a follow-up vote over just the
+    tied options, with the same people. Returns `(poll, created)`; asking again returns the
+    follow-up that already exists."""
+    with transaction.atomic():
+        poll = Poll.objects.select_for_update().get(pk=poll_id)
+        if poll.creator_id != user.pk:
+            raise PermissionDenied(
+                "Tylko osoba, która rozpoczęła głosowanie, może rozpisać dogrywkę."
+            )
+        if poll.status != Poll.Status.CLOSED:
+            raise ValidationError("Dogrywkę można rozpisać dopiero po zakończeniu głosowania.")
+        tied = tied_winners(poll)
+        if not tied:
+            raise ValidationError("To głosowanie nie zakończyło się remisem.")
+        existing = find_tie_break(poll.pk)
+        if existing is not None:
+            return existing, False
+        labels = [o["label"] for o in poll.config["options"] if o["id"] in tied]
+        voter_ids = PollParticipant.objects.filter(poll=poll, user__is_active=True).values_list(
+            "user_id", flat=True
+        )
+        follow_up = create_poll(
+            creator=poll.creator,
+            title=f"Dogrywka: {poll.title}"[:200],
+            kind_key=TIE_BREAK_KINDS[poll.kind],
+            config={"options": labels},
+            participant_ids=list(voter_ids),
+            extra_config={"tie_break_of": poll.pk},
+        )
+    return follow_up, True
 
 
 def send_reaction(poll: Poll, user: Any, emoji: str) -> None:
