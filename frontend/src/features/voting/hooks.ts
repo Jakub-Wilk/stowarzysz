@@ -98,8 +98,14 @@ export function useCastBallot(id: number) {
 }
 
 export function useVeto(id: number) {
-  return useRefreshingPollMutation(() =>
-    apiFetch<PollDetail>(`/api/polls/${id}/veto/`, { method: 'POST' }),
+  return useRefreshingPollMutation((reason: string) =>
+    apiFetch<PollDetail>(`/api/polls/${id}/veto/`, { method: 'POST', json: { reason } }),
+  )
+}
+
+export function useAbstain(id: number) {
+  return useRefreshingPollMutation((reason: string) =>
+    apiFetch<PollDetail>(`/api/polls/${id}/abstain/`, { method: 'POST', json: { reason } }),
   )
 }
 

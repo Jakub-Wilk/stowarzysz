@@ -10,6 +10,7 @@ import { UserAvatar } from '@/features/auth/UserAvatar'
 import { ConfirmDialog } from '@/features/voting/ConfirmDialog'
 import { formatWhen, pollDeadline } from '@/features/voting/dates'
 import {
+  useAbstain,
   useCastBallot,
   useClosePoll,
   usePoll,
@@ -17,6 +18,7 @@ import {
   useVeto,
 } from '@/features/voting/hooks'
 import { getKindUI } from '@/features/voting/kinds'
+import { ReasonDialog } from '@/features/voting/ReasonDialog'
 import { subscribeReactions } from '@/features/voting/reactionBus'
 import { useSmoke } from '@/features/voting/SmokeLayer'
 import { ApiError } from '@/lib/api'
@@ -75,10 +77,11 @@ function OpenVote({ poll }: { poll: PollDetail }) {
   const kind = getKindUI(poll.kind)
   const cast = useCastBallot(poll.id)
   const veto = useVeto(poll.id)
+  const abstain = useAbstain(poll.id)
   const close = useClosePoll(poll.id)
-  const [confirm, setConfirm] = useState<'veto' | 'close' | null>(null)
+  const [confirm, setConfirm] = useState<'veto' | 'abstain' | 'close' | null>(null)
 
-  const error = [cast, veto, close].find((m) => m.isError)?.error
+  const error = [cast, veto, abstain, close].find((m) => m.isError)?.error
   const BallotInput = kind?.BallotInput
   const Proposal = kind?.Proposal
 
@@ -103,10 +106,25 @@ function OpenVote({ poll }: { poll: PollDetail }) {
               onSubmit={(ballot) => cast.mutate(ballot)}
             />
           )}
-          {!poll.my.vetoed && poll.can_veto && (
-            <Button variant="destructive" className="w-full" onClick={() => setConfirm('veto')}>
-              Weto
-            </Button>
+          {poll.my.abstained && (
+            <p className="rounded-lg border bg-card p-4 text-base">
+              Wstrzymujesz się od głosu. Możesz to zmienić, oddając głos.
+              {poll.my_reason && ` Powód: ${poll.my_reason}`}
+            </p>
+          )}
+          {(poll.can_abstain || (!poll.my.vetoed && poll.can_veto)) && (
+            <div className="flex gap-2">
+              {poll.can_abstain && !poll.my.abstained && (
+                <Button variant="outline" className="flex-1" onClick={() => setConfirm('abstain')}>
+                  Wstrzymaj się
+                </Button>
+              )}
+              {!poll.my.vetoed && poll.can_veto && (
+                <Button variant="destructive" className="flex-1" onClick={() => setConfirm('veto')}>
+                  Weto
+                </Button>
+              )}
+            </div>
           )}
         </section>
       )}
@@ -135,14 +153,24 @@ function OpenVote({ poll }: { poll: PollDetail }) {
         </span>
       )}
 
-      <ConfirmDialog
+      <ReasonDialog
+        open={confirm === 'abstain'}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title="Wstrzymać się od głosu?"
+        description="Twój głos nie będzie wliczany do wyniku (to co innego niż wynik 0). Do zakończenia głosowania możesz jeszcze oddać głos."
+        confirmLabel="Wstrzymaj się"
+        pending={abstain.isPending}
+        onConfirm={(reason) => abstain.mutate(reason, { onSettled: () => setConfirm(null) })}
+      />
+      <ReasonDialog
         open={confirm === 'veto'}
         onOpenChange={(open) => !open && setConfirm(null)}
         title="Zawetować to głosowanie?"
         description="Weto liczy się jako najniższy wynik i oznacza wynik głosowania jako zawetowany dla wszystkich. Nie można tego cofnąć."
         confirmLabel="Weto"
+        destructive
         pending={veto.isPending}
-        onConfirm={() => veto.mutate(undefined, { onSettled: () => setConfirm(null) })}
+        onConfirm={(reason) => veto.mutate(reason, { onSettled: () => setConfirm(null) })}
       />
       <ConfirmDialog
         open={confirm === 'close'}

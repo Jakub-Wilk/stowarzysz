@@ -94,7 +94,7 @@ export interface PollListItem {
   closed_at: string | null
   participant_count: number
   voted_count: number
-  my: { participating: boolean; has_voted: boolean; vetoed: boolean }
+  my: { participating: boolean; has_voted: boolean; vetoed: boolean; abstained: boolean }
   result: PollResult | null
 }
 
@@ -104,6 +104,9 @@ export interface PollParticipant {
   /** Only present once the vote has ended. */
   ballot?: Ballot | null
   vetoed?: boolean
+  abstained?: boolean
+  /** Optional explanation of a veto or an abstention (auto-abstained non-voters get a fixed one). */
+  reason?: string
 }
 
 export interface PollDetail extends PollListItem {
@@ -114,6 +117,9 @@ export interface PollDetail extends PollListItem {
   can_vote: boolean
   can_close: boolean
   can_veto: boolean
+  can_abstain: boolean
+  /** The signed-in user's own veto or abstention reason. */
+  my_reason: string
   /** Picture proposed by a profile-picture vote (kept after it closes). */
   proposed_avatar_url: string | null
   /** The picture an approved profile-picture vote replaced; null if none (or an older vote). */

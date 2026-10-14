@@ -14,15 +14,18 @@ class MySerializer(serializers.Serializer):
     participating = serializers.BooleanField()
     has_voted = serializers.BooleanField()
     vetoed = serializers.BooleanField()
+    abstained = serializers.BooleanField()
 
 
 class ParticipantSerializer(serializers.Serializer):
-    """`ballot`/`vetoed` are only present once the poll has ended."""
+    """`ballot`, `vetoed`, `abstained` and `reason` are only present once the poll has ended."""
 
     user = UserBriefSerializer()
     has_voted = serializers.BooleanField()
     ballot = serializers.JSONField(required=False, allow_null=True)
     vetoed = serializers.BooleanField(required=False)
+    abstained = serializers.BooleanField(required=False)
+    reason = serializers.CharField(required=False, allow_blank=True)
 
 
 class PollSerializer(serializers.ModelSerializer):
@@ -70,6 +73,7 @@ class PollSerializer(serializers.ModelSerializer):
             "participating": mine is not None,
             "has_voted": bool(mine and mine.has_ballot),
             "vetoed": bool(mine and mine.vetoed),
+            "abstained": bool(mine and mine.abstained),
         }
 
 
@@ -81,6 +85,8 @@ class PollDetailSerializer(PollSerializer):
     can_vote = serializers.SerializerMethodField()
     can_close = serializers.SerializerMethodField()
     can_veto = serializers.SerializerMethodField()
+    can_abstain = serializers.SerializerMethodField()
+    my_reason = serializers.SerializerMethodField()
     proposed_avatar_url = serializers.SerializerMethodField()
     previous_avatar_url = serializers.SerializerMethodField()
 
@@ -94,6 +100,8 @@ class PollDetailSerializer(PollSerializer):
             "can_vote",
             "can_close",
             "can_veto",
+            "can_abstain",
+            "my_reason",
             "proposed_avatar_url",
             "previous_avatar_url",
         )
@@ -111,6 +119,8 @@ class PollDetailSerializer(PollSerializer):
             if revealed:  # hidden until the end, for everyone
                 row["ballot"] = p.ballot
                 row["vetoed"] = p.vetoed
+                row["abstained"] = p.abstained
+                row["reason"] = p.reason
             rows.append(row)
         return rows
 
@@ -124,6 +134,18 @@ class PollDetailSerializer(PollSerializer):
 
     def get_can_veto(self, poll: Poll) -> bool:
         return self.get_can_vote(poll) and get_kind(poll.kind).allows_veto
+
+    def get_can_abstain(self, poll: Poll) -> bool:
+        mine = self._mine(poll)
+        return (
+            self.get_can_vote(poll)
+            and get_kind(poll.kind).allows_abstain
+            and not (mine and mine.vetoed)
+        )
+
+    def get_my_reason(self, poll: Poll) -> str:
+        mine = self._mine(poll)
+        return mine.reason if mine else ""
 
     def get_can_close(self, poll: Poll) -> bool:
         return (
@@ -161,6 +183,14 @@ class PollCreateSerializer(serializers.Serializer):
 
 class BallotRequestSerializer(serializers.Serializer):
     ballot = serializers.JSONField()
+
+
+class ReasonRequestSerializer(serializers.Serializer):
+    """Body of a veto or an abstention; the reason is optional."""
+
+    reason = serializers.CharField(
+        max_length=300, required=False, allow_blank=True, default="", trim_whitespace=True
+    )
 
 
 class ReactionRequestSerializer(serializers.Serializer):

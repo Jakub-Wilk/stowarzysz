@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/features/auth/UserAvatar'
+import { ReasonBadge } from '@/features/voting/ReasonBadge'
 import { formatScore } from '@/features/voting/format'
 import { ScoreDial } from '@/features/voting/kinds/ScoreDial'
 import { toneClasses } from '@/features/voting/tone'
@@ -17,6 +18,7 @@ interface ScoreResult {
   votes_cast: number
   veto_count: number
   vetoed: boolean
+  abstain_count: number
   score: number | null
 }
 
@@ -28,6 +30,7 @@ function readResult(result: PollResult | null): ScoreResult | null {
     votes_cast,
     veto_count,
     vetoed: vetoed === true,
+    abstain_count: typeof result.abstain_count === 'number' ? result.abstain_count : 0,
     score: typeof score === 'number' ? score : null,
   }
 }
@@ -83,12 +86,13 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
             Zagłosowało {result.votes_cast} z {poll.participant_count} posłów
             {result.veto_count > 1 &&
               ` · ${result.veto_count} ${plural(result.veto_count, VETO_FORMS)}`}
+            {result.abstain_count > 0 && ` · wstrzymało się: ${result.abstain_count}`}
           </div>
         )}
       </div>
 
       <ul className="flex flex-col gap-2">
-        {poll.participants.map(({ user, has_voted, ballot, vetoed }) => {
+        {poll.participants.map(({ user, has_voted, ballot, vetoed, abstained, reason }) => {
           const value = readValue(ballot)
           return (
             <li
@@ -99,15 +103,15 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
               <span className="text-metal flex-1 truncate text-lg font-medium">
                 {user.username}
               </span>
-              {vetoed && (
-                <span className="rounded-full bg-negative/15 px-2 py-0.5 text-xs font-bold text-negative uppercase">
-                  Weto
+              {vetoed && <ReasonBadge type="veto" reason={reason} />}
+              {abstained ? (
+                <span className="flex w-12 justify-center">
+                  <ReasonBadge type="abstain" reason={reason} />
                 </span>
-              )}
-              {has_voted && value !== null ? (
+              ) : has_voted && value !== null ? (
                 <span
                   className={cn(
-                    'w-12 text-right text-2xl font-bold tabular-nums',
+                    'w-12 text-center text-2xl font-bold tabular-nums',
                     toneClasses(scoreTone(value)).text,
                   )}
                 >

@@ -33,6 +33,7 @@ class Entry:
 class PollKind(ABC):
     key: ClassVar[str]
     allows_veto: ClassVar[bool] = True  # may participants veto?
+    allows_abstain: ClassVar[bool] = True  # may participants abstain (and non-voters count so)?
     allows_early_close: ClassVar[bool] = True  # may the creator end it before everyone voted?
     everyone_participates: ClassVar[bool] = False  # ignore the chosen participants, take all
     accepts_image: ClassVar[bool] = False  # may the proposal carry an uploaded picture?
@@ -140,6 +141,7 @@ class ProfileChangeKind(ScoreKind):
     """
 
     allows_veto = False
+    allows_abstain = False
     allows_early_close = False
     everyone_participates = True
     APPROVAL_SCORE = 1

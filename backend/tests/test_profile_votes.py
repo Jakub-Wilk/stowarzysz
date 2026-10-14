@@ -159,6 +159,12 @@ def test_profile_votes_cannot_be_vetoed(alice: User, bob: User, carol: User) -> 
     assert bob.username == "bobby"
 
 
+def test_profile_votes_cannot_be_abstained(alice: User, bob: User, carol: User) -> None:
+    poll_id = propose_nickname(alice, bob).json()["id"]
+    assert client_for(carol).get(f"{POLLS}{poll_id}/").json()["can_abstain"] is False
+    assert client_for(carol).post(f"{POLLS}{poll_id}/abstain/").status_code == 400
+
+
 def test_name_taken_while_voting_is_reported_not_applied(
     alice: User, bob: User, carol: User
 ) -> None:
@@ -369,3 +375,12 @@ def test_command_runs(old_poll: Poll, capsys) -> None:
     age(old_poll, 80)
     call_command("process_poll_deadlines")
     assert "Closed 1 poll" in capsys.readouterr().out
+
+
+def test_expiry_counts_non_voters_as_abstained(old_poll: Poll, alice: User, bob: User) -> None:
+    client_for(alice).put(f"{POLLS}{old_poll.pk}/ballot/", {"ballot": {"value": 4}})
+    age(old_poll, 73)
+    assert services.process_deadlines() == (1, 0)
+    result = Poll.objects.get(pk=old_poll.pk).result
+    assert result["votes_cast"] == 1 and result["abstain_count"] == 2
+    assert PollParticipant.objects.get(poll=old_poll, user=bob).reason == "Brak głosu w terminie."

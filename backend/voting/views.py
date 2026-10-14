@@ -16,6 +16,7 @@ from voting.serializers import (
     PollDetailSerializer,
     PollSerializer,
     ReactionRequestSerializer,
+    ReasonRequestSerializer,
 )
 
 
@@ -100,10 +101,22 @@ class PollBallotView(APIView):
 
 
 class PollVetoView(APIView):
-    @extend_schema(request=None, responses={200: PollDetailSerializer})
+    @extend_schema(request=ReasonRequestSerializer, responses={200: PollDetailSerializer})
     def post(self, request: Request, poll_id: int) -> Response:
+        serializer = ReasonRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         get_object_or_404(Poll, pk=poll_id)
-        services.veto(poll_id, request.user)
+        services.veto(poll_id, request.user, serializer.validated_data["reason"])
+        return Response(_detail(poll_id, request))
+
+
+class PollAbstainView(APIView):
+    @extend_schema(request=ReasonRequestSerializer, responses={200: PollDetailSerializer})
+    def post(self, request: Request, poll_id: int) -> Response:
+        serializer = ReasonRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        get_object_or_404(Poll, pk=poll_id)
+        services.abstain(poll_id, request.user, serializer.validated_data["reason"])
         return Response(_detail(poll_id, request))
 
 

@@ -76,7 +76,9 @@ class PollParticipant(models.Model):
     )
     ballot = models.JSONField(null=True)  # shape defined by the poll's kind
     vetoed = models.BooleanField(default=False)
-    voted_at = models.DateTimeField(null=True)
+    abstained = models.BooleanField(default=False)  # no ballot; left out of the result
+    reason = models.CharField(max_length=300, blank=True)  # optional, for a veto or an abstention
+    voted_at = models.DateTimeField(null=True)  # null for someone auto-abstained at close
 
     objects = models.Manager()
 

@@ -5,11 +5,17 @@ import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/features/auth/UserAvatar'
 import { getPactKind } from '@/features/pacts/kinds'
 import { usePact } from '@/features/pacts/hooks'
+import { ReasonBadge } from '@/features/voting/ReasonBadge'
 import { toneClasses } from '@/features/voting/tone'
 import type { Ballot, PollDetail, PollResult } from '@/lib/api-types'
 import { cn } from '@/lib/utils'
 
 import type { BallotInputProps } from './types'
+
+const abstainNote = (poll: PollDetail): string => {
+  const n = poll.result?.abstain_count
+  return typeof n === 'number' && n > 0 ? ` · Wstrzymało się: ${n}` : ''
+}
 
 const readChoice = (ballot: Ballot | null | undefined): boolean | null =>
   typeof ballot?.upheld === 'boolean' ? ballot.upheld : null
@@ -88,6 +94,7 @@ export function RulingResultDisplay({ poll }: { poll: PollDetail }) {
         </div>
         <div className="text-base text-muted-foreground">
           Za: {String(poll.result?.upheld ?? 0)} · Przeciw: {String(poll.result?.rejected ?? 0)}
+          {abstainNote(poll)}
         </div>
         {upheld && applied === false && (
           <div className="text-base text-destructive">
@@ -101,7 +108,7 @@ export function RulingResultDisplay({ poll }: { poll: PollDetail }) {
         )}
       </div>
       <ul className="flex flex-col gap-2">
-        {poll.participants.map(({ user, has_voted, ballot }) => {
+        {poll.participants.map(({ user, has_voted, ballot, abstained, reason }) => {
           const choice = readChoice(ballot)
           return (
             <li
@@ -112,7 +119,9 @@ export function RulingResultDisplay({ poll }: { poll: PollDetail }) {
               <span className="text-metal flex-1 truncate text-lg font-medium">
                 {user.username}
               </span>
-              {has_voted && choice !== null ? (
+              {abstained ? (
+                <ReasonBadge type="abstain" reason={reason} />
+              ) : has_voted && choice !== null ? (
                 <span
                   className={cn(
                     'text-base font-bold',
@@ -217,6 +226,7 @@ export function JudgmentResultDisplay({ poll }: { poll: PollDetail }) {
         <div className="text-base text-muted-foreground">
           Dotrzymał(a): {String(poll.result?.kept ?? 0)} · Nie dotrzymał(a):{' '}
           {String(poll.result?.broken ?? 0)}
+          {abstainNote(poll)}
         </div>
         {!decided && (
           <div className="text-base text-muted-foreground">
@@ -225,7 +235,7 @@ export function JudgmentResultDisplay({ poll }: { poll: PollDetail }) {
         )}
       </div>
       <ul className="flex flex-col gap-2">
-        {poll.participants.map(({ user, has_voted, ballot }) => {
+        {poll.participants.map(({ user, has_voted, ballot, abstained, reason }) => {
           const choice = readKept(ballot)
           return (
             <li
@@ -236,7 +246,9 @@ export function JudgmentResultDisplay({ poll }: { poll: PollDetail }) {
               <span className="text-metal flex-1 truncate text-lg font-medium">
                 {user.username}
               </span>
-              {has_voted && choice !== null ? (
+              {abstained ? (
+                <ReasonBadge type="abstain" reason={reason} />
+              ) : has_voted && choice !== null ? (
                 <span
                   className={cn(
                     'text-base font-bold',

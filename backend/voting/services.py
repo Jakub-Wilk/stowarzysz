@@ -21,6 +21,13 @@ POLL_DURATION = timedelta(hours=72)  # every poll ends this long after it was cr
 REMINDER_OFFSETS = (timedelta(hours=24), timedelta(hours=48), timedelta(hours=69))
 
 
+AUTO_ABSTAIN_REASONS = {
+    Poll.CloseReason.AUTO: "",  # everyone had answered, so nobody is left
+    Poll.CloseReason.EXPIRED: "Brak głosu w terminie.",
+    Poll.CloseReason.CREATOR: "Brak głosu przed zakończeniem głosowania.",
+}
+
+
 class Conflict(APIException):
     status_code = 409
     default_detail = "To głosowanie już się zakończyło."
@@ -43,9 +50,15 @@ def _participant(poll: Poll, user: Any) -> PollParticipant:
 
 def _close(poll: Poll, reason: str) -> None:
     kind = get_kind(poll.kind)
-    cast = PollParticipant.objects.filter(poll=poll, voted_at__isnull=False)
+    if kind.allows_abstain:  # whoever never answered is counted as abstaining
+        PollParticipant.objects.filter(poll=poll, voted_at__isnull=True).update(
+            abstained=True, reason=AUTO_ABSTAIN_REASONS[reason]
+        )
+    cast = PollParticipant.objects.filter(poll=poll, voted_at__isnull=False, abstained=False)
     entries = [Entry(ballot=p.ballot, vetoed=p.vetoed) for p in cast]
     result = kind.compute_result(poll.config, entries)
+    if kind.allows_abstain:
+        result["abstain_count"] = PollParticipant.objects.filter(poll=poll, abstained=True).count()
     result.update(kind.on_close(poll, result))  # e.g. apply the change a vote was about
     poll.result = result
     poll.status = Poll.Status.CLOSED
@@ -145,13 +158,32 @@ def cast_ballot(poll_id: int, user: Any, ballot: Any) -> Poll:
         if participant.vetoed:
             raise ValidationError("Zawetowano już to głosowanie; weta nie można cofnąć.")
         participant.ballot = get_kind(poll.kind).validate_ballot(poll.config, ballot)
+        participant.abstained = False  # a vote replaces an earlier abstention
+        participant.reason = ""
         participant.voted_at = timezone.now()
-        participant.save(update_fields=["ballot", "voted_at"])
+        participant.save(update_fields=["ballot", "abstained", "reason", "voted_at"])
         _after_ballot(poll)
     return poll
 
 
-def veto(poll_id: int, user: Any) -> Poll:
+def abstain(poll_id: int, user: Any, reason: str = "") -> Poll:
+    with transaction.atomic():
+        poll = _locked_open_poll(poll_id)
+        if not get_kind(poll.kind).allows_abstain:
+            raise ValidationError("W tym głosowaniu nie można się wstrzymać.")
+        participant = _participant(poll, user)
+        if participant.vetoed:
+            raise ValidationError("Zawetowano już to głosowanie; weta nie można cofnąć.")
+        participant.ballot = None
+        participant.abstained = True
+        participant.reason = reason.strip()
+        participant.voted_at = timezone.now()
+        participant.save(update_fields=["ballot", "abstained", "reason", "voted_at"])
+        _after_ballot(poll)
+    return poll
+
+
+def veto(poll_id: int, user: Any, reason: str = "") -> Poll:
     with transaction.atomic():
         poll = _locked_open_poll(poll_id)
         kind = get_kind(poll.kind)
@@ -160,8 +192,10 @@ def veto(poll_id: int, user: Any) -> Poll:
         participant = _participant(poll, user)
         participant.ballot = kind.veto_ballot(poll.config)
         participant.vetoed = True
+        participant.abstained = False
+        participant.reason = reason.strip()
         participant.voted_at = timezone.now()
-        participant.save(update_fields=["ballot", "vetoed", "voted_at"])
+        participant.save(update_fields=["ballot", "vetoed", "abstained", "reason", "voted_at"])
         _after_ballot(poll)
     return poll
 

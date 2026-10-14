@@ -92,6 +92,7 @@ def test_every_endpoint_requires_auth(api_client: APIClient, poll: Poll) -> None
         api_client.get(url(poll)),
         api_client.put(url(poll, "ballot/"), {"ballot": {"value": 1}}),
         api_client.post(url(poll, "veto/")),
+        api_client.post(url(poll, "abstain/")),
         api_client.post(url(poll, "close/")),
         api_client.post(url(poll, "reactions/"), {"emoji": "❤️"}),
         api_client.get("/api/auth/people/"),
@@ -165,7 +166,12 @@ def test_non_participant_can_read_but_not_vote(poll: Poll, dave) -> None:
     client = client_for(dave)
     listed = client.get(POLLS, {"status": "open"}).json()
     assert [p["id"] for p in listed] == [poll.pk]
-    assert listed[0]["my"] == {"participating": False, "has_voted": False, "vetoed": False}
+    assert listed[0]["my"] == {
+        "participating": False,
+        "has_voted": False,
+        "vetoed": False,
+        "abstained": False,
+    }
 
     detail = client.get(url(poll)).json()
     assert detail["can_vote"] is False and detail["can_close"] is False
@@ -261,6 +267,7 @@ def test_auto_closes_when_everyone_voted(poll: Poll, alice, bob, carol, events) 
         "vetoed": False,
         "score": 1.0,
         "tone": "positive",
+        "abstain_count": 0,
     }
     revealed = {p["user"]["username"]: p for p in body["participants"]}
     assert revealed["alice"]["ballot"] == {"value": 3} and revealed["alice"]["vetoed"] is False
@@ -385,7 +392,12 @@ def test_list_item_progress(poll: Poll, bob) -> None:
     vote(bob, poll, 1)
     item = client_for(bob).get(POLLS, {"status": "open"}).json()[0]
     assert item["participant_count"] == 3 and item["voted_count"] == 1
-    assert item["my"] == {"participating": True, "has_voted": True, "vetoed": False}
+    assert item["my"] == {
+        "participating": True,
+        "has_voted": True,
+        "vetoed": False,
+        "abstained": False,
+    }
 
 
 # --- reactions --------------------------------------------------------------
@@ -481,4 +493,82 @@ def test_new_kinds_plug_in_through_the_registry(
     client.put(url(pid, "ballot/"), {"ballot": {"yes": True}})
     body = client_for(bob).put(url(pid, "ballot/"), {"ballot": {"yes": False}}).json()
     assert body["status"] == "closed"
-    assert body["result"] == {"yes": 1, "no": 1, "tone": "positive"}
+    assert body["result"] == {"yes": 1, "no": 1, "tone": "positive", "abstain_count": 0}
+
+
+# --- abstaining -------------------------------------------------------------
+
+
+def abstain(user: User, poll: Poll, reason: str | None = None) -> Any:
+    body = {} if reason is None else {"reason": reason}
+    return client_for(user).post(url(poll, "abstain/"), body)
+
+
+def test_abstaining_is_left_out_of_the_score(poll: Poll, alice, bob, carol) -> None:
+    assert vote(alice, poll, 4).status_code == 200
+    assert abstain(bob, poll, "Nie znam się").status_code == 200
+    assert vote(carol, poll, 2).status_code == 200  # last answer closes it
+    result = Poll.objects.get(pk=poll.pk).result
+    assert result["votes_cast"] == 2 and result["score"] == 3.0
+    assert result["abstain_count"] == 1
+
+
+def test_abstain_reason_is_hidden_until_the_poll_ends(poll: Poll, alice, bob, carol) -> None:
+    abstain(bob, poll, "Nie znam się")
+    open_view = client_for(alice).get(url(poll)).json()
+    assert all("reason" not in p and "abstained" not in p for p in open_view["participants"])
+    mine = client_for(bob).get(url(poll)).json()
+    assert mine["my"]["abstained"] is True and mine["my_reason"] == "Nie znam się"
+    client_for(alice).post(url(poll, "close/"))
+    rows = {
+        p["user"]["username"]: p for p in client_for(alice).get(url(poll)).json()["participants"]
+    }
+    assert rows["bob"]["abstained"] is True and rows["bob"]["reason"] == "Nie znam się"
+
+
+def test_a_vote_replaces_an_abstention(poll: Poll, bob) -> None:
+    abstain(bob, poll, "hmm")
+    assert vote(bob, poll, 3).status_code == 200
+    p = PollParticipant.objects.get(poll=poll, user=bob)
+    assert p.abstained is False and p.reason == "" and p.ballot == {"value": 3}
+
+
+def test_cannot_abstain_after_a_veto_and_veto_keeps_its_reason(poll: Poll, bob) -> None:
+    resp = client_for(bob).post(url(poll, "veto/"), {"reason": "Za drogo"})
+    assert resp.status_code == 200
+    assert PollParticipant.objects.get(poll=poll, user=bob).reason == "Za drogo"
+    assert abstain(bob, poll).status_code == 400
+    assert client_for(bob).get(url(poll)).json()["can_abstain"] is False
+
+
+def test_abstain_permissions(poll: Poll, alice, dave) -> None:
+    assert abstain(dave, poll).status_code == 403
+    client_for(alice).post(url(poll, "close/"))
+    assert abstain(alice, poll).status_code == 409
+
+
+def test_non_voters_are_auto_abstained_on_early_close(poll: Poll, alice, bob, carol) -> None:
+    vote(bob, poll, 4)
+    client_for(alice).post(url(poll, "close/"))
+    result = Poll.objects.get(pk=poll.pk).result
+    assert result["votes_cast"] == 1 and result["abstain_count"] == 2
+    rows = {
+        p.user.username: p for p in PollParticipant.objects.filter(poll=poll).select_related("user")
+    }
+    assert rows["alice"].abstained and rows["carol"].abstained
+    assert rows["alice"].reason == "Brak głosu przed zakończeniem głosowania."
+    assert not rows["bob"].abstained
+
+
+def test_everyone_abstaining_gives_no_score(poll: Poll, alice, bob, carol) -> None:
+    for user in (alice, bob, carol):
+        abstain(user, poll)
+    closed = Poll.objects.get(pk=poll.pk)
+    result = closed.result
+    assert closed.status == Poll.Status.CLOSED
+    assert result["score"] is None and result["abstain_count"] == 3
+
+
+def test_only_score_style_kinds_allow_abstaining() -> None:
+    allowed = {key for key, kind in kinds.KINDS.items() if kind.allows_abstain}
+    assert allowed == {"score", "pact_ruling", "resolution_judgment"}
