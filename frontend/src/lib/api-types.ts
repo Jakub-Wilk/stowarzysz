@@ -237,7 +237,7 @@ export interface SantaHistoryEvent {
 
 // --- pacts ----------------------------------------------------------------------------
 
-export type PactKindKey = 'bet' | 'group_bet' | 'resolution'
+export type PactKindKey = 'bet' | 'group_bet' | 'resolution' | 'shared_goal'
 export type PactStatus =
   | 'proposed'
   | 'active'

@@ -6,6 +6,8 @@ export interface OutcomeChoice {
   label: string
   result: Record<string, unknown>
   tone: Tone
+  /** May be claimed before the deadline (mirrors `PactKind.early_ok`). */
+  early?: boolean
 }
 
 /**

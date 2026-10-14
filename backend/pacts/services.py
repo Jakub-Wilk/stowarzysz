@@ -39,7 +39,7 @@ VOID = {"void": True}  # a claim result meaning "call it off"
 
 class Conflict(APIException):
     status_code = 409
-    default_detail = "Ten zakład nie jest już aktualny."
+    default_detail = "Ta umowa nie jest już aktualna."
     default_code = "conflict"
 
 
@@ -76,7 +76,7 @@ def _locked_pact(pact_id: int) -> Pact:
 def _participant(pact: Pact, user: Any) -> PactParticipant:
     participant = PactParticipant.objects.filter(pact=pact, user=user).first()
     if participant is None:
-        raise PermissionDenied("Nie bierzesz udziału w tym zakładzie.")
+        raise PermissionDenied("Nie bierzesz udziału w tej umowie.")
     return participant
 
 
@@ -128,9 +128,7 @@ def create_pact(
     """Create a pact for `creator`."""
     kind = get_kind(kind_key)
     if kind.judged_by_everyone and opponents:
-        raise ValidationError(
-            "Tego rodzaju zakładu oceniają wszyscy posłowie, nie zapraszaj nikogo."
-        )
+        raise ValidationError("Tego rodzaju umowy oceniają wszyscy posłowie, nie zapraszaj nikogo.")
     if kind.needs_due_date and due_at is None:
         raise ValidationError("Podaj termin.")
     if due_at is not None and due_at <= timezone.now():
@@ -180,7 +178,7 @@ def create_pact(
         )
         _announce(
             pact,
-            "Nowy zakład",
+            "Nowa umowa",
             f"{creator.username} zaprasza Cię: {title}",
             push_to=ids,
             event="pact.created",
@@ -239,8 +237,8 @@ def respond_to_invite(
         _refresh_status(pact)
         _announce(
             pact,
-            "Zakład: odpowiedź",
-            f"{user.username} {'przyjmuje' if accept else 'odrzuca'} zakład: {pact.title}",
+            "Umowa: odpowiedź",
+            f"{user.username} {'przyjmuje' if accept else 'odrzuca'} umowę: {pact.title}",
             push_to=[pact.creator_id],
         )
     return pact
@@ -251,15 +249,15 @@ def cancel_pact(pact_id: int, user: Any) -> Pact:
     with transaction.atomic():
         pact = _locked_pact(pact_id)
         if pact.creator_id != user.pk:
-            raise PermissionDenied("Tylko autor może anulować zakład.")
+            raise PermissionDenied("Tylko autor może anulować umowę.")
         if pact.status != Pact.Status.PROPOSED:
-            raise Conflict("Zakład już się rozpoczął.")
+            raise Conflict("Umowa już się rozpoczęła.")
         pact.status = Pact.Status.CANCELLED
         pact.save(update_fields=["status"])
         _announce(
             pact,
-            "Zakład anulowany",
-            f"{user.username} anuluje zakład: {pact.title}",
+            "Umowa anulowana",
+            f"{user.username} anuluje umowę: {pact.title}",
             push_to=[uid for uid in _everyone(pact) if uid != user.pk],
         )
     return pact
@@ -276,9 +274,9 @@ def add_attachment(pact_id: int, user: Any, upload: Any, caption: str = "") -> P
     with transaction.atomic():
         pact = _locked_pact(pact_id)
         if not pact.participants.filter(user=user, state__in=ATTACH_STATES).exists():
-            raise PermissionDenied("Tylko uczestnicy mogą dodawać zdjęcia do zakładu.")
+            raise PermissionDenied("Tylko uczestnicy mogą dodawać zdjęcia do umowy.")
         if pact.attachments.count() >= MAX_ATTACHMENTS:
-            raise ValidationError(f"Do zakładu można dodać maksymalnie {MAX_ATTACHMENTS} zdjęć.")
+            raise ValidationError(f"Do umowy można dodać maksymalnie {MAX_ATTACHMENTS} zdjęć.")
         attachment = PactAttachment(pact=pact, uploaded_by=user, caption=caption.strip())
         attachment.image.save(f"{uuid4().hex}.webp", process_photo(upload), save=False)
         attachment.save()
@@ -294,7 +292,7 @@ def delete_attachment(pact_id: int, attachment_id: int, user: Any) -> None:
         if attachment is None:
             raise Http404
         if user.pk not in (attachment.uploaded_by_id, pact.creator_id):
-            raise PermissionDenied("Zdjęcie może usunąć jego autor albo autor zakładu.")
+            raise PermissionDenied("Zdjęcie może usunąć jego autor albo autor umowy.")
         attachment.delete()
         _announce(pact, "", "")
 
@@ -308,11 +306,11 @@ def request_to_join(pact_id: int, user: Any, terms: Terms) -> PactParticipant:
         pact = _locked_pact(pact_id)
         kind = get_kind(pact.kind)
         if not kind.joinable:
-            raise Conflict("Do tego rodzaju zakładu nie można dołączać.")
+            raise Conflict("Do tego rodzaju umowy nie można dołączać.")
         if pact.status not in (Pact.Status.PROPOSED, Pact.Status.ACTIVE) or (
             pact.due_at is not None and pact.due_at <= timezone.now()
         ):
-            raise Conflict("Do tego zakładu nie można już dołączyć.")
+            raise Conflict("Do tej umowy nie można już dołączyć.")
         _no_claim_in_flight(pact)
         final = kind.validate_terms(
             Terms(user.pk, terms.stake_amount, terms.stake_note, terms.side),
@@ -323,7 +321,7 @@ def request_to_join(pact_id: int, user: Any, terms: Terms) -> PactParticipant:
         participant = PactParticipant.objects.filter(pact=pact, user=user).first()
         retry = (State.DECLINED, State.REJECTED, State.WITHDRAWN, State.EXPIRED)
         if participant is not None and participant.state not in retry:
-            raise Conflict("Już bierzesz udział w tym zakładzie albo czekasz na decyzję.")
+            raise Conflict("Już bierzesz udział w tej umowie albo czekasz na decyzję.")
         if participant is None:
             participant = PactParticipant(pact=pact, user=user)
         else:
@@ -342,7 +340,7 @@ def request_to_join(pact_id: int, user: Any, terms: Terms) -> PactParticipant:
         _announce(
             pact,
             "Prośba o dołączenie",
-            f"{user.username} chce dołączyć do zakładu: {pact.title}",
+            f"{user.username} chce dołączyć do umowy: {pact.title}",
             push_to=approvers,
         )
     return participant
@@ -379,8 +377,8 @@ def decide_join(pact_id: int, user: Any, participant_id: int, *, approve: bool) 
             _refresh_status(pact)
             _announce(
                 pact,
-                "Dołączono do zakładu",
-                f"{requester.user.username} dołącza do zakładu: {pact.title}",
+                "Dołączono do umowy",
+                f"{requester.user.username} dołącza do umowy: {pact.title}",
                 push_to=[requester.user_id],
             )
         else:
@@ -394,7 +392,7 @@ def withdraw_request(pact_id: int, user: Any) -> PactParticipant:
         pact = _locked_pact(pact_id)
         participant = _participant(pact, user)
         if participant.state != State.REQUESTED:
-            raise Conflict("Nie masz oczekującej prośby w tym zakładzie.")
+            raise Conflict("Nie masz oczekującej prośby w tej umowie.")
         participant.state = State.WITHDRAWN
         participant.save(update_fields=["state"])
         participant.consents.all().delete()
@@ -453,12 +451,13 @@ def propose_outcome(
             raise Conflict("Trwa głosowanie w sprawie spornego wyniku.")
         if result.get("void") is True:
             cleaned = dict(VOID)  # calling it off is always possible
-        elif not result_allowed(pact):
-            raise Conflict(
-                "Wynik można podać dopiero po upływie terminu. Wcześniej można tylko unieważnić."
-            )
         else:
             cleaned = kind.validate_outcome(result, pact.config)
+            if not result_allowed(pact) and not kind.early_ok(cleaned):
+                raise Conflict(
+                    "Wynik można podać dopiero po upływie terminu. "
+                    "Wcześniej można tylko unieważnić."
+                )
         scope.filter(state__in=(Proposal.PENDING, Proposal.DISPUTED)).update(
             state=Proposal.SUPERSEDED
         )
@@ -468,7 +467,7 @@ def propose_outcome(
         confirmers = _confirmers(pact, proposal)
         _announce(
             pact,
-            "Potwierdź wynik zakładu",
+            "Potwierdź wynik umowy",
             f"{user.username} podaje wynik: {pact.title}",
             push_to=confirmers,
         )
@@ -515,7 +514,7 @@ def dispute_outcome(proposal_id: int, user: Any) -> OutcomeProposal:
         proposal.save(update_fields=["state", "decided_at"])
         _announce(
             pact,
-            "Wynik zakładu sporny",
+            "Wynik umowy sporny",
             f"{user.username} nie zgadza się z wynikiem: {pact.title}",
             push_to=[proposal.proposed_by_id],
         )
@@ -534,7 +533,7 @@ def _settle(pact: Pact, proposal: OutcomeProposal) -> None:
     else:
         affected = ended = [r for r in rows if r.state == State.ACTIVE]
     if any(r.state != State.ACTIVE for r in ended):
-        raise Conflict("Ten zakład nie jest już aktywny.")
+        raise Conflict("Ta umowa nie jest już aktywna.")
 
     void = proposal.result.get("void") is True
     verdicts: dict[int, str] = {}
@@ -557,7 +556,7 @@ def _settle(pact: Pact, proposal: OutcomeProposal) -> None:
     summary = ", ".join(format_amount(d.amount, item=d.item) for d in debts) or "bez rozliczenia"
     _announce(
         pact,
-        "Zakład rozstrzygnięty" if not void else "Zakład unieważniony",
+        "Umowa rozstrzygnięta" if not void else "Umowa unieważniona",
         f"{pact.title}: {summary}",
         push_to=[proposal.proposed_by_id],
     )
@@ -632,7 +631,7 @@ def apply_ruling(proposal_id: int, *, upheld: bool) -> dict[str, Any]:
             return {"applied": False, "apply_error": "Ten wynik nie jest już sporny."}
         if upheld:
             if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
-                return {"applied": False, "apply_error": "Zakład jest już zamknięty."}
+                return {"applied": False, "apply_error": "Umowa jest już zamknięta."}
             _settle(pact, proposal)
         else:
             proposal.state = Proposal.OVERRULED
@@ -640,7 +639,7 @@ def apply_ruling(proposal_id: int, *, upheld: bool) -> dict[str, Any]:
             _announce(
                 pact,
                 "Wynik odrzucony",
-                f"Sejmik odrzucił wynik zakładu: {pact.title}",
+                f"Sejmik odrzucił wynik umowy: {pact.title}",
                 push_to=_active_ids(pact),
             )
     return {"applied": upheld}
@@ -652,15 +651,16 @@ def apply_ruling(proposal_id: int, *, upheld: bool) -> dict[str, Any]:
 def call_judgment(pact_id: int, user: Any) -> Pact:
     """Put a resolution to a Sejmik vote of every member except its author.
 
-    Only once the deadline has passed, for the author and everyone else alike.
+    Anyone can once the deadline has passed; before it only the author can (claiming it is done
+    early), and a vote that does not carry then leaves the resolution open.
     """
     with transaction.atomic():
         pact = _locked_pact(pact_id)
         if not get_kind(pact.kind).judged_by_everyone:
-            raise Conflict("Ten zakład nie jest oceniany w głosowaniu.")
+            raise Conflict("Ta umowa nie jest oceniana w głosowaniu.")
         if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
             raise Conflict()
-        if not result_allowed(pact):
+        if not result_allowed(pact) and user.pk != pact.creator_id:
             raise PermissionDenied("Postanowienie można ocenić dopiero po upływie terminu.")
         if pact.judgment_poll_id is not None:
             raise Conflict("Posłowie już oceniają to postanowienie.")
@@ -693,7 +693,16 @@ def apply_judgment(pact_id: int, *, kept: bool, decided: bool) -> dict[str, Any]
             )
             return {"applied": False}
         if pact.status not in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT):
-            return {"applied": False, "apply_error": "Zakład jest już zamknięty."}
+            return {"applied": False, "apply_error": "Umowa jest już zamknięta."}
+        if not kept and not result_allowed(pact):
+            # called early and not carried: there is still time to keep their word
+            _announce(
+                pact,
+                "Brak rozstrzygnięcia",
+                f"Posłowie nie uznali jeszcze postanowienia: {pact.title}",
+                push_to=[pact.creator_id],
+            )
+            return {"applied": False}
         proposal = OutcomeProposal.objects.create(
             pact=pact, proposed_by=pact.creator, result={"kept": kept}
         )
@@ -728,7 +737,7 @@ def process_deadlines(now: datetime | None = None) -> dict[str, int]:
                 pact.status = Pact.Status.CANCELLED  # it never started and the date has passed
                 pact.save(update_fields=["status"])
                 counts["lapsed"] += 1
-                _announce(pact, "Zakład wygasł", pact.title)
+                _announce(pact, "Umowa wygasła", pact.title)
                 continue
             if pact.status == Pact.Status.ACTIVE and pact.due_at and pact.due_at <= now:
                 pact.status = Pact.Status.AWAITING_RESULT
@@ -749,7 +758,7 @@ def process_deadlines(now: datetime | None = None) -> dict[str, int]:
 def _nudge(pact: Pact) -> None:
     _announce(
         pact,
-        "Termin zakładu minął",
+        "Termin umowy minął",
         f"„{pact.title}”: ustalcie wynik",
         push_to=_active_ids(pact),
     )

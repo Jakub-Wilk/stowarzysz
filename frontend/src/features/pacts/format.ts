@@ -48,6 +48,10 @@ export function formatStake(
 }
 
 /** "za 3 dni", "dzisiaj" or "3 dni temu" relative to `now`. */
+export function isPastDue(iso: string | null, now: Date = new Date()): boolean {
+  return iso === null || new Date(iso) <= now
+}
+
 export function dueLabel(iso: string, now: Date = new Date()): string {
   const days = Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000)
   if (days === 0) return 'dzisiaj'

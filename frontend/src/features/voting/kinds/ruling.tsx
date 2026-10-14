@@ -34,7 +34,7 @@ export function RulingProposal({ poll }: { poll: PollDetail }) {
   return (
     <section className="flex flex-col gap-2 rounded-lg border bg-card p-4">
       <p className="text-base">
-        Strony zakładu nie zgadzają się co do wyniku. Czy ten wynik jest słuszny?
+        Strony umowy nie zgadzają się co do wyniku. Czy ten wynik jest słuszny?
       </p>
       {text && <p className="text-xl font-semibold">{text}</p>}
       <Button
@@ -43,7 +43,7 @@ export function RulingProposal({ poll }: { poll: PollDetail }) {
         nativeButton={false}
         render={<Link to={`/pacts/${pactId}`} />}
       >
-        Zobacz zakład
+        Zobacz umowę
       </Button>
     </section>
   )
@@ -103,7 +103,7 @@ export function RulingResultDisplay({ poll }: { poll: PollDetail }) {
         )}
         {!upheld && (
           <div className="text-base text-muted-foreground">
-            Strony mogą podać nowy wynik w zakładzie.
+            Strony mogą podać nowy wynik w umowie.
           </div>
         )}
       </div>

@@ -84,7 +84,11 @@ function PactView({ pact }: { pact: PactDetail }) {
 
       <section className="flex flex-col gap-2 rounded-lg border bg-card p-4">
         <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          {kind.key === 'resolution' ? 'Postanowienie' : 'Warunek'}
+          {kind.key === 'resolution'
+            ? 'Postanowienie'
+            : kind.key === 'shared_goal'
+              ? 'Cel'
+              : 'Warunek'}
         </h3>
         <p className="text-lg whitespace-pre-wrap">{pact.condition}</p>
         {pact.notes && (
@@ -124,7 +128,7 @@ export function PactDetailPage() {
       {error && !isPending && (
         <div className="flex flex-col items-start gap-2">
           <span role="alert" className="text-sm text-destructive">
-            Nie udało się wczytać zakładu.
+            Nie udało się wczytać umowę.
           </span>
           <Button variant="outline" onClick={() => refetch()}>
             Spróbuj ponownie

@@ -25,7 +25,7 @@ export function PactStatsBlock({ stats }: { stats: PactStats }) {
       <h3 className="font-semibold">Umowy</h3>
       {empty ? (
         <p className="text-sm text-muted-foreground">
-          Brak rozstrzygniętych zakładów z udziałem tej osoby.
+          Brak rozstrzygniętych umów z udziałem tej osoby.
         </p>
       ) : (
         <>

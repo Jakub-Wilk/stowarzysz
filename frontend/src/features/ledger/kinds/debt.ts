@@ -11,7 +11,7 @@ export const debtKind: LedgerKindUI<DebtEntry> = {
   icon: HandCoins,
   statusLabel: (entry) => (entry.status === 'cancelled' ? 'Usunięty' : 'Zapisany'),
   summary: (entry, myId) => {
-    const from = entry.source_type === 'pact' ? 'z zakładu: ' : ''
+    const from = entry.source_type === 'pact' ? 'z umowy: ' : ''
     const pairs = entry.obligations.map((o) => `${who(o.debtor, myId)} → ${who(o.creditor, myId)}`)
     return from + pairs.join(', ')
   },

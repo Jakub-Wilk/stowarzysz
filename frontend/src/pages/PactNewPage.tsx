@@ -119,7 +119,7 @@ export function PactNewPage() {
   return (
     <>
       <BackLink to="/pacts">Umowy</BackLink>
-      <h2 className="mb-6 text-2xl font-semibold">Nowy zakład</h2>
+      <h2 className="mb-6 text-2xl font-semibold">Nowa umowa</h2>
 
       <form onSubmit={submit} className="flex max-w-md flex-col gap-6">
         <fieldset className="flex flex-col gap-2">
@@ -155,7 +155,11 @@ export function PactNewPage() {
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="condition">
-            {kind.key === 'resolution' ? 'Do czego się zobowiązujesz?' : 'Warunek'}
+            {kind.key === 'resolution'
+              ? 'Do czego się zobowiązujesz?'
+              : kind.key === 'shared_goal'
+                ? 'Jaki jest cel?'
+                : 'Warunek'}
           </Label>
           <Textarea
             id="condition"
@@ -166,7 +170,9 @@ export function PactNewPage() {
                 ? 'Co musi się stać, żebyś wygrał(a)?'
                 : kind.key === 'resolution'
                   ? 'Co dokładnie zrobisz?'
-                  : 'O co się zakładamy?'
+                  : kind.key === 'shared_goal'
+                    ? 'Co chcemy razem osiągnąć?'
+                    : 'O co się zakładamy?'
             }
             onChange={(e) => setCondition(e.target.value)}
           />

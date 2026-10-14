@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/features/secretsanta/format'
+import { isPastDue } from '@/features/pacts/format'
 import {
   Dialog,
   DialogContent,
@@ -50,7 +51,7 @@ function Claim({ pact, proposal }: { pact: PactDetail; proposal: PactProposal })
         <>
           <p className="text-sm text-muted-foreground">
             Wynik jest sporny. Strony mogą podać nowy albo oddać sprawę pod głosowanie posłów spoza
-            zakładu.
+            umowy.
           </p>
           {proposal.ruling_poll_id !== null && (
             <Button
@@ -70,7 +71,7 @@ function Claim({ pact, proposal }: { pact: PactDetail; proposal: PactProposal })
                 open={escalating}
                 onOpenChange={setEscalating}
                 title="Oddać spór pod głosowanie?"
-                description="Posłowie, którzy nie biorą udziału w zakładzie, zagłosują, czy ten wynik jest słuszny. Przy remisie albo braku głosów wynik zostaje odrzucony."
+                description="Posłowie, którzy nie biorą udziału w umowie, zagłosują, czy ten wynik jest słuszny. Przy remisie albo braku głosów wynik zostaje odrzucony."
                 confirmLabel="Oddaj pod głosowanie"
                 destructive={false}
                 pending={action.isPending}
@@ -124,23 +125,30 @@ function ProposeForm({ pact }: { pact: PactDetail }) {
   const [open, setOpen] = useState(false)
   const wager = wagers.find((w) => w.id === wagerId) ?? null
   const canSet = pact.actions.can_set_result
-  // before the deadline nobody can call the result: the only claim left is calling it off
-  const choices = canSet ? [...kind.outcomeChoices(pact, wager), VOID_CHOICE] : [VOID_CHOICE]
+  const beforeDeadline = pact.due_at !== null && !isPastDue(pact.due_at)
+  // before the deadline only an early claim (e.g. "done") or calling it off is possible
+  const claims = kind.outcomeChoices(pact, wager).filter((c) => !beforeDeadline || c.early)
+  const choices = canSet ? [...claims, VOID_CHOICE] : [VOID_CHOICE]
+  const earlyOnly = canSet && beforeDeadline
 
   if (kind.wagerBased && wagers.length === 0) return null
 
   return (
     <>
       <Button className="w-full" onClick={() => setOpen(true)}>
-        {canSet ? 'Podaj wynik' : 'Unieważnij zakład'}
+        {canSet ? (earlyOnly ? 'Zgłoś wynik' : 'Podaj wynik') : 'Unieważnij umowę'}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{canSet ? 'Podaj wynik' : 'Unieważnij zakład'}</DialogTitle>
+            <DialogTitle>
+              {canSet ? (earlyOnly ? 'Zgłoś wynik' : 'Podaj wynik') : 'Unieważnij umowę'}
+            </DialogTitle>
             <DialogDescription>
-              {!canSet && pact.due_at
-                ? `Wynik można podać dopiero po terminie (${formatDate(pact.due_at)}). Do tego czasu można tylko unieważnić zakład, jeśli druga strona się zgodzi.`
+              {(!canSet || earlyOnly) && pact.due_at
+                ? earlyOnly
+                  ? `Przed terminem (${formatDate(pact.due_at)}) można zgłosić tylko, że cel został osiągnięty, albo go unieważnić. Wymaga to potwierdzenia pozostałych uczestników.`
+                  : `Wynik można podać dopiero po terminie (${formatDate(pact.due_at)}). Do tego czasu można tylko unieważnić umowę, jeśli druga strona się zgodzi.`
                 : kind.wagerBased
                   ? 'Wynik zacznie obowiązywać, gdy druga strona go potwierdzi.'
                   : 'Wynik zacznie obowiązywać, gdy potwierdzą go wszyscy pozostali uczestnicy.'}
@@ -209,6 +217,7 @@ function ProposeForm({ pact }: { pact: PactDetail }) {
 function JudgmentPanel({ pact }: { pact: PactDetail }) {
   const call = useCallJudgment(pact.id)
   const isAuthor = pact.my.role === 'host'
+  const pastDue = isPastDue(pact.due_at)
   return (
     <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
       <h3 className="text-lg font-semibold">Ocena postanowienia</h3>
@@ -226,12 +235,18 @@ function JudgmentPanel({ pact }: { pact: PactDetail }) {
       ) : pact.actions.can_call_judgment ? (
         <>
           <p className="text-base">
-            {isAuthor
-              ? 'Termin minął. Oddaj sprawę pod głosowanie wszystkich posłów, niezależnie od tego, czy się udało.'
-              : 'Termin minął. Możesz poprosić posłów o ocenę, czy postanowienie dotrzymano.'}
+            {pastDue
+              ? isAuthor
+                ? 'Termin minął. Oddaj sprawę pod głosowanie wszystkich posłów, niezależnie od tego, czy się udało.'
+                : 'Termin minął. Możesz poprosić posłów o ocenę, czy postanowienie dotrzymano.'
+              : 'Zrobione przed terminem? Poproś wszystkich posłów o ocenę. Jeśli nie uznają, że dotrzymałeś słowa, postanowienie zostaje otwarte do terminu.'}
           </p>
           <Button disabled={call.isPending} onClick={() => call.mutate()}>
-            {call.isPending ? 'Wysyłanie…' : 'Oddaj pod głosowanie w Sejmiku'}
+            {call.isPending
+              ? 'Wysyłanie…'
+              : pastDue
+                ? 'Oddaj pod głosowanie w Sejmiku'
+                : 'Dotrzymałem słowa, oceńcie'}
           </Button>
         </>
       ) : (

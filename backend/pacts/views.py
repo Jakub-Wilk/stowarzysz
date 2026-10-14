@@ -162,7 +162,7 @@ class AttachmentDetailView(APIView):
 
 
 class JudgmentView(APIView):
-    """Put a resolution to a vote of all members (its author may do it any time)."""
+    """Put a resolution to a vote of all members (its author may do it before the deadline too)."""
 
     @extend_schema(request=None, responses={200: PactDetailSerializer})
     def post(self, request: Request, pact_id: int) -> Response:

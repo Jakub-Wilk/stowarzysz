@@ -113,7 +113,7 @@ function JoinPanel({ pact }: { pact: PactDetail }) {
   }
   return (
     <section className="flex flex-col gap-4 rounded-lg border bg-card p-4">
-      <h3 className="text-lg font-semibold">Dołącz do zakładu</h3>
+      <h3 className="text-lg font-semibold">Dołącz do umowy</h3>
       {kind.wagerBased && (
         <p className="text-base">
           Stawiasz przeciwko {pact.creator.username}. Podaj własną stawkę, a autor zdecyduje, czy ją
@@ -170,14 +170,14 @@ export function ResponsePanel({ pact }: { pact: PactDetail }) {
       {canCancel && (
         <>
           <Button variant="outline" className="w-full" onClick={() => setConfirmCancel(true)}>
-            Anuluj zakład
+            Anuluj umowę
           </Button>
           <ConfirmDialog
             open={confirmCancel}
             onOpenChange={setConfirmCancel}
-            title="Anulować zakład?"
-            description="Zakład jeszcze się nie rozpoczął. Zaproszeni dostaną powiadomienie, a zakładu nie będzie można wznowić."
-            confirmLabel="Anuluj zakład"
+            title="Anulować umowę?"
+            description="Umowa jeszcze się nie rozpoczęła. Zaproszeni dostaną powiadomienie, a umowy nie będzie można wznowić."
+            confirmLabel="Anuluj umowę"
             pending={cancel.isPending}
             onConfirm={() => cancel.mutate(undefined, { onSettled: () => setConfirmCancel(false) })}
           />

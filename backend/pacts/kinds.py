@@ -52,6 +52,7 @@ class PactKind(ABC):
     needs_due_date: ClassVar[bool] = False
     wager_based: ClassVar[bool] = False  # each opponent is a separate wager against the host
     all_must_answer: ClassVar[bool] = False  # starts only once every invitee has answered
+    early_claims: ClassVar[bool] = False  # some claims may be made before the deadline
 
     @abstractmethod
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -79,6 +80,10 @@ class PactKind(ABC):
     def join_approvers(self, host_id: int, active_ids: list[int]) -> set[int]:
         """Who must approve a join request. Default: only the host."""
         return {host_id}
+
+    def early_ok(self, result: dict[str, Any]) -> bool:
+        """Whether this (already cleaned) claim may be made before the deadline."""
+        return False
 
 
 def _clean_amount(terms: Terms) -> int | None:
@@ -242,6 +247,45 @@ class ResolutionKind(PactKind):
         return Settlement([], {host.user_id: WON if result["kept"] else LOST})
 
 
+class SharedGoalKind(PactKind):
+    """A goal a group commits to together (a trip, a project), possibly years away.
+
+    Whoever joins is bound by it. Anyone in it can claim "done" at any time; the rest confirm.
+    "Not done" can only be claimed after the deadline. No money."""
+
+    key = "shared_goal"
+    needs_due_date = True
+    early_claims = True
+
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    def validate_terms(
+        self, terms: Terms, config: dict[str, Any], *, host: bool, final: bool
+    ) -> Terms:
+        if terms.stake_amount or terms.side.strip():
+            raise ValidationError("Wspólne cele nie mają stawki pieniężnej ani stron.")
+        return Terms(terms.user_id, None, terms.stake_note.strip())
+
+    def validate_outcome(self, result: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+        done = result.get("done")
+        if not isinstance(done, bool):
+            raise ValidationError("Wynik musi mówić, czy cel osiągnięto (done: true/false).")
+        return {"done": done}
+
+    def join_approvers(self, host_id: int, active_ids: list[int]) -> set[int]:
+        return set(active_ids)
+
+    def early_ok(self, result: dict[str, Any]) -> bool:
+        return result.get("done") is True
+
+    def settle(
+        self, parties: list[Party], result: dict[str, Any], config: dict[str, Any]
+    ) -> Settlement:
+        verdict = WON if result["done"] else LOST
+        return Settlement([], {p.user_id: verdict for p in parties})
+
+
 KINDS: dict[str, PactKind] = {}
 
 
@@ -253,9 +297,10 @@ def get_kind(key: str) -> PactKind:
     try:
         return KINDS[key]
     except KeyError:
-        raise ValidationError("Nieznany rodzaj zakładu.") from None
+        raise ValidationError("Nieznany rodzaj umowy.") from None
 
 
 register(BetKind())
 register(GroupBetKind())
 register(ResolutionKind())
+register(SharedGoalKind())

@@ -48,7 +48,7 @@ export function PactsPage() {
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-2xl font-semibold">Umowy</h2>
         <Button nativeButton={false} render={<Link to="/pacts/new" />}>
-          <Plus /> Zakład
+          <Plus /> Umowa
         </Button>
       </div>
 
@@ -70,7 +70,7 @@ export function PactsPage() {
         {pacts.isError && (
           <div className="mt-6 flex flex-col items-start gap-2">
             <span role="alert" className="text-base text-destructive">
-              Nie udało się wczytać zakładów.
+              Nie udało się wczytać umów.
             </span>
             <Button variant="outline" onClick={() => void pacts.refetch()}>
               Spróbuj ponownie
@@ -79,7 +79,7 @@ export function PactsPage() {
         )}
 
         {pacts.isPending && (
-          <div className="mt-6 flex flex-col gap-3" role="status" aria-label="Ładowanie zakładów">
+          <div className="mt-6 flex flex-col gap-3" role="status" aria-label="Ładowanie umów">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-24" />
             ))}

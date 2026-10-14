@@ -378,7 +378,7 @@ class DebtKind(EntryKind):
         if action not in ("cancel", "edit") or entry.status != Status.CONFIRMED:
             raise Conflict()
         if entry.source_type != "manual":
-            raise Conflict("Rozliczenie zakładu zmienia się tylko przez zakład.")
+            raise Conflict("Rozliczenie umowy zmienia się tylko przez umowę.")
         if user.pk not in {d.creditor_id for d in self.debts(entry)}:
             raise PermissionDenied(
                 "Wpis może zmienić lub usunąć tylko osoba, której ktoś jest winien."

@@ -288,7 +288,7 @@ class PactRulingKind(PollKind):
         }
 
     def generate_title(self, config: dict[str, Any]) -> str:
-        return f"Spór o zakład: {config['pact_title']}"
+        return f"Spór o umowę: {config['pact_title']}"
 
     def eligible_participants(self, config: dict[str, Any], creator: Any) -> list[Any]:
         from pacts.models import PactParticipant

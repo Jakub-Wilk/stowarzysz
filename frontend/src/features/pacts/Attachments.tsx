@@ -110,7 +110,7 @@ export function Attachments({ pact, myId }: { pact: PactDetail; myId: number | u
               >
                 <img
                   src={a.url}
-                  alt={a.caption || 'Zdjęcie do zakładu'}
+                  alt={a.caption || 'Zdjęcie do umowy'}
                   loading="lazy"
                   className="size-full object-cover"
                 />

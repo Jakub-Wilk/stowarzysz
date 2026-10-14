@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from accounts.models import User
 from ledger.models import LedgerEntry
@@ -414,8 +415,9 @@ def test_a_resolution_starts_at_once_and_invites_nobody(alice, bob) -> None:
 
 def test_a_resolution_is_judged_by_every_other_member(alice, bob, carol, dave) -> None:
     pact = resolution(alice)
-    assert judgment(alice, pact).status_code == 403  # nobody before the deadline, author included
-    assert client_for(alice).get(url(pact)).json()["actions"]["can_call_judgment"] is False
+    assert judgment(bob, pact).status_code == 403  # only the author may call it early
+    assert client_for(bob).get(url(pact)).json()["actions"]["can_call_judgment"] is False
+    assert client_for(alice).get(url(pact)).json()["actions"]["can_call_judgment"] is True
     overdue(pact)
     assert judgment(alice, pact).status_code == 200
     pact.refresh_from_db()
@@ -469,6 +471,28 @@ def test_a_tied_or_empty_judgment_leaves_the_resolution_open(alice, bob, carol, 
     assert judgment(alice, pact).status_code == 200  # judge again
 
 
+def test_the_author_can_claim_a_resolution_early(alice, bob, carol) -> None:
+    pact = resolution(alice)
+    assert judgment(alice, pact).status_code == 200
+    pact.refresh_from_db()
+    for juror in (bob, carol):
+        juror_vote(juror, pact.judgment_poll, True)
+    assert state(pact) == Pact.Status.RESOLVED
+    assert OutcomeProposal.objects.get(pact=pact).verdicts == {str(alice.pk): "won"}
+
+
+def test_an_early_judgment_that_fails_leaves_the_resolution_open(alice, bob, carol) -> None:
+    pact = resolution(alice)
+    judgment(alice, pact)
+    pact.refresh_from_db()
+    for juror in (bob, carol):
+        juror_vote(juror, pact.judgment_poll, False)
+    assert state(pact) == Pact.Status.ACTIVE  # not lost: the deadline is still ahead
+    pact.refresh_from_db()
+    assert pact.judgment_poll is None and not OutcomeProposal.objects.exists()
+    assert judgment(alice, pact).status_code == 200  # try again later
+
+
 def test_anyone_can_call_for_judgment_once_the_deadline_has_passed(alice, bob) -> None:
     pact = resolution(alice)
     Pact.objects.filter(pk=pact.pk).update(due_at=timezone.now() - timedelta(hours=1))
@@ -507,7 +531,7 @@ def test_escalating_creates_a_poll_for_members_outside_the_pact(
     assert escalate(alice, pact, proposal).status_code == 200
     proposal.refresh_from_db()
     poll = proposal.ruling_poll
-    assert poll.kind == "pact_ruling" and poll.title == f"Spór o zakład: {pact.title}"
+    assert poll.kind == "pact_ruling" and poll.title == f"Spór o umowę: {pact.title}"
     assert set(poll.participants.values_list("user__username", flat=True)) == {"carol", "dave"}
     assert escalate(alice, pact, proposal).status_code == 409  # only once
 
@@ -718,3 +742,74 @@ def test_a_normal_create_still_needs_a_future_deadline(alice, bob) -> None:
         "opponents": [{"user_id": bob.pk, "stake_amount": 100}],
     }
     assert client_for(alice).post(PACTS, body, format="json").status_code == 400
+
+
+# --- shared goals ---------------------------------------------------------------
+
+
+def goal(user: User, *invitees: User, years: int = 10) -> Pact:
+    pact = create(
+        user,
+        kind="shared_goal",
+        title="Wyjazd do Ameryki",
+        condition="Wszyscy razem w USA",
+        due_at=(timezone.now() + timedelta(days=365 * years)).isoformat(),
+        opponents=[{"user_id": u.pk} for u in invitees],
+    )
+    for u in invitees:
+        respond(u, pact)
+    return pact
+
+
+def test_a_shared_goal_needs_a_deadline_and_has_no_stakes(alice, bob) -> None:
+    resp = client_for(alice).post(
+        PACTS, {"kind": "shared_goal", "title": "t", "condition": "c"}, format="json"
+    )
+    assert resp.status_code == 400
+    body = {
+        "kind": "shared_goal",
+        "title": "t",
+        "condition": "c",
+        "due_at": (timezone.now() + timedelta(days=9)).isoformat(),
+        "opponents": [{"user_id": bob.pk, "stake_amount": 100}],
+    }
+    assert client_for(alice).post(PACTS, body, format="json").status_code == 400
+
+
+def test_a_shared_goal_can_be_completed_early_when_all_confirm(alice, bob, carol) -> None:
+    pact = goal(alice, bob, carol)
+    assert state(pact) == Pact.Status.ACTIVE
+    assert client_for(bob).get(url(pact)).json()["actions"]["can_set_result"] is True
+    proposal = claim(bob, pact, {"done": True}).json()
+    confirm(alice, pact, proposal["id"])
+    assert state(pact) == Pact.Status.ACTIVE  # carol hasn't confirmed yet
+    confirm(carol, pact, proposal["id"])
+    assert state(pact) == Pact.Status.RESOLVED
+    verdicts = OutcomeProposal.objects.get(pk=proposal["id"]).verdicts
+    assert verdicts == {str(alice.pk): "won", str(bob.pk): "won", str(carol.pk): "won"}
+    assert not LedgerEntry.objects.exists()
+
+
+def test_a_shared_goal_cannot_be_failed_before_the_deadline(alice, bob) -> None:
+    pact = goal(alice, bob)
+    assert claim(bob, pact, {"done": False}).status_code == 409
+    assert claim(bob, pact, {"done": "yes"}).status_code == 400
+    assert claim(bob, pact, {"void": True}).status_code == 201
+    overdue(pact)
+    assert claim(bob, pact, {"done": False}).status_code == 201
+
+
+def test_only_participants_claim_a_shared_goal_and_joiners_need_everyone(alice, bob, carol) -> None:
+    pact = goal(alice, bob)
+    assert claim(carol, pact, {"done": True}).status_code == 403
+    assert request(carol, pact).status_code in (200, 201)
+    decide_ids = client_for(carol).get(url(pact)).json()["actions"]
+    assert decide_ids["can_withdraw_request"] is True
+    assert client_for(alice).get(url(pact)).json()["actions"]["to_decide"]
+    assert client_for(bob).get(url(pact)).json()["actions"]["to_decide"]
+
+
+def test_shared_goal_endpoints_need_authentication(alice, bob) -> None:
+    pact = goal(alice, bob)
+    resp = APIClient().post(url(pact, "outcome/"), {"result": {"done": True}}, format="json")
+    assert resp.status_code == 401

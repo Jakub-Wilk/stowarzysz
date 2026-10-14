@@ -24,7 +24,7 @@ export function DebtDetail({ entry, myId }: { entry: DebtEntry; myId: number | u
       </ul>
       {entry.source_type === 'pact' && entry.source_id !== null && (
         <Link to={`/pacts/${entry.source_id}`} className="mt-2 self-start text-base underline">
-          Zobacz zakład
+          Zobacz umowę
         </Link>
       )}
     </section>

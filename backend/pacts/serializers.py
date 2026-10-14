@@ -74,7 +74,7 @@ class ActionsSerializer(serializers.Serializer):
     can_respond = serializers.BooleanField()
     can_request_join = serializers.BooleanField()
     can_call_judgment = serializers.BooleanField()
-    can_set_result = serializers.BooleanField()  # false before the deadline: only void
+    can_set_result = serializers.BooleanField()  # before the deadline: only void (and early claims)
     can_withdraw_request = serializers.BooleanField()
     can_attach = serializers.BooleanField()
     to_decide = serializers.ListField(child=serializers.IntegerField())  # participant ids
@@ -190,8 +190,9 @@ class PactDetailSerializer(PactSerializer):
             "can_call_judgment": get_kind(pact.kind).judged_by_everyone
             and running
             and pact.judgment_poll_id is None
-            and result_allowed(pact),
-            "can_set_result": running and result_allowed(pact),
+            and (result_allowed(pact) or user.pk == pact.creator_id),
+            "can_set_result": running
+            and (result_allowed(pact) or get_kind(pact.kind).early_claims),
             "can_withdraw_request": mine is not None and mine.state == state.REQUESTED,
             "can_attach": mine is not None
             and mine.state in _ATTACH
