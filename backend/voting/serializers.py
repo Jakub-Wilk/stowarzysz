@@ -18,7 +18,7 @@ class MySerializer(serializers.Serializer):
 
 
 class ParticipantSerializer(serializers.Serializer):
-    """`ballot`, `vetoed`, `abstained` and `reason` are only present once the poll has ended."""
+    """`ballot`, `vetoed`, `abstained`, `reason`, `reaction`: only present once the poll ended."""
 
     user = UserBriefSerializer()
     has_voted = serializers.BooleanField()
@@ -26,6 +26,7 @@ class ParticipantSerializer(serializers.Serializer):
     vetoed = serializers.BooleanField(required=False)
     abstained = serializers.BooleanField(required=False)
     reason = serializers.CharField(required=False, allow_blank=True)
+    reaction = serializers.CharField(required=False, allow_null=True)
 
 
 class PollSerializer(serializers.ModelSerializer):
@@ -121,6 +122,7 @@ class PollDetailSerializer(PollSerializer):
                 row["vetoed"] = p.vetoed
                 row["abstained"] = p.abstained
                 row["reason"] = p.reason
+                row["reaction"] = p.last_reaction or None
             rows.append(row)
         return rows
 

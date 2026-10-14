@@ -214,6 +214,10 @@ def close_early(poll_id: int, user: Any) -> Poll:
 def send_reaction(poll: Poll, user: Any, emoji: str) -> None:
     if poll.status != Poll.Status.CLOSED:
         raise ValidationError("Reakcje są dostępne dla zakończonych głosowań.")
+    # Meant to be spammed: one conditional UPDATE, no lock, and a repeated emoji writes nothing.
+    PollParticipant.objects.filter(poll=poll, user=user).exclude(last_reaction=emoji).update(
+        last_reaction=emoji
+    )
     broadcast("poll.reaction", {"poll_id": poll.pk, "emoji": emoji, "user_id": user.pk})
 
 

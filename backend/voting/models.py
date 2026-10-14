@@ -79,6 +79,7 @@ class PollParticipant(models.Model):
     abstained = models.BooleanField(default=False)  # no ballot; left out of the result
     reason = models.CharField(max_length=300, blank=True)  # optional, for a veto or an abstention
     voted_at = models.DateTimeField(null=True)  # null for someone auto-abstained at close
+    last_reaction = models.CharField(max_length=8, blank=True)  # last emoji tapped on the result
 
     objects = models.Manager()
 

@@ -7,6 +7,7 @@ import { ledgerKey } from '@/features/ledger/hooks'
 import { pactsKey } from '@/features/pacts/hooks'
 import { santaKey } from '@/features/secretsanta/hooks'
 import { emitOcr } from '@/features/ledger/expense/ocrBus'
+import { setCachedReaction } from '@/features/voting/hooks'
 import { emitReaction } from '@/features/voting/reactionBus'
 import {
   REACTION_EMOJI,
@@ -59,6 +60,14 @@ export function RealtimeShell() {
       void queryClient.invalidateQueries({ queryKey: ledgerKey })
       return
     }
+    if (type === 'poll.reaction') {
+      // spammed: patch the open result instead of refetching it on every tap
+      if (isReactionEvent(data)) {
+        setCachedReaction(queryClient, data.poll_id, data.user_id, data.emoji)
+        emitReaction(data)
+      }
+      return
+    }
     if (!type.startsWith('poll.')) return
     void queryClient.invalidateQueries({ queryKey: ['polls'] })
     if (type === 'poll.closed') {
@@ -69,7 +78,6 @@ export function RealtimeShell() {
       void queryClient.invalidateQueries({ queryKey: ['people'] })
       void queryClient.invalidateQueries({ queryKey: meQueryKey })
     }
-    if (type === 'poll.reaction' && isReactionEvent(data)) emitReaction(data)
   })
 
   return (

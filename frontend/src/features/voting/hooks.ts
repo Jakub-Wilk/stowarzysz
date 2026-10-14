@@ -115,9 +115,31 @@ export function useClosePoll(id: number) {
   )
 }
 
-export function useSendReaction(id: number) {
+/** Shows someone's latest reaction in a cached result without refetching it (it is spammed). */
+export function setCachedReaction(
+  queryClient: QueryClient,
+  pollId: number,
+  userId: number,
+  emoji: ReactionEmoji,
+): void {
+  queryClient.setQueryData<PollDetail>(detailKey(pollId), (poll) => {
+    const row = poll?.participants.find((p) => p.user.id === userId)
+    if (!poll || !row || row.reaction === emoji) return poll
+    return {
+      ...poll,
+      participants: poll.participants.map((p) => (p === row ? { ...p, reaction: emoji } : p)),
+    }
+  })
+}
+
+export function useSendReaction(id: number, userId: number | undefined) {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (emoji: ReactionEmoji) =>
       apiFetch<void>(`/api/polls/${id}/reactions/`, { method: 'POST', json: { emoji } }),
+    // no refetch afterwards: taps come in bursts
+    onMutate: (emoji) => {
+      if (userId !== undefined) setCachedReaction(queryClient, id, userId, emoji)
+    },
   })
 }

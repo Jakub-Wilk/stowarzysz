@@ -92,37 +92,45 @@ export function ScoreResultDisplay({ poll }: { poll: PollDetail }) {
       </div>
 
       <ul className="flex flex-col gap-2">
-        {poll.participants.map(({ user, has_voted, ballot, vetoed, abstained, reason }) => {
-          const value = readValue(ballot)
-          return (
-            <li
-              key={user.id}
-              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
-            >
-              <UserAvatar username={user.username} src={user.avatar_url} size="md" />
-              <span className="text-metal flex-1 truncate text-lg font-medium">
-                {user.username}
-              </span>
-              {vetoed && <ReasonBadge type="veto" reason={reason} />}
-              {abstained ? (
-                <span className="flex w-12 justify-center">
-                  <ReasonBadge type="abstain" reason={reason} />
+        {poll.participants.map(
+          ({ user, has_voted, ballot, vetoed, abstained, reason, reaction }) => {
+            const value = readValue(ballot)
+            return (
+              <li
+                key={user.id}
+                className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
+              >
+                <UserAvatar username={user.username} src={user.avatar_url} size="md" />
+                <span className="text-metal flex-1 truncate text-lg font-medium">
+                  {user.username}
                 </span>
-              ) : has_voted && value !== null ? (
+                {vetoed && <ReasonBadge type="veto" reason={reason} />}
                 <span
-                  className={cn(
-                    'w-12 text-center text-2xl font-bold tabular-nums',
-                    toneClasses(scoreTone(value)).text,
-                  )}
+                  className="w-8 text-center text-xl"
+                  aria-label={reaction ? `Reakcja ${reaction}` : undefined}
                 >
-                  {value > 0 ? `+${value}` : value}
+                  {reaction}
                 </span>
-              ) : (
-                <span className="text-base text-muted-foreground">brak głosu</span>
-              )}
-            </li>
-          )
-        })}
+                {abstained ? (
+                  <span className="flex w-12 justify-center">
+                    <ReasonBadge type="abstain" reason={reason} />
+                  </span>
+                ) : has_voted && value !== null ? (
+                  <span
+                    className={cn(
+                      'w-12 text-center text-2xl font-bold tabular-nums',
+                      toneClasses(scoreTone(value)).text,
+                    )}
+                  >
+                    {value > 0 ? `+${value}` : value}
+                  </span>
+                ) : (
+                  <span className="text-base text-muted-foreground">brak głosu</span>
+                )}
+              </li>
+            )
+          },
+        )}
       </ul>
     </div>
   )

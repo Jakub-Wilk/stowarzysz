@@ -189,7 +189,7 @@ function ClosedVote({ poll }: { poll: PollDetail }) {
   const { data: me } = useMe()
   const ResultDisplay = getKindUI(poll.kind)?.ResultDisplay
   const Proposal = getKindUI(poll.kind)?.Proposal
-  const react = useSendReaction(poll.id)
+  const react = useSendReaction(poll.id, me?.id)
   const { spawn, layer } = useSmoke()
   const myId = me?.id
 

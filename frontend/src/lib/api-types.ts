@@ -107,6 +107,8 @@ export interface PollParticipant {
   abstained?: boolean
   /** Optional explanation of a veto or an abstention (auto-abstained non-voters get a fixed one). */
   reason?: string
+  /** The last emoji this person tapped on the result (once the vote has ended). */
+  reaction?: ReactionEmoji | null
 }
 
 export interface PollDetail extends PollListItem {

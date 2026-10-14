@@ -442,6 +442,34 @@ def test_reactions_can_be_spammed(poll: Poll, alice, bob, carol) -> None:
     assert codes == {204}
 
 
+def reactions_of(client: APIClient, poll: Poll) -> dict[str, Any]:
+    rows = client.get(url(poll)).json()["participants"]
+    return {r["user"]["username"]: r["reaction"] for r in rows}
+
+
+def test_last_reaction_is_stored_and_shown(poll: Poll, alice, bob, carol) -> None:
+    finish(poll, alice, bob, carol)
+    client = client_for(bob)
+    for emoji in ("🔥", "🤣", "😭"):
+        client.post(url(poll, "reactions/"), {"emoji": emoji})
+    assert reactions_of(client, poll) == {"alice": None, "bob": "😭", "carol": None}
+
+
+def test_spammed_reaction_stays_stored(poll: Poll, alice, bob, carol) -> None:
+    finish(poll, alice, bob, carol)
+    client = client_for(bob)
+    for _ in range(50):
+        assert client.post(url(poll, "reactions/"), {"emoji": "🔥"}).status_code == 204
+    assert reactions_of(client, poll)["bob"] == "🔥"
+
+
+def test_outsider_reaction_is_not_stored(poll: Poll, alice, bob, carol, dave) -> None:
+    finish(poll, alice, bob, carol)
+    resp = client_for(dave).post(url(poll, "reactions/"), {"emoji": "🔥"})
+    assert resp.status_code == 204
+    assert set(reactions_of(client_for(dave), poll).values()) == {None}
+
+
 # --- directory --------------------------------------------------------------
 
 
