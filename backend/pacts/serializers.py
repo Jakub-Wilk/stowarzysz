@@ -157,6 +157,8 @@ class PactDetailSerializer(PactSerializer):
         state = PactParticipant.State
         mine = next((p for p in pact.participants.all() if p.user_id == user.pk), None)
         running = pact.status in (Pact.Status.PROPOSED, Pact.Status.ACTIVE)
+        # claims and judgments stay possible once the deadline marked it awaiting a result
+        deciding = pact.status in (Pact.Status.ACTIVE, Pact.Status.AWAITING_RESULT)
         retry = (state.DECLINED, state.REJECTED, state.WITHDRAWN, state.EXPIRED)
         to_decide = [
             p.pk
@@ -188,10 +190,10 @@ class PactDetailSerializer(PactSerializer):
             and running
             and (mine is None or mine.state in retry),
             "can_call_judgment": get_kind(pact.kind).judged_by_everyone
-            and running
+            and deciding
             and pact.judgment_poll_id is None
             and (result_allowed(pact) or user.pk == pact.creator_id),
-            "can_set_result": running
+            "can_set_result": deciding
             and (result_allowed(pact) or get_kind(pact.kind).early_claims),
             "can_withdraw_request": mine is not None and mine.state == state.REQUESTED,
             "can_attach": mine is not None

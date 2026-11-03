@@ -500,6 +500,15 @@ def test_anyone_can_call_for_judgment_once_the_deadline_has_passed(alice, bob) -
     assert judgment(bob, pact).status_code == 200
 
 
+def test_an_overdue_resolution_can_still_be_judged(alice, bob) -> None:
+    pact = resolution(alice)
+    Pact.objects.filter(pk=pact.pk).update(due_at=timezone.now() - timedelta(hours=1))
+    services.process_deadlines()
+    assert state(pact) == Pact.Status.AWAITING_RESULT
+    assert client_for(bob).get(url(pact)).json()["actions"]["can_call_judgment"] is True
+    assert judgment(bob, pact).status_code == 200
+
+
 def test_only_resolutions_are_judged_this_way(alice, bob) -> None:
     pact = make_bet(alice, (bob, 1000))
     accept(bob, pact)
@@ -639,6 +648,7 @@ def test_overdue_pacts_are_moved_and_nudged_weekly(alice, bob, pushes) -> None:
     }
     assert services.process_deadlines(now + timedelta(days=8))["nudged"] == 1
     # an overdue pact can still be settled
+    assert client_for(alice).get(url(pact)).json()["actions"]["can_set_result"] is True
     proposal = propose(alice, pact, bob, "host").json()
     confirm(bob, pact, proposal["id"])
     assert state(pact) == Pact.Status.RESOLVED
