@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from legacy_refresh_tokens where expires_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "baa2044d28935a0f4b5cb4dac69d2bca68be9530420f077483b579d6564ea6d3"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select min(next_attempt_at) from push_outbox",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "min",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "97f004adc4b0b65c8cc9176ce1e71a805211ffa38bbbc6bfb4df6147fb1b7b06"
+}

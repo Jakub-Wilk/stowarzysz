@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update scheduled_jobs set last_run_at = $2, next_run_at = $3 where name = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7e422ee95e1b9ff2ca7f152e78843c22a5b821259efb711c9dfcfd19cd51e62a"
+}

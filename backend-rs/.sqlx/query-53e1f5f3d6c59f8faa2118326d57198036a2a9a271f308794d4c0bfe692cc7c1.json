@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select next_run_at from scheduled_jobs where name = $1 for update skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "next_run_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "53e1f5f3d6c59f8faa2118326d57198036a2a9a271f308794d4c0bfe692cc7c1"
+}

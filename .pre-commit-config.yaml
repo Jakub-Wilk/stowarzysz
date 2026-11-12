@@ -53,6 +53,14 @@ repos:
         language: system
         files: ^backend-rs/(.*\.rs|.*Cargo\.(toml|lock)|clippy\.toml)$
         pass_filenames: false
+      - id: sqlx-prepare
+        name: sqlx offline metadata is current
+        # Needs the dev database (docker compose up -d db) and sqlx-cli. If it fails, run
+        # `cargo sqlx prepare --workspace` in backend-rs/ and commit .sqlx/.
+        entry: bash -c 'cd backend-rs && cargo sqlx prepare --workspace --check'
+        language: system
+        files: ^backend-rs/(.*\.rs|migrations/.*\.sql|\.sqlx/.*)$
+        pass_filenames: false
 
       # Frontend (pnpm)
       - id: oxlint

@@ -1,89 +1,87 @@
-//! HTTP-level tests of the scaffold: health, problem documents, OpenAPI, middleware.
-#![allow(clippy::unwrap_used)] // test helpers may panic
+//! HTTP basics: health, problem documents, OpenAPI, middleware.
+#![allow(clippy::unwrap_used)]
+
+mod common;
 
 use app::config::Config;
-use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
-use serde_json::Value;
-use tower::ServiceExt as _;
+use common::TestApp;
+use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 
-fn app() -> Router {
-    server::http::router(server::AppState::new(Config::for_tests()))
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn health_answers_ok_when_the_database_does(pool: PgPool) {
+    let response = TestApp::new(pool).get("/api/health").await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.header("content-type"), "application/json");
+    assert_eq!(response.json(), serde_json::json!({"status": "ok"}));
 }
 
-async fn send(request: Request<Body>) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
-    let response = app().oneshot(request).await.unwrap();
-    let status = response.status();
-    let headers = response.headers().clone();
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
+#[tokio::test]
+async fn health_is_unavailable_without_the_database() {
+    let dead = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(500))
+        .connect_lazy("postgres://nobody@127.0.0.1:1/nothing")
         .unwrap();
-    (status, headers, body.to_vec())
+    let response = TestApp::new(dead).get("/api/health").await;
+    assert_eq!(response.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(response.header("content-type"), "application/problem+json");
+    assert_eq!(response.json()["code"], "database_unavailable");
 }
 
-fn get(uri: &str) -> Request<Body> {
-    Request::get(uri).body(Body::empty()).unwrap()
-}
-
-fn json(body: &[u8]) -> Value {
-    serde_json::from_slice(body).unwrap()
-}
-
-#[tokio::test]
-async fn health_answers_ok() {
-    let (status, headers, body) = send(get("/api/health")).await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(headers[header::CONTENT_TYPE], "application/json");
-    assert_eq!(json(&body), serde_json::json!({"status": "ok"}));
-}
-
-#[tokio::test]
-async fn every_response_carries_a_request_id() {
-    let (_, headers, _) = send(get("/api/health")).await;
-    assert!(!headers["x-request-id"].is_empty());
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn every_response_carries_a_request_id(pool: PgPool) {
+    let app = TestApp::new(pool);
+    let generated = app.get("/api/health").await;
+    assert_ne!(
+        generated.header("x-request-id"),
+        "",
+        "a request id is generated"
+    );
 
     let request = Request::get("/api/health")
         .header("x-request-id", "abc-123")
         .body(Body::empty())
         .unwrap();
-    let (_, headers, _) = send(request).await;
-    assert_eq!(headers["x-request-id"], "abc-123");
+    assert_eq!(app.send(request).await.header("x-request-id"), "abc-123");
 }
 
-#[tokio::test]
-async fn unknown_routes_are_problem_documents() {
-    let (status, headers, body) = send(get("/api/nope")).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(headers[header::CONTENT_TYPE], "application/problem+json");
-    let problem = json(&body);
-    assert_eq!(problem["status"], 404);
-    assert_eq!(problem["code"], "not_found");
-    assert_eq!(problem["type"], "urn:stowarzysz:problem:not_found");
-    assert_eq!(problem["title"], "Nie znaleziono");
-    assert_eq!(problem["detail"], "Nie znaleziono.");
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn unknown_routes_are_problem_documents(pool: PgPool) {
+    let response = TestApp::new(pool).get("/api/nope").await;
+    assert_eq!(response.status, StatusCode::NOT_FOUND);
+    assert_eq!(response.header("content-type"), "application/problem+json");
+    insta::assert_json_snapshot!(response.json(), @r#"
+    {
+      "code": "not_found",
+      "detail": "Nie znaleziono.",
+      "status": 404,
+      "title": "Nie znaleziono",
+      "type": "urn:stowarzysz:problem:not_found"
+    }
+    "#);
 }
 
-#[tokio::test]
-async fn wrong_method_is_a_problem_document_with_allow() {
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn wrong_method_is_a_problem_document_with_allow(pool: PgPool) {
     let request = Request::delete("/api/health").body(Body::empty()).unwrap();
-    let (status, headers, body) = send(request).await;
-    assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
-    assert_eq!(headers[header::CONTENT_TYPE], "application/problem+json");
-    assert!(headers.contains_key(header::ALLOW));
-    assert_eq!(json(&body)["code"], "method_not_allowed");
+    let response = TestApp::new(pool).send(request).await;
+    assert_eq!(response.status, StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(response.header("content-type"), "application/problem+json");
+    assert!(response.headers.contains_key(header::ALLOW));
+    assert_eq!(response.json()["code"], "method_not_allowed");
 }
 
-#[tokio::test]
-async fn openapi_document_lists_every_route() {
-    let (status, headers, body) = send(get("/api/openapi.json")).await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(headers[header::CONTENT_TYPE], "application/json");
-    let spec = json(&body);
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn openapi_document_describes_the_api(pool: PgPool) {
+    let response = TestApp::new(pool).get("/api/openapi.json").await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.header("content-type"), "application/json");
+    let spec = response.json();
     assert_eq!(spec["info"]["title"], "stowarzysz API");
     assert!(spec["components"]["schemas"]["Problem"].is_object());
     assert!(spec["components"]["securitySchemes"]["bearer"].is_object());
-
     // Health is public: it opts out of the default bearer requirement.
     assert_eq!(
         spec["paths"]["/api/health"]["get"]["security"],
@@ -94,13 +92,10 @@ async fn openapi_document_lists_every_route() {
 /// Routes are registered through `utoipa_axum::routes!`, so every handler is documented by
 /// construction. This checks the other direction: every documented path is really routed.
 /// An unsupported method yields 405 on a routed path and 404 on an unknown one.
-#[tokio::test]
-async fn every_documented_path_is_routed() {
-    let (_, body) = {
-        let (status, _, body) = send(get("/api/openapi.json")).await;
-        (status, body)
-    };
-    let spec = json(&body);
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn every_documented_path_is_routed(pool: PgPool) {
+    let app = TestApp::new(pool);
+    let spec = app.get("/api/openapi.json").await.json();
     let paths = spec["paths"].as_object().unwrap();
     assert!(!paths.is_empty());
     for path in paths.keys() {
@@ -120,7 +115,7 @@ async fn every_documented_path_is_routed() {
             .uri(&concrete)
             .body(Body::empty())
             .unwrap();
-        let (status, _, _) = send(request).await;
+        let status = app.send(request).await.status;
         assert_eq!(
             status,
             StatusCode::METHOD_NOT_ALLOWED,
@@ -129,47 +124,43 @@ async fn every_documented_path_is_routed() {
     }
 }
 
-#[tokio::test]
-async fn docs_ui_is_served() {
-    let (status, headers, body) = send(get("/api/docs")).await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(
-        headers[header::CONTENT_TYPE]
-            .to_str()
-            .unwrap()
-            .starts_with("text/html")
-    );
-    assert!(String::from_utf8_lossy(&body).contains("scalar"));
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn docs_ui_is_served(pool: PgPool) {
+    let response = TestApp::new(pool).get("/api/docs").await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.header("content-type").starts_with("text/html"));
+    assert!(String::from_utf8_lossy(&response.body).contains("scalar"));
 }
 
-#[tokio::test]
-async fn cors_is_off_unless_configured() {
-    let request = Request::options("/api/health")
+fn preflight() -> Request<Body> {
+    Request::options("/api/health")
         .header(header::ORIGIN, "http://localhost:5173")
         .header(header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
         .body(Body::empty())
-        .unwrap();
-    let (_, headers, _) = send(request).await;
-    assert!(!headers.contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN));
+        .unwrap()
 }
 
-#[tokio::test]
-async fn cors_allows_configured_origins() {
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn cors_is_off_unless_configured(pool: PgPool) {
+    let response = TestApp::new(pool).send(preflight()).await;
+    assert!(
+        !response
+            .headers
+            .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+    );
+}
+
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn cors_allows_configured_origins(pool: PgPool) {
     let config = Config::from_lookup(|key| match key {
         "APP_ENV" => Some("dev".into()),
         "CORS_ALLOWED_ORIGINS" => Some("http://localhost:5173".into()),
         _ => None,
     })
     .unwrap();
-    let app = server::http::router(server::AppState::new(config));
-    let request = Request::options("/api/health")
-        .header(header::ORIGIN, "http://localhost:5173")
-        .header(header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
-        .body(Body::empty())
-        .unwrap();
-    let response = app.oneshot(request).await.unwrap();
+    let response = TestApp::with_config(pool, config).send(preflight()).await;
     assert_eq!(
-        response.headers()[header::ACCESS_CONTROL_ALLOW_ORIGIN],
+        response.header("access-control-allow-origin"),
         "http://localhost:5173"
     );
 }

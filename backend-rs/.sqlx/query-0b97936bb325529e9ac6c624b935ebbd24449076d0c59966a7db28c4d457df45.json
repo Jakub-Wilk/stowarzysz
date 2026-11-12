@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into push_outbox (subscription_id, payload, expires_at)\n             select id, $2, now() + make_interval(secs => $3)\n             from push_subscriptions where user_id = any($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Jsonb",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0b97936bb325529e9ac6c624b935ebbd24449076d0c59966a7db28c4d457df45"
+}

@@ -5,6 +5,7 @@
 
 pub mod http;
 pub mod shutdown;
+pub mod sse;
 pub mod state;
 pub mod telemetry;
 

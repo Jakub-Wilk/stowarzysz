@@ -11,9 +11,28 @@ domain.workspace = true
 
 anyhow.workspace = true
 base64.workspace = true
+chrono.workspace = true
 dotenvy.workspace = true
+futures-util.workspace = true
 humantime.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+utoipa.workspace = true
+uuid.workspace = true
+web-push-native.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+
+[features]
+# Test doubles (e.g. a recording push transport) for other crates' tests.
+test-util = []
 
 [lints]
 workspace = true

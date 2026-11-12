@@ -82,7 +82,7 @@ pub fn api() -> OpenApiRouter<AppState> {
 
 /// The complete application: API, OpenAPI document, docs UI and middleware.
 pub fn router(state: AppState) -> Router {
-    let config = Arc::clone(&state.config);
+    let config = Arc::clone(&state.ctx.config);
     let (api, openapi) = api().split_for_parts();
     let spec: Arc<str> = openapi
         .to_json()

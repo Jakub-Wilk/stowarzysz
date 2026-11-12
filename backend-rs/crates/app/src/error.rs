@@ -94,3 +94,9 @@ impl From<Vec<DomainError>> for AppError {
         Self::Invalid(errors)
     }
 }
+
+impl From<sqlx::Error> for AppError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Internal(error.into())
+    }
+}

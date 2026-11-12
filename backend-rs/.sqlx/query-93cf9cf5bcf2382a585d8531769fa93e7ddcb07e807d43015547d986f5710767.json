@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into scheduled_jobs (name, next_run_at) values ($1, $2) on conflict (name) do nothing",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "93cf9cf5bcf2382a585d8531769fa93e7ddcb07e807d43015547d986f5710767"
+}

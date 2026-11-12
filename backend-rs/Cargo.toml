@@ -18,11 +18,17 @@ base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 clap = { version = "4", features = ["derive", "env"] }
 dotenvy = "0.15"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 humantime = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "chrono", "uuid", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2", "json"] }
+web-push-native = "0.4"
+base64ct = { version = "1", features = ["alloc"] }
 thiserror = "2"
-tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "time"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["catch-panic", "compression-full", "cors", "limit", "request-id", "timeout", "trace", "util"] }
 tracing = "0.1"
@@ -31,6 +37,7 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.2"
 utoipa-scalar = { version = "0.3", features = ["axum"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+insta = { version = "1", features = ["json", "redactions"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

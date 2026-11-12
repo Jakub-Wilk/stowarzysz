@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select o.id, o.subscription_id, o.payload, o.attempts, o.expires_at,\n                      s.endpoint, s.p256dh, s.auth\n               from push_outbox o join push_subscriptions s on s.id = o.subscription_id\n               where o.next_attempt_at <= now()\n               order by o.id\n               limit $1\n               for update of o skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "subscription_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "payload",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "attempts",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 4,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "endpoint",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "p256dh",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "auth",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a49bbfa3e42eefdd4da4e920285434938f95b44893829917f1c91f520853e55b"
+}

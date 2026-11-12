@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from auth_sessions where expires_at < $1 or revoked_at < $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2f092ae49c07d777adc6de9286baed4113b29bf08885fac3a30102bec3f583f8"
+}
