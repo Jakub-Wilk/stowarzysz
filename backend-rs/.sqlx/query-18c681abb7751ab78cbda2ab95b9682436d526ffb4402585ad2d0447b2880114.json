@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update users set\n             username = coalesce($2, username),\n             is_active = coalesce($3, is_active),\n             is_superuser = coalesce($4, is_superuser),\n             birthday = case when $5 then $6 else birthday end\n         where id = $1 returning is_active",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "18c681abb7751ab78cbda2ab95b9682436d526ffb4402585ad2d0447b2880114"
+}

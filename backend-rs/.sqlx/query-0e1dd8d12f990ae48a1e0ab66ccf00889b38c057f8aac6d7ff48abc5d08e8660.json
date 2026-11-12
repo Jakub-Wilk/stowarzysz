@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select is_active from users where id = $1 for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0e1dd8d12f990ae48a1e0ab66ccf00889b38c057f8aac6d7ff48abc5d08e8660"
+}

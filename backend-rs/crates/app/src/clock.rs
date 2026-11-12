@@ -58,6 +58,14 @@ impl Clock for FixedClock {
     }
 }
 
+/// The app's time zone: dates people see ("today", birthdays, ledger days) are Warsaw dates.
+pub const ZONE: chrono_tz::Tz = chrono_tz::Europe::Warsaw;
+
+/// The Warsaw date at `now`.
+pub fn local_today(now: DateTime<Utc>) -> chrono::NaiveDate {
+    now.with_timezone(&ZONE).date_naive()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

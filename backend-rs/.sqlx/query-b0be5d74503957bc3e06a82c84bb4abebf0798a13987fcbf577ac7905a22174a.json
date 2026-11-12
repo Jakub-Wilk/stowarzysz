@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with expired as (delete from uploads where expires_at <= $1 returning key)\n             insert into media_trash (key, due_at) select key, $1 from expired\n             on conflict do nothing",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b0be5d74503957bc3e06a82c84bb4abebf0798a13987fcbf577ac7905a22174a"
+}

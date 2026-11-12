@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update auth_sessions\n         set prev_refresh_hash = case when $2 then refresh_hash else prev_refresh_hash end,\n             refresh_hash = $3, last_used_at = $4, expires_at = $5, user_agent = $6\n         where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Bytea",
+        "Timestamptz",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d42f2ac58e6fb55ea0c7627259e8aa4b99b3065a2b98a10a3d8f833b998953e3"
+}

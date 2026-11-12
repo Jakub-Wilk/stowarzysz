@@ -44,7 +44,12 @@ impl Scheduler {
 
     /// Every job the application runs.
     pub fn standard() -> Self {
-        Self::new(vec![Arc::new(Housekeeping)])
+        Self::new(vec![
+            Arc::new(Housekeeping),
+            Arc::new(crate::media::jobs::MediaSweeper),
+            Arc::new(crate::media::jobs::MediaGc),
+            Arc::new(crate::accounts::birthdays::BirthdayReminders),
+        ])
     }
 
     pub fn job_names(&self) -> Vec<&'static str> {

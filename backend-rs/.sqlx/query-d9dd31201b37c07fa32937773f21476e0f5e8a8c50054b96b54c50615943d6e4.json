@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select key as \"key!\" from (\n                   select avatar_key as key from users\n                   union all select proposed_image_key from polls\n                   union all select previous_image_key from polls\n                   union all select image_key from pact_attachments\n                   union all select image_key from ledger_attachments\n                   union all select key from uploads\n                   union all select key from media_trash\n               ) keys where key is not null",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d9dd31201b37c07fa32937773f21476e0f5e8a8c50054b96b54c50615943d6e4"
+}

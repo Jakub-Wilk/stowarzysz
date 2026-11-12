@@ -28,6 +28,9 @@ use crate::config::Vapid;
 use crate::db::Uow;
 use crate::listener::Wake;
 
+mod subscriptions;
+pub use subscriptions::{Subscription, subscribe, unsubscribe};
+
 /// How long a push service keeps trying to deliver a notification (and how long we do).
 pub const TTL: Duration = Duration::from_hours(1);
 const BATCH: i64 = 32;
@@ -213,6 +216,24 @@ fn retry_after(response: &reqwest::Response) -> Option<Duration> {
         .to_str()
         .ok()?;
     value.trim().parse().ok().map(Duration::from_secs)
+}
+
+/// A fresh VAPID key pair as `(private, public)`, base64url without padding (the forms the
+/// configuration and `pushManager.subscribe` take).
+pub fn generate_vapid_keys() -> (String, String) {
+    use rand::RngCore as _;
+    loop {
+        let mut bytes = [0_u8; 32];
+        rand::rng().fill_bytes(&mut bytes);
+        // Almost every 32-byte string is a valid scalar; retry the rare one that is not.
+        if let Ok(secret) = p256::SecretKey::from_slice(&bytes) {
+            let public = secret.public_key().to_encoded_point(false);
+            return (
+                URL_SAFE_NO_PAD.encode(bytes),
+                URL_SAFE_NO_PAD.encode(public.as_bytes()),
+            );
+        }
+    }
 }
 
 /// Browsers hand out base64url without padding; be lenient about the variant.

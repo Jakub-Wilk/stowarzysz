@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update users set birthday_reminded_on = $1\n             where is_active and password_hash is not null\n               and to_char(birthday, 'MM-DD') = any($2)\n               and birthday_reminded_on is distinct from $1\n             returning id, username",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "5e40854f9c93e8574598b479a5d18dc6ab38868df2c51fac332f1f2c8c40de64"
+}

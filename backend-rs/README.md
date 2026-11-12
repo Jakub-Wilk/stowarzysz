@@ -28,6 +28,8 @@ cargo run                                  # = serve: migrate, then API on :8000
 cargo run -- migrate                       # apply migrations and exit
 cargo run -- run-jobs                      # run every background job once (and deliver pushes)
 cargo run -- healthcheck                   # exit 0 if /api/health answers (container probe)
+cargo run -- create-superuser --username X # the first administrator (prompts for the password)
+cargo run -- generate-keys                 # fresh secrets for a new deployment (.env lines)
 cargo test --workspace                     # needs the dev database: one fresh DB per test
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 cargo sqlx prepare --workspace             # after changing a query or a migration; commit .sqlx/
@@ -50,6 +52,14 @@ uv run --project ../backend python fixtures/differential/generate.py   # regener
 - **Background work** runs in-process (no cron): the scheduler sleeps until the next job is
   due; periodic jobs and due rows are claimed with `FOR UPDATE SKIP LOCKED`, so several
   processes never do the same work twice.
+- **Auth:** short JWT access tokens naming a session, checked against it on every request;
+  opaque refresh tokens that rotate but stay valid until the client used the new one (a PWA
+  killed mid-refresh is not logged out), sliding 400 days. Old Django password hashes and
+  SimpleJWT refresh tokens still work once and are upgraded.
+- **Images** are uploaded once (`POST /api/uploads`, raw body, 50 MB) and referenced by
+  `upload_id`. They are stored as a lossless WebP master plus lossy variants and served by the
+  API through signed URLs (no `Authorization` header needed, valid for a day or more).
+  Unclaimed uploads expire after 30 minutes; replaced files are deleted after commit.
 - **Time** comes from `app::clock::Clock` (`FixedClock` in tests) for every business decision.
 - **Configuration** is read from the environment (and `.env`); every problem is reported at once
   on startup. Production (no `APP_ENV`) refuses to start without the secrets.

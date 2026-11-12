@@ -111,6 +111,12 @@ impl From<AppError> for ApiError {
     }
 }
 
+impl From<anyhow::Error> for ApiError {
+    fn from(error: anyhow::Error) -> Self {
+        Self(AppError::Internal(error))
+    }
+}
+
 impl From<DomainError> for ApiError {
     fn from(error: DomainError) -> Self {
         Self(error.into())

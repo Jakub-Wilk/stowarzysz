@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update auth_sessions set revoked_at = $3\n         where user_id = $1 and ($2::uuid is null or id = $2) and revoked_at is null\n         returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "944e24537294ffc0cd128bad65004906f6695a70435227c193922faa332ee2be"
+}

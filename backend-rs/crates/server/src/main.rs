@@ -29,6 +29,16 @@ enum Command {
     Migrate,
     /// Run every background job once (and deliver queued push notifications), then exit.
     RunJobs,
+    /// Create an administrator who can sign in straight away (the first account, typically).
+    CreateSuperuser {
+        #[arg(long)]
+        username: String,
+        /// Read the password from the first line of standard input instead of prompting.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Print fresh secrets for a new deployment (`.env` lines).
+    GenerateKeys,
     /// Exit 0 if the local server answers `GET /api/health` (for container health checks).
     Healthcheck {
         /// `host:port` of the server; defaults to the port of `BIND_ADDR` on localhost.
@@ -44,6 +54,14 @@ async fn main() -> ExitCode {
         Command::Serve => serve().await,
         Command::Migrate => migrate().await,
         Command::RunJobs => run_jobs().await,
+        Command::CreateSuperuser {
+            username,
+            password_stdin,
+        } => create_superuser(&username, password_stdin).await,
+        Command::GenerateKeys => {
+            generate_keys();
+            Ok(())
+        }
         Command::Healthcheck { addr } => healthcheck(addr).await,
     };
     match result {
@@ -61,7 +79,12 @@ async fn context() -> anyhow::Result<Arc<Context>> {
     server::telemetry::init(config.log_format);
     let pool = db::pool(&config)?;
     migrate_with_retry(&pool).await?;
-    Ok(Arc::new(Context::new(config, pool, Arc::new(SystemClock))))
+    let ctx = Context::new(config, pool, Arc::new(SystemClock));
+    ctx.media
+        .init()
+        .await
+        .context("cannot prepare MEDIA_ROOT")?;
+    Ok(Arc::new(ctx))
 }
 
 /// The database may still be starting (compose brings services up together).
@@ -171,6 +194,57 @@ async fn run_jobs() -> anyhow::Result<()> {
         bail!("some jobs failed");
     }
     Ok(())
+}
+
+async fn create_superuser(username: &str, password_stdin: bool) -> anyhow::Result<()> {
+    let password = if password_stdin {
+        let mut line = String::new();
+        std::io::stdin().read_line(&mut line)?;
+        line.trim_end_matches(['\r', '\n']).to_owned()
+    } else {
+        let first = rpassword::prompt_password("Hasło: ")?;
+        let second = rpassword::prompt_password("Powtórz hasło: ")?;
+        if first != second {
+            bail!("the passwords differ");
+        }
+        first
+    };
+    let ctx = context().await?;
+    match app::accounts::users::create_superuser(&ctx, username, &password).await {
+        Ok(id) => {
+            tracing::info!(id, username, "administrator created");
+            Ok(())
+        }
+        Err(app::AppError::Invalid(errors)) => {
+            let reasons: Vec<String> = errors.iter().map(ToString::to_string).collect();
+            bail!("{}", reasons.join("; "))
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// Random secrets for `.env.prod`. Keep them: changing `JWT_SECRET` signs everyone out,
+/// changing `SANTA_SEAL_KEY` makes an active Secret Santa draw unreadable.
+#[allow(clippy::print_stdout)] // the output is the point
+fn generate_keys() {
+    use base64::Engine as _;
+    use rand::RngCore as _;
+    let random = |len: usize| {
+        let mut bytes = vec![0_u8; len];
+        rand::rng().fill_bytes(&mut bytes);
+        bytes
+    };
+    let url = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    let (vapid_private, vapid_public) = app::push::generate_vapid_keys();
+    println!("JWT_SECRET={}", url.encode(random(48)));
+    println!("MEDIA_SIGNING_KEY={}", url.encode(random(48)));
+    println!(
+        "SANTA_SEAL_KEY={}",
+        base64::engine::general_purpose::STANDARD.encode(random(32))
+    );
+    println!("VAPID_PRIVATE_KEY={vapid_private}");
+    println!("VAPID_PUBLIC_KEY={vapid_public}");
+    println!("VAPID_SUBJECT=mailto:you@example.com");
 }
 
 /// A dependency-free HTTP/1.1 probe: the runtime image has no curl.

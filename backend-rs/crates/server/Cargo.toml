@@ -19,11 +19,17 @@ app.workspace = true
 domain.workspace = true
 
 anyhow.workspace = true
+base64.workspace = true
+tempfile.workspace = true
 axum.workspace = true
+chrono.workspace = true
+rand.workspace = true
 clap.workspace = true
 futures-util.workspace = true
+governor.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+rpassword.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -37,9 +43,12 @@ utoipa-scalar.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+image.workspace = true
 app = { workspace = true, features = ["test-util"] }
-chrono.workspace = true
 insta.workspace = true
+jsonwebtoken.workspace = true
+chrono-tz.workspace = true
+serde = { workspace = true }
 
 [lints]
 workspace = true

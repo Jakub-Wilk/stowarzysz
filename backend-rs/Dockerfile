@@ -22,9 +22,13 @@ COPY . .
 ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked --bin stowarzysz
+# The media volume's mount point, owned by the runtime user: a fresh named volume takes its
+# ownership from here (distroless has no shell to mkdir/chown in the final stage).
+RUN mkdir -p /data/media
 
 FROM gcr.io/distroless/cc-debian12
 COPY --from=builder /app/target/release/stowarzysz /usr/local/bin/stowarzysz
+COPY --from=builder --chown=1000:1000 /data /data
 # uid 1000 owns the existing `media` volume (it was created by the previous Python image).
 USER 1000:1000
 ENV BIND_ADDR=0.0.0.0:8000 \

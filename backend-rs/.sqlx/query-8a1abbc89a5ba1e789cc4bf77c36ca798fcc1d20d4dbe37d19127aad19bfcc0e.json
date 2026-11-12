@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select s.id, s.user_id, s.refresh_hash = $1 as \"is_current!\"\n           from auth_sessions s join users u on u.id = s.user_id\n           where (s.refresh_hash = $1 or s.prev_refresh_hash = $1)\n             and s.revoked_at is null and s.expires_at > $2\n             and u.is_active and u.password_hash is not null\n           for update of s",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_current!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "8a1abbc89a5ba1e789cc4bf77c36ca798fcc1d20d4dbe37d19127aad19bfcc0e"
+}

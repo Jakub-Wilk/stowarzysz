@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select u.username from activation_tokens t join users u on u.id = t.user_id\n         where t.token_hash = $1 and t.used_at is null and t.expires_at > $2 and u.is_active",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "764ce23e00b84185c73cd2489356eb39db4bf58a37282b302ee5464f8d118305"
+}

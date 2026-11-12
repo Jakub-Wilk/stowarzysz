@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select key from media_trash where due_at <= $1 order by due_at\n                 limit $2 for update skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2e1ebc10581a3733e2ab8797902f2a38c451e094a9e493584d431320a39ee136"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update activation_tokens set used_at = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0eb1aa6c008970d5c18f1a4a46a0f2a4c843299f4307158664ce44d21ec76ad4"
+}

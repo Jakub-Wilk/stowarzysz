@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from activation_tokens where user_id = $1 and used_at is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "992aec8e0c41d8e91de0a22e0f0a99fb313c17a18a5d55238936d53d20414a51"
+}

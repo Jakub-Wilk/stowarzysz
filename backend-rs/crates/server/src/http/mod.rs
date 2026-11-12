@@ -1,8 +1,14 @@
 //! The HTTP API: routes, OpenAPI document and middleware stack.
 
+mod accounts;
+mod events;
+pub mod guard;
 mod health;
 pub mod json;
+mod media;
 pub mod problem;
+mod push;
+mod users;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -34,8 +40,10 @@ use problem::Problem;
 const REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
 /// Sent by SSE clients when reconnecting.
 const LAST_EVENT_ID: HeaderName = HeaderName::from_static("last-event-id");
-/// Default deadline for a request; long-running routes (uploads, OCR, SSE) get their own.
+/// Deadline for an ordinary request (until the response starts).
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+/// Uploads of up to 50 MB over a phone connection need longer.
+const UPLOAD_TIMEOUT: Duration = Duration::from_mins(10);
 
 #[derive(OpenApi)]
 #[openapi(
@@ -46,8 +54,16 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
                        document (`Problem`). Authenticate with `Authorization: Bearer <access token>`."
     ),
     modifiers(&BearerAuth),
-    components(schemas(Problem)),
-    tags((name = "meta", description = "Health and API metadata")),
+    components(schemas(Problem, app::events::Event)),
+    tags(
+        (name = "auth", description = "Signing in and out, activation links"),
+        (name = "people", description = "Members and the signed-in user"),
+        (name = "users", description = "Account management (administrators)"),
+        (name = "media", description = "Image uploads and stored images"),
+        (name = "push", description = "Web Push subscriptions"),
+        (name = "events", description = "Live updates (server-sent events)"),
+        (name = "meta", description = "Health and API metadata"),
+    ),
 )]
 struct ApiDoc;
 
@@ -74,10 +90,43 @@ impl Modify for BearerAuth {
 }
 
 /// Every documented route, mounted under `/api`. Routes are registered together with their
-/// OpenAPI operation, so the document cannot drift from the router.
+/// OpenAPI operation, so the document cannot drift from the router. Groups differ in their
+/// deadline: ordinary requests, uploads, and long-lived responses (event stream, files).
 pub fn api() -> OpenApiRouter<AppState> {
-    let routes = OpenApiRouter::new().routes(routes!(health::health));
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).nest("/api", routes)
+    let ordinary = OpenApiRouter::new()
+        .routes(routes!(health::health))
+        .routes(routes!(accounts::login))
+        .routes(routes!(accounts::refresh))
+        .routes(routes!(accounts::logout))
+        .routes(routes!(accounts::validate_activation))
+        .routes(routes!(accounts::complete_activation))
+        .routes(routes!(accounts::me))
+        .routes(routes!(accounts::people))
+        .routes(routes!(accounts::birthdays_today))
+        .routes(routes!(accounts::login_users))
+        .routes(routes!(users::list, users::create))
+        .routes(routes!(users::get, users::update, users::delete))
+        .routes(routes!(users::activation_link))
+        .routes(routes!(users::set_avatar, users::clear_avatar))
+        .routes(routes!(users::revoke_sessions))
+        .routes(routes!(push::public_key))
+        .routes(routes!(push::subscribe, push::unsubscribe))
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            REQUEST_TIMEOUT,
+        ));
+    let uploads =
+        OpenApiRouter::new()
+            .routes(routes!(media::upload))
+            .layer(TimeoutLayer::with_status_code(
+                StatusCode::REQUEST_TIMEOUT,
+                UPLOAD_TIMEOUT,
+            ));
+    let streams = OpenApiRouter::new()
+        .routes(routes!(events::events))
+        .routes(routes!(media::serve));
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .nest("/api", ordinary.merge(uploads).merge(streams))
 }
 
 /// The complete application: API, OpenAPI document, docs UI and middleware.
@@ -115,11 +164,7 @@ pub fn router(state: AppState) -> Router {
                 DefaultPredicate::new().and(NotForContentType::new("text/event-stream")),
             ))
             .layer(axum::middleware::map_response(problemize))
-            .layer(CatchPanicLayer::new())
-            .layer(TimeoutLayer::with_status_code(
-                StatusCode::REQUEST_TIMEOUT,
-                REQUEST_TIMEOUT,
-            )),
+            .layer(CatchPanicLayer::new()),
     );
     if let Some(cors) = cors(&config.cors_allowed_origins) {
         router = router.layer(cors);

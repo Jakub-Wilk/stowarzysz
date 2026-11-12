@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select v.user_id, k.kind,\n                  count(*) filter (where v.verdict = 'won') as \"won!\",\n                  count(*) filter (where v.verdict = 'lost') as \"lost!\",\n                  count(*) filter (where v.verdict = 'draw') as \"draw!\"\n           from pact_verdicts v\n           join pact_claims c on c.id = v.claim_id\n           join pacts k on k.id = c.pact_id\n           where c.state = 'confirmed' and v.verdict <> 'void' and v.user_id = any($1)\n           group by v.user_id, k.kind",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "won!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "lost!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "draw!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8400a5e05f7031661f13be3d16d35894cac922828389910a2385287eab9a4bbf"
+}

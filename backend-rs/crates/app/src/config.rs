@@ -105,7 +105,8 @@ pub struct Ocr {
 
 #[derive(Debug, Clone)]
 pub struct Images {
-    /// libwebp lossless preset, 0 (fastest) to 9 (smallest).
+    /// libwebp lossless preset, 0 (fastest) to 9 (smallest). 2: measured on a 12 MP photo as fast
+    /// as possible without growing the files (4 was as small and 1.7x slower).
     pub lossless_effort: u8,
 }
 
@@ -368,7 +369,7 @@ impl Config {
             );
         }
 
-        let lossless_effort = r.parsed("IMAGE_LOSSLESS_EFFORT").unwrap_or(4);
+        let lossless_effort = r.parsed("IMAGE_LOSSLESS_EFFORT").unwrap_or(2);
         if lossless_effort > 9 {
             r.error("IMAGE_LOSSLESS_EFFORT", "must be between 0 and 9");
         }

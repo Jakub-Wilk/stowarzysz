@@ -4,6 +4,7 @@
 //! and returns plain values (or a [`DomainError`]), so every rule can be unit- and
 //! property-tested in isolation. User-facing messages are Polish.
 
+pub mod accounts;
 mod error;
 
 pub use error::DomainError;

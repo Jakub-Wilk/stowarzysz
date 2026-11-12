@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from push_subscriptions where user_id = $1 and endpoint = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ed8be6a7a0d3a96eb1de5cb0540b5f13a5d4ff855009a29dd6e1613a113e1e43"
+}

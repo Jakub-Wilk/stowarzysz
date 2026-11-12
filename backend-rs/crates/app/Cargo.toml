@@ -10,15 +10,26 @@ publish.workspace = true
 domain.workspace = true
 
 anyhow.workspace = true
+argon2.workspace = true
 base64.workspace = true
 chrono.workspace = true
+chrono-tz.workspace = true
 dotenvy.workspace = true
+fast_image_resize.workspace = true
 futures-util.workspace = true
+hmac.workspace = true
 humantime.workspace = true
+image.workspace = true
+jsonwebtoken.workspace = true
+pbkdf2.workspace = true
+rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
 sqlx.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -26,8 +37,10 @@ tracing.workspace = true
 utoipa.workspace = true
 uuid.workspace = true
 web-push-native.workspace = true
+webp.workspace = true
 
 [dev-dependencies]
+flate2.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 
 [features]

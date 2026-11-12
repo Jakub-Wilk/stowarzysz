@@ -6,6 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[dependencies]
+chrono.workspace = true
+flate2.workspace = true
+unicode-normalization.workspace = true
+
 [dev-dependencies]
 serde_json.workspace = true
 

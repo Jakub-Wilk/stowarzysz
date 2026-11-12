@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.user_id,\n                  count(*) as \"votes_cast!\",\n                  count(*) filter (where p.vetoed) as \"veto_count!\",\n                  avg((p.ballot ->> 'value')::float8) as average\n           from poll_participants p join polls o on o.id = p.poll_id\n           where o.status = 'closed' and o.kind = 'score' and p.ballot is not null\n             and p.user_id = any($1)\n           group by p.user_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "votes_cast!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "veto_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "average",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f9326bf221e55bb37ceb6d5be36037705edd3e8de70e58b6ee809cc3021fcd7a"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select avatar_key from users where id = $1 for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "avatar_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "c1262166b1baaef54b42946c572b34d7b2815098e3a1583659915ac96f4de7a1"
+}

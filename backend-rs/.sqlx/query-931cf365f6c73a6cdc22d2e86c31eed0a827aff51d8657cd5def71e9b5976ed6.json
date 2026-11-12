@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into media_trash (key) values ($1) on conflict do nothing",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "931cf365f6c73a6cdc22d2e86c31eed0a827aff51d8657cd5def71e9b5976ed6"
+}
