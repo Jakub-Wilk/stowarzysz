@@ -40,6 +40,20 @@ repos:
         files: ^backend/
         pass_filenames: false
 
+      # Backend v2 (Rust). Replaces the Python hooks above at cutover.
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --manifest-path backend-rs/Cargo.toml --all -- --check
+        language: system
+        files: ^backend-rs/.*\.rs$
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --manifest-path backend-rs/Cargo.toml --workspace --all-targets -- -D warnings
+        language: system
+        files: ^backend-rs/(.*\.rs|.*Cargo\.(toml|lock)|clippy\.toml)$
+        pass_filenames: false
+
       # Frontend (pnpm)
       - id: oxlint
         name: oxlint

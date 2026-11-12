@@ -1,0 +1,11 @@
+[package]
+name = "domain"
+description = "Pure business rules: no I/O, no async, no database."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+
+[lints]
+workspace = true

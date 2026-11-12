@@ -1,0 +1,5 @@
+# Keep in sync with the workspace lints in Cargo.toml.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-print-in-tests = true
+doc-valid-idents = ["OpenAPI", "SimpleJWT", "PostgreSQL", "WebP", "JavaScript", ".."]

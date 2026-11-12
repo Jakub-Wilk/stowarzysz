@@ -1,0 +1,36 @@
+[package]
+name = "server"
+description = "HTTP API, SSE, CLI and wiring for stowarzysz."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+default-run = "stowarzysz"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "stowarzysz"
+path = "src/main.rs"
+
+[dependencies]
+app.workspace = true
+domain.workspace = true
+
+anyhow.workspace = true
+axum.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+utoipa.workspace = true
+utoipa-axum.workspace = true
+utoipa-scalar.workspace = true
+
+[lints]
+workspace = true
