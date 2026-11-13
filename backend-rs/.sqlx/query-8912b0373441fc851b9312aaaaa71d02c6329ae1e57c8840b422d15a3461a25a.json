@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update poll_participants set ballot = $3, vetoed = true, abstained = false, reason = $4, voted_at = $5\n         where poll_id = $1 and user_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Jsonb",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8912b0373441fc851b9312aaaaa71d02c6329ae1e57c8840b422d15a3461a25a"
+}

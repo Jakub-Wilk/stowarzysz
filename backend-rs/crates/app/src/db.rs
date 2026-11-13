@@ -73,6 +73,30 @@ impl Uow {
         Ok(())
     }
 
+    /// Mark a point to roll back to without abandoning the whole transaction (around a step
+    /// whose failure is recorded rather than raised). Savepoints nest: `rollback_to_savepoint`
+    /// and `release_savepoint` act on the most recent one.
+    pub async fn savepoint(&mut self) -> AppResult<()> {
+        sqlx::query!("savepoint step")
+            .execute(&mut *self.tx)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn rollback_to_savepoint(&mut self) -> AppResult<()> {
+        sqlx::query!("rollback to savepoint step")
+            .execute(&mut *self.tx)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn release_savepoint(&mut self) -> AppResult<()> {
+        sqlx::query!("release savepoint step")
+            .execute(&mut *self.tx)
+            .await?;
+        Ok(())
+    }
+
     pub async fn commit(self) -> AppResult<()> {
         self.tx.commit().await.map_err(anyhow::Error::from)?;
         Ok(())

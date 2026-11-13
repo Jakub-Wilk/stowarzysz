@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select deadline_at from polls where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "deadline_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9e49a0d31aa8e1083bdf5523f49b9936a49bf5144f4fd99de0ce34742a7ad552"
+}

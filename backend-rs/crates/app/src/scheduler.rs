@@ -49,6 +49,7 @@ impl Scheduler {
             Arc::new(crate::media::jobs::MediaSweeper),
             Arc::new(crate::media::jobs::MediaGc),
             Arc::new(crate::accounts::birthdays::BirthdayReminders),
+            Arc::new(crate::polls::deadlines::PollDeadlines),
         ])
     }
 

@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into polls (creator_id, title, kind, config, created_at, deadline_at, next_reminder_at,\n                            proposed_image_key, tie_break_of, subject_user_id, subject_claim_id, subject_pact_id)\n         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b99f60def22de5f26a61eb9322a7d96ee64abe73b647819f0a2306ebec2b6e4c"
+}

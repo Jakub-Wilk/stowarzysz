@@ -42,6 +42,24 @@ impl MediaSweeper {
             .fetch_all(&mut *tx)
             .await?;
             for key in &due {
+                // A key can be shared (an avatar vote keeps the pictures it swapped), so a
+                // trashed key that something still references keeps its files.
+                let referenced = sqlx::query_scalar!(
+                    r#"select exists(select 1 from users where avatar_key = $1)
+                           or exists(select 1 from polls where proposed_image_key = $1 or previous_image_key = $1)
+                           or exists(select 1 from pact_attachments where image_key = $1)
+                           or exists(select 1 from ledger_attachments where image_key = $1)
+                           or exists(select 1 from uploads where key = $1) as "referenced!""#,
+                    key,
+                )
+                .fetch_one(&mut *tx)
+                .await?;
+                if referenced {
+                    sqlx::query!("delete from media_trash where key = $1", key)
+                        .execute(&mut *tx)
+                        .await?;
+                    continue;
+                }
                 let dir = ctx.media.dir(key);
                 match tokio::fs::remove_dir_all(&dir).await {
                     Ok(()) => {}

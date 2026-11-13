@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists(select 1 from poll_participants where poll_id = $1 and voted_at is null) as \"waiting!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "waiting!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5f4a3f47118dbd97b58848ef3acfff223814703595f9e0638856afd64f1e86ab"
+}

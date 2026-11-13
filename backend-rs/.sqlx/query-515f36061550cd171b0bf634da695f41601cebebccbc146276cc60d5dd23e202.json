@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, creator_id, title, kind, config, status, result, created_at, reminders_sent,\n                proposed_image_key\n         from polls where id = $1 for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "creator_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "result",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "reminders_sent",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 9,
+        "name": "proposed_image_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "515f36061550cd171b0bf634da695f41601cebebccbc146276cc60d5dd23e202"
+}

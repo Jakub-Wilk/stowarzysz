@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.user_id from poll_participants p join users u on u.id = p.user_id\n         where p.poll_id = $1 and u.is_active and u.password_hash is not null order by p.user_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ec64449f137e73ebce4d2dc4c7501939a63438dca8f01d2f36a96a3220500817"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "release savepoint step",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "99110e2ad2dba35b989663e07f7ec8236a1cb17a1433793817a300607e4f9f47"
+}

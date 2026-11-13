@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select user_id from poll_participants where poll_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d3611fca447bb7a6747b61db5e78d8e58e3c4bd278e3d0b08fe02fe897eb84e5"
+}

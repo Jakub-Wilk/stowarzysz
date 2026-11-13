@@ -1,5 +1,4 @@
 //! Uploading images and serving stored ones.
-#![allow(unused_qualifications)] // emitted inside utoipa's `params(...)` expansion
 
 use app::AppError;
 use app::media::{self, Purpose, UploadView, Variant};

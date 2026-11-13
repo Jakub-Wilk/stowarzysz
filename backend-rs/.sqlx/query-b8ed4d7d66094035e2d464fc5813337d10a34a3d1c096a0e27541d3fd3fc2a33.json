@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "rollback to savepoint step",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "b8ed4d7d66094035e2d464fc5813337d10a34a3d1c096a0e27541d3fd3fc2a33"
+}

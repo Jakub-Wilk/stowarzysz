@@ -5,7 +5,12 @@ mod events;
 pub mod guard;
 mod health;
 pub mod json;
+// `utoipa`'s `IntoParams` expansion triggers `unused_qualifications` in modules with query
+// parameters.
+#[allow(unused_qualifications)]
 mod media;
+#[allow(unused_qualifications)]
+mod polls;
 pub mod problem;
 mod push;
 mod users;
@@ -59,6 +64,7 @@ const UPLOAD_TIMEOUT: Duration = Duration::from_mins(10);
         (name = "auth", description = "Signing in and out, activation links"),
         (name = "people", description = "Members and the signed-in user"),
         (name = "users", description = "Account management (administrators)"),
+        (name = "polls", description = "Sejmik: votes"),
         (name = "media", description = "Image uploads and stored images"),
         (name = "push", description = "Web Push subscriptions"),
         (name = "events", description = "Live updates (server-sent events)"),
@@ -109,6 +115,14 @@ pub fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(users::activation_link))
         .routes(routes!(users::set_avatar, users::clear_avatar))
         .routes(routes!(users::revoke_sessions))
+        .routes(routes!(polls::list, polls::create))
+        .routes(routes!(polls::get))
+        .routes(routes!(polls::ballot))
+        .routes(routes!(polls::veto))
+        .routes(routes!(polls::abstain))
+        .routes(routes!(polls::close))
+        .routes(routes!(polls::tie_break))
+        .routes(routes!(polls::react))
         .routes(routes!(push::public_key))
         .routes(routes!(push::subscribe, push::unsubscribe))
         .layer(TimeoutLayer::with_status_code(

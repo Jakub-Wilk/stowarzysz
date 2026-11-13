@@ -14,6 +14,8 @@ mod error;
 pub mod events;
 pub mod listener;
 pub mod media;
+pub mod pagination;
+pub mod polls;
 pub mod push;
 pub mod scheduler;
 

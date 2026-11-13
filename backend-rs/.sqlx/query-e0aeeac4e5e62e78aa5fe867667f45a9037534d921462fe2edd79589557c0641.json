@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select avatar_key from users where id = $1 and is_active and password_hash is not null for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "avatar_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "e0aeeac4e5e62e78aa5fe867667f45a9037534d921462fe2edd79589557c0641"
+}

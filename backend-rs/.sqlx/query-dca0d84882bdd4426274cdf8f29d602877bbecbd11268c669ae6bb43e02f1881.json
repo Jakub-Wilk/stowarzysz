@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update poll_participants set abstained = true, reason = $2 where poll_id = $1 and voted_at is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dca0d84882bdd4426274cdf8f29d602877bbecbd11268c669ae6bb43e02f1881"
+}

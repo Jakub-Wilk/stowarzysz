@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.id, p.title, p.kind, p.status, p.created_at, p.deadline_at, p.closed_at, p.result,\n                  p.config, p.close_reason, p.creator_id, p.reminders_sent, p.proposed_image_key,\n                  p.previous_image_key, p.tie_break_of,\n                  u.username as creator_username, u.avatar_key as creator_avatar,\n                  (select f.id from polls f where f.tie_break_of = p.id) as tie_break_poll\n           from polls p join users u on u.id = p.creator_id where p.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "deadline_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "closed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "result",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "close_reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "reminders_sent",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 12,
+        "name": "proposed_image_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "previous_image_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "tie_break_of",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "creator_avatar",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "tie_break_poll",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "1282ed3c8c2cf9b0935ee769049e3026e4e58f44c02bca159c64d24f7327cb5b"
+}

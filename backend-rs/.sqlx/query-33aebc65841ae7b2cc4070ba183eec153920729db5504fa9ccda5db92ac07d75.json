@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select min(least(deadline_at, coalesce(next_reminder_at, deadline_at))) from polls where status = 'open'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "min",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "33aebc65841ae7b2cc4070ba183eec153920729db5504fa9ccda5db92ac07d75"
+}

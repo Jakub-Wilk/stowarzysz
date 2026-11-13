@@ -1,0 +1,123 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.id, p.title, p.kind, p.status, p.created_at, p.deadline_at, p.closed_at, p.result,\n                  u.id as creator_id, u.username as creator_username, u.avatar_key as creator_avatar,\n                  (select count(*) from poll_participants x where x.poll_id = p.id) as \"participant_count!\",\n                  (select count(*) from poll_participants x where x.poll_id = p.id and x.voted_at is not null) as \"voted_count!\",\n                  me.user_id is not null as \"participating!\",\n                  coalesce(me.voted_at is not null, false) as \"has_voted!\",\n                  coalesce(me.vetoed, false) as \"vetoed!\",\n                  coalesce(me.abstained, false) as \"abstained!\"\n           from polls p\n           join users u on u.id = p.creator_id\n           left join poll_participants me on me.poll_id = p.id and me.user_id = $1\n           where ($2::text is null or p.status = $2)\n             and (not $3 or me.user_id is not null)\n             and ($4::timestamptz is null or (p.created_at, p.id) < ($4, $5))\n           order by p.created_at desc, p.id desc\n           limit $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "deadline_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "closed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "result",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "creator_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_avatar",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "participant_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "voted_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "participating!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "has_voted!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "vetoed!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "abstained!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Bool",
+        "Timestamptz",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "ac40c8c92436a1a28d3f61a0ee4c7a25f076e8ba9cb1459c30630d4421a6f504"
+}

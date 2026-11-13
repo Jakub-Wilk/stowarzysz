@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into poll_participants (poll_id, user_id) select $1, unnest($2::bigint[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bcb086a252c5bd68840f85407a552c65f326abed65af3fa5f44da74654d8e409"
+}

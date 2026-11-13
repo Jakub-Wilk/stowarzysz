@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update poll_participants set last_reaction = $3 where poll_id = $1 and user_id = $2 and last_reaction <> $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c646543a22396dc063cbc6921b9c7c2acac232cabdd43c9865254611eaa20e89"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select status from polls where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "94e593dc0640fbdbbd9997c58bd4f1f0c822f280beb364b2783f2c57130d9ab5"
+}

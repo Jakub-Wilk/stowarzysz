@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.user_id, u.username, u.avatar_key, p.ballot, p.vetoed, p.abstained, p.reason,\n                p.voted_at is not null as has_voted, p.last_reaction\n         from poll_participants p join users u on u.id = p.user_id\n         where p.poll_id = $1 order by u.username",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "avatar_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "ballot",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "vetoed",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "abstained",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "reason",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "has_voted",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_reaction",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      null,
+      false
+    ]
+  },
+  "hash": "6ed7ada66e14d894dcd61b73651362c0ba94bdb703cee95a8e9b83bb40896f9a"
+}

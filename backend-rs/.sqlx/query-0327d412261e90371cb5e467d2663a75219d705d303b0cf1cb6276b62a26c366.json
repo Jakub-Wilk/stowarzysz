@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select user_id from poll_participants\n             where poll_id = $1 and voted_at is not null and not abstained and user_id <> $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0327d412261e90371cb5e467d2663a75219d705d303b0cf1cb6276b62a26c366"
+}

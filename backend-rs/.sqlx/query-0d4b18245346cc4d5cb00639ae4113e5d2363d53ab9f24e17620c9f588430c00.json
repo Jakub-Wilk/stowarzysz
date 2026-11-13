@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update polls set reminders_sent = $2, next_reminder_at = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int2",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d4b18245346cc4d5cb00639ae4113e5d2363d53ab9f24e17620c9f588430c00"
+}

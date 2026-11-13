@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id from users where is_active and password_hash is not null order by id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cbbe6044831053d5cebea61b4cb3c9557d626abce9d39f22e81a44c68cb2db66"
+}

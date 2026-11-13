@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update polls set previous_image_key = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "174e97c0d08ef9ad15895cbeeda217157e690185f1a428f49cd32837899e30e5"
+}

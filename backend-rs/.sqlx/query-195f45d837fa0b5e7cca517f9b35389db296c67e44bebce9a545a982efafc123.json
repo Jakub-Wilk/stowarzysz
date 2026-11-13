@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select username from users where id = $1 and is_active and password_hash is not null",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "195f45d837fa0b5e7cca517f9b35389db296c67e44bebce9a545a982efafc123"
+}

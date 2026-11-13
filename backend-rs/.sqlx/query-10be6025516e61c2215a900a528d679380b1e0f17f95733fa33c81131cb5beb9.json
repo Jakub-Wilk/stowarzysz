@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "savepoint step",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "10be6025516e61c2215a900a528d679380b1e0f17f95733fa33c81131cb5beb9"
+}

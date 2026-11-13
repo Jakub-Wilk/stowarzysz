@@ -334,3 +334,30 @@ pub fn png(width: u32, height: u32) -> Vec<u8> {
         .unwrap();
     bytes.into_inner()
 }
+
+/// Give each of `users` one push subscription (endpoint `https://push.test/<id>`).
+pub async fn subscribe(db: &PgPool, users: &[i64]) {
+    for user in users {
+        sqlx::query("insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push.test/' || $1, 'k', 'a')")
+            .bind(user)
+            .execute(db)
+            .await
+            .unwrap();
+    }
+}
+
+/// Queued notifications as `(user id, title, body)`, oldest first; then the outbox is emptied.
+pub async fn take_pushes(db: &PgPool) -> Vec<(i64, String, String)> {
+    let rows: Vec<(i64, String, String)> = sqlx::query_as(
+        "select s.user_id, o.payload->>'title', o.payload->>'body'
+         from push_outbox o join push_subscriptions s on s.id = o.subscription_id order by o.id",
+    )
+    .fetch_all(db)
+    .await
+    .unwrap();
+    sqlx::query("delete from push_outbox")
+        .execute(db)
+        .await
+        .unwrap();
+    rows
+}
