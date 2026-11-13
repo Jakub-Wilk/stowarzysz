@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into users (id, username, password_hash, is_active, is_superuser, avatar_key,\n                                birthday, birthday_reminded_on, created_at)\n             values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool",
+        "Text",
+        "Date",
+        "Date",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfc9bcbb7712ddea9fa3dc3d43d06290bbfe6f03df6ecb3d4db017652577b18e"
+}

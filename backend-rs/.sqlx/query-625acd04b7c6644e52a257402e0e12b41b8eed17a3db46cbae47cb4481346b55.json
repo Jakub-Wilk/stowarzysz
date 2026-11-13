@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pacts (id, creator_id, kind, title, condition, notes, due_at, config, status,\n                                created_at, resolved_at, next_nudge_at, judgment_poll_id)\n             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Jsonb",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "625acd04b7c6644e52a257402e0e12b41b8eed17a3db46cbae47cb4481346b55"
+}

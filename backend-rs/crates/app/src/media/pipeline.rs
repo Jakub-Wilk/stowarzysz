@@ -69,6 +69,33 @@ pub fn process(
     })
 }
 
+/// Take over an image the old backend already processed: a WebP file becomes the master as it
+/// is (re-encoding it would only lose more), anything else is re-encoded losslessly; the variants
+/// are made from it as for a new upload.
+pub fn adopt(path: &Path, purpose: Purpose, lossless_effort: u8) -> Result<Processed, ImageError> {
+    let image = decode(path)?;
+    let is_webp = ImageReader::open(path)
+        .and_then(ImageReader::with_guessed_format)
+        .map(|reader| reader.format() == Some(ImageFormat::WebP))
+        .map_err(anyhow::Error::from)?;
+    let master = if is_webp {
+        std::fs::read(path).map_err(anyhow::Error::from)?
+    } else {
+        encode(&image, Some(lossless_effort))?
+    };
+    let (small, medium) = match purpose {
+        Purpose::Avatar => (square(&image, 128)?, square(&image, 512)?),
+        Purpose::Photo => (fit(&image, 512)?, fit(&image, 1600)?),
+    };
+    Ok(Processed {
+        width: image.width(),
+        height: image.height(),
+        master,
+        small: encode(&small, None)?,
+        medium: encode(&medium, None)?,
+    })
+}
+
 pub(crate) fn decode(path: &Path) -> Result<DynamicImage, ImageError> {
     let file = std::fs::File::open(path).map_err(anyhow::Error::from)?;
     let mut reader = ImageReader::new(BufReader::new(file))

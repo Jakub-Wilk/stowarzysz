@@ -21,6 +21,7 @@ use crate::{AppError, AppResult};
 
 pub use balances::{Balances, MemberBalance, PendingPayment, Transfer, balances};
 pub use rates::{Rate, RateView, Rates};
+pub(crate) use services::write_meaning;
 pub use services::{
     EntryUpdate, MAX_ATTACHMENTS, NewEntry, add_attachment, cancel, confirm, create,
     delete_attachment, rate, record_debts, reject, update,

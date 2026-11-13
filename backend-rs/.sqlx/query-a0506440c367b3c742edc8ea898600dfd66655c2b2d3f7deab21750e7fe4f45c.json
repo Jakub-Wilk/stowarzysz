@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_verdicts (claim_id, user_id, verdict) values ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a0506440c367b3c742edc8ea898600dfd66655c2b2d3f7deab21750e7fe4f45c"
+}

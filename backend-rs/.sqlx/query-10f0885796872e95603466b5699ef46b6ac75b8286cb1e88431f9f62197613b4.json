@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update polls set subject_claim_id = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "10f0885796872e95603466b5699ef46b6ac75b8286cb1e88431f9f62197613b4"
+}

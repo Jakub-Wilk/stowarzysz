@@ -45,6 +45,19 @@ enum Command {
         /// The image file.
         file: std::path::PathBuf,
     },
+    /// Copy the Django database (and its media) into this empty database, once. Everything is
+    /// checked before it is committed; any problem rolls it all back.
+    ImportDjango {
+        /// The Django database (default: `LEGACY_DATABASE_URL`).
+        #[arg(long)]
+        from: Option<String>,
+        /// The old `MEDIA_ROOT`, whose files are moved into the new layout.
+        #[arg(long)]
+        media_from: Option<std::path::PathBuf>,
+        /// Do everything and check it, then roll it back.
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Exit 0 if the local server answers `GET /api/health` (for container health checks).
     Healthcheck {
         /// `host:port` of the server; defaults to the port of `BIND_ADDR` on localhost.
@@ -70,6 +83,11 @@ async fn main() -> ExitCode {
         }
         Command::Healthcheck { addr } => healthcheck(addr).await,
         Command::Ocr { file } => ocr(file).await,
+        Command::ImportDjango {
+            from,
+            media_from,
+            dry_run,
+        } => import_django(from, media_from, dry_run).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -232,6 +250,43 @@ async fn create_superuser(username: &str, password_stdin: bool) -> anyhow::Resul
 
 /// Random secrets for `.env.prod`. Keep them: changing `JWT_SECRET` signs everyone out,
 /// changing `SANTA_SEAL_KEY` makes an active Secret Santa draw unreadable.
+#[allow(clippy::print_stdout)] // the output is the point
+async fn import_django(
+    from: Option<String>,
+    media_from: Option<std::path::PathBuf>,
+    dry_run: bool,
+) -> anyhow::Result<()> {
+    let ctx = context().await?;
+    let url = match from {
+        Some(url) => url,
+        None => ctx
+            .config
+            .legacy
+            .database_url
+            .as_ref()
+            .map(|url| url.expose().to_owned())
+            .context("pass --from or set LEGACY_DATABASE_URL")?,
+    };
+    let legacy = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&url)
+        .await
+        .context("cannot connect to the Django database")?;
+    let options = app::import::Options {
+        media_from,
+        santa_key: ctx
+            .config
+            .legacy
+            .santa_key
+            .as_ref()
+            .map(|key| key.expose().to_owned()),
+        dry_run,
+    };
+    let report = app::import::run(&ctx, &legacy, &options).await?;
+    print!("{report}");
+    Ok(())
+}
+
 #[allow(clippy::print_stdout)] // the output is the point
 async fn ocr(file: std::path::PathBuf) -> anyhow::Result<()> {
     let config = Config::from_env()?;

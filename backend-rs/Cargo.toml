@@ -18,6 +18,7 @@ chrono-tz = "0.10"
 fast_image_resize = { version = "5", features = ["image"] }
 flate2 = "1"
 chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+fernet = { version = "0.2", default-features = false, features = ["rustcrypto"] }
 governor = "0.10"
 hmac = "0.12"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }

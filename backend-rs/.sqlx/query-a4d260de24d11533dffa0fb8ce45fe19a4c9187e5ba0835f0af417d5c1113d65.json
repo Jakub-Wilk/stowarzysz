@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_attachments (id, pact_id, uploaded_by, image_key, width, height, caption, created_at)\n             values ($1, $2, $3, $4, $5, $6, $7, $8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Text",
+        "Int4",
+        "Int4",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a4d260de24d11533dffa0fb8ce45fe19a4c9187e5ba0835f0af417d5c1113d65"
+}

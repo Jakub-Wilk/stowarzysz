@@ -12,6 +12,7 @@ mod context;
 pub mod db;
 mod error;
 pub mod events;
+pub mod import;
 pub mod ledger;
 pub mod listener;
 pub mod media;

@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select o.debtor_id, o.creditor_id, lower(o.item) as \"item!\", sum(o.amount)::bigint as \"amount!\"\n           from ledger_obligations o join ledger_entries e on e.id = o.entry_id\n           where e.status = 'confirmed' group by 1, 2, 3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "debtor_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "creditor_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "item!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "amount!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "ffe3319501ac06a15ff31637cfe89720f736991d036eeed21596cd3198ca26b7"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into legacy_refresh_tokens (jti, user_id, expires_at) values ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2f30712cfebde4ada6f85ae148ca6267a5e671b9e303bdfacc4ad83097bfe0d4"
+}

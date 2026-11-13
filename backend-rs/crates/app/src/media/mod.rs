@@ -33,7 +33,7 @@ use crate::db::Uow;
 use crate::{AppError, AppResult};
 use domain::DomainError;
 
-pub use uploads::{UploadView, store_upload, take_upload};
+pub use uploads::{StoredImage, UploadView, store_upload, take_upload};
 
 const DAY_SECS: i64 = 86_400;
 /// Where uploads are streamed to before processing (same filesystem, so renames are cheap).

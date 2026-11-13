@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_join_consents (participant_id, approver_id, approved) values ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b06d1382d837cca253122e430b6fef9df8bbbd9d03849411330119b40fa3b038"
+}

@@ -418,7 +418,7 @@ async fn insert(
 
 /// (Re)derive what entry `id` means: its obligations and, for an expense or income, each
 /// person's paid and owed amounts.
-async fn write_meaning(uow: &mut Uow, id: i64, entry: &Entry) -> AppResult<()> {
+pub(crate) async fn write_meaning(uow: &mut Uow, id: i64, entry: &Entry) -> AppResult<()> {
     sqlx::query!("delete from ledger_obligations where entry_id = $1", id)
         .execute(uow.conn())
         .await?;

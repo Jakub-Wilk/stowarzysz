@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into santa_assignments (id, event_id, giver_id, tier_index, sealed, receiver_id)\n             values ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int2",
+        "Bytea",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "195ddec6ef9a1943967d63ee72be8274cd5930b99e5632b7ed45ca49225555e6"
+}

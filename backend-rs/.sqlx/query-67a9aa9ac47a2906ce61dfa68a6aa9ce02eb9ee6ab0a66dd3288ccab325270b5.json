@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into santa_gifts (id, assignment_id, amount, note) values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "67a9aa9ac47a2906ce61dfa68a6aa9ce02eb9ee6ab0a66dd3288ccab325270b5"
+}

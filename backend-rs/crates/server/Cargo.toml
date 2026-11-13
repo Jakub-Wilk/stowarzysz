@@ -47,6 +47,8 @@ image.workspace = true
 app = { workspace = true, features = ["test-util"] }
 insta.workspace = true
 jsonwebtoken.workspace = true
+fernet.workspace = true
+tempfile.workspace = true
 chrono-tz.workspace = true
 serde = { workspace = true }
 wiremock.workspace = true
