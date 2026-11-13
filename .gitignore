@@ -44,3 +44,5 @@ backups/
 logs/
 .deploy.lock
 .deadlines.lock
+
+sample-backups/

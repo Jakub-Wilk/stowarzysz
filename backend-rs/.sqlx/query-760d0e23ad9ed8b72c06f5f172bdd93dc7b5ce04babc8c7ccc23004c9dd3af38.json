@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into santa_help_requests (event_id, receiver_id, tier_index, asked_at)\n                 values ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int2",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "760d0e23ad9ed8b72c06f5f172bdd93dc7b5ce04babc8c7ccc23004c9dd3af38"
+}

@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, receiver_id, tier_index, ideas, answered_at from santa_help_requests\n           where event_id = $1 order by tier_index nulls first, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "receiver_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "tier_index",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "ideas",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 4,
+        "name": "answered_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "5a92f0abab4c2ab3ad7fb014d4cfd25b657e7deb2e1d5c465ca63f9c2dbd0968"
+}

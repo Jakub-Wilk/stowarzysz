@@ -17,6 +17,8 @@ mod pacts;
 mod polls;
 pub mod problem;
 mod push;
+#[allow(unused_qualifications)]
+mod santa;
 mod users;
 
 use std::sync::Arc;
@@ -71,6 +73,7 @@ const UPLOAD_TIMEOUT: Duration = Duration::from_mins(10);
         (name = "polls", description = "Sejmik: votes"),
         (name = "pacts", description = "Umowy: bets, group bets, resolutions and shared goals"),
         (name = "ledger", description = "Kasa Skarbowa: expenses, debts, payments and balances"),
+        (name = "secret-santa", description = "Secret Santa: the draw, help requests and history"),
         (name = "media", description = "Image uploads and stored images"),
         (name = "push", description = "Web Push subscriptions"),
         (name = "events", description = "Live updates (server-sent events)"),
@@ -154,6 +157,12 @@ pub fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(ledger::rates))
         .routes(routes!(ledger::stats))
         .routes(routes!(ledger::meta))
+        .routes(routes!(santa::get, santa::start, santa::update))
+        .routes(routes!(santa::end))
+        .routes(routes!(santa::history))
+        .routes(routes!(santa::ask_for_help))
+        .routes(routes!(santa::answer_help))
+        .routes(routes!(santa::gift_note))
         .routes(routes!(push::public_key))
         .routes(routes!(push::subscribe, push::unsubscribe))
         .layer(TimeoutLayer::with_status_code(

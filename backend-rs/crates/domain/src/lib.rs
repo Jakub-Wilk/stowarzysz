@@ -12,5 +12,6 @@ mod error;
 pub mod ledger;
 pub mod pacts;
 pub mod polls;
+pub mod santa;
 
 pub use error::DomainError;

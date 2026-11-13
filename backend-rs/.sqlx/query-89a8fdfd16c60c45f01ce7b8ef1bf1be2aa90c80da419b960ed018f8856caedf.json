@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update santa_gifts set note = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "89a8fdfd16c60c45f01ce7b8ef1bf1be2aa90c80da419b960ed018f8856caedf"
+}

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select g.id, g.assignment_id, g.amount, g.note from santa_gifts g\n         join santa_assignments a on a.id = g.assignment_id\n         where a.event_id = any($1) order by g.amount desc, g.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "assignment_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "amount",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "note",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7afac7b64f7085b0b6ff83244a08d02f88a060f01e73a1516a004931b5c8c908"
+}

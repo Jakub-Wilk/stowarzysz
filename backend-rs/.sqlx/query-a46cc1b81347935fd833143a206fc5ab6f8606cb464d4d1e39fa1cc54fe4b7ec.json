@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into santa_assignments (event_id, giver_id, tier_index, sealed)\n         select $1, giver, tier, sealed\n         from unnest($2::bigint[], $3::smallint[], $4::bytea[]) with ordinality as t(giver, tier, sealed, n)\n         order by n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int2Array",
+        "ByteaArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a46cc1b81347935fd833143a206fc5ab6f8606cb464d4d1e39fa1cc54fe4b7ec"
+}

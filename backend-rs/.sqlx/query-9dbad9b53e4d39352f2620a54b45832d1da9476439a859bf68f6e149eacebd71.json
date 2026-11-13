@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select tier_index from santa_help_requests\n         where id = $1 and event_id = $2 and receiver_id = $3 for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tier_index",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "9dbad9b53e4d39352f2620a54b45832d1da9476439a859bf68f6e149eacebd71"
+}

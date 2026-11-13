@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select distinct giver_id from santa_assignments where event_id = $1 order by giver_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "giver_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9bd20ab7048954781fba7ec7da6f0e68f3e2bcd95e5a5a06d3ea981bdf6a9ab9"
+}

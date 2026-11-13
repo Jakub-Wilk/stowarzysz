@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update santa_assignments a set receiver_id = t.receiver, sealed = null\n         from unnest($1::bigint[], $2::bigint[]) as t(id, receiver) where a.id = t.id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f9da16eab4c17cb2191e246c9fbe94b43f0f3faf17f716a65bd39f366268eb4"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update santa_events set status = 'ended', ended_at = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6917a9377fbb77c8af0df3d45dba849cb707f979d562191150025be49841db57"
+}

@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, mode, deadline, ended_at as \"ended_at!\", gift_tiers from santa_events\n           where status = 'ended'\n             and ($1::timestamptz is null or (ended_at, id) < ($1, $2))\n           order by ended_at desc, id desc limit $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "mode",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "deadline",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "ended_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "gift_tiers",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "a06551e29ef4e010b341636f685d677549fcf106bdd216974923bbdea01bc212"
+}

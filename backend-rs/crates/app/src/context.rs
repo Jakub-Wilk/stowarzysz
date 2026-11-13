@@ -12,6 +12,7 @@ use crate::listener::Signals;
 use crate::media::Media;
 use crate::ocr::Ocr;
 use crate::push::Push;
+use crate::santa::Sealer;
 
 /// The services every use case may need. Built once at startup and shared behind an `Arc`.
 #[derive(Debug)]
@@ -31,6 +32,8 @@ pub struct Context {
     pub rates: Rates,
     /// Receipt OCR (Gemini candidates and their health).
     pub ocr: Ocr,
+    /// Seals Secret Santa pairings while a round is active.
+    pub santa: Sealer,
 }
 
 impl Context {
@@ -42,6 +45,7 @@ impl Context {
             media: Media::new(&config),
             rates: Rates::new(&config.rates_url),
             ocr: Ocr::new(&config),
+            santa: Sealer::new(config.secrets.santa_seal.expose()),
             config: Arc::new(config),
             db,
             clock,

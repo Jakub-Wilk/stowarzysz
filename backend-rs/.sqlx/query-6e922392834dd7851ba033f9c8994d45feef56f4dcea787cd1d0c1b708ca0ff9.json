@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update santa_help_requests set ideas = $2, answered_at = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "TextArray",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6e922392834dd7851ba033f9c8994d45feef56f4dcea787cd1d0c1b708ca0ff9"
+}

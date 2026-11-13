@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, event_id, giver_id, receiver_id as \"receiver_id!\" from santa_assignments\n           where event_id = any($1) and receiver_id is not null\n           order by tier_index nulls first, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "giver_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "receiver_id!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "68b43032862d8802c4ca8fb0ff638a0d8654b845d9dbca969fc6c87b28d518d8"
+}

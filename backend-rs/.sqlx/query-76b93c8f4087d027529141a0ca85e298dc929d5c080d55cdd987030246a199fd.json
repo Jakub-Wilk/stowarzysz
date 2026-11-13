@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select g.id, g.amount, a.giver_id, e.id as event_id, e.status\n         from santa_gifts g join santa_assignments a on a.id = g.assignment_id\n         join santa_events e on e.id = a.event_id\n         where g.id = $1 for update of g",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "amount",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "giver_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "status",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "76b93c8f4087d027529141a0ca85e298dc929d5c080d55cdd987030246a199fd"
+}

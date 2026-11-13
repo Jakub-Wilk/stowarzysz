@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update santa_events set deadline = $2, gift_tiers = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "308e622af56b59c8d788ceb9704a101e248f38b5995e8fa131ddf4cd5e901fd7"
+}
