@@ -52,35 +52,31 @@ pub struct Balances {
 }
 
 pub async fn balances(ctx: &Context) -> AppResult<Balances> {
-    // Per person and unit (an item, case-insensitive; "" for money): the net of confirmed
-    // entries, and of confirmed plus pending ones.
-    let nets = sqlx::query!(
-        r#"select x.user_id as "user_id!", lower(o.item) as "unit!",
-                  coalesce(sum(x.signed) filter (where e.status = 'confirmed'), 0)::bigint as "confirmed!",
-                  sum(x.signed)::bigint as "planned!",
-                  min(o.id) filter (where e.status = 'confirmed') as confirmed_first,
-                  (array_agg(o.item order by o.id) filter (where e.status = 'confirmed'))[1] as confirmed_label,
-                  min(o.id) as "planned_first!",
-                  (array_agg(o.item order by o.id))[1] as "planned_label!"
+    // Who owes whom, per unit (an item, case-insensitive; "" for money), split into confirmed
+    // and pending: one pass with a hash aggregate, a row per pair, however long the history.
+    let pairs = sqlx::query!(
+        r#"select o.debtor_id, o.creditor_id, lower(o.item) as "unit!",
+                  e.status = 'confirmed' as "confirmed!", sum(o.amount)::bigint as "total!"
            from ledger_obligations o
            join ledger_entries e on e.id = o.entry_id
-           cross join lateral (values (o.creditor_id, o.amount), (o.debtor_id, -o.amount))
-                as x(user_id, signed)
            where e.status in ('confirmed', 'pending')
-           group by x.user_id, lower(o.item)"#,
+           group by 1, 2, 3, 4"#,
     )
     .fetch_all(&ctx.db)
     .await?;
-    let goods = sqlx::query!(
-        r#"select o.debtor_id, o.creditor_id, lower(o.item) as "unit!",
-                  sum(o.amount)::bigint as "total!"
+    // How each item is spelled: as first recorded, in a confirmed entry if there is one.
+    let labels: HashMap<String, String> = sqlx::query!(
+        r#"select distinct on (lower(o.item)) lower(o.item) as "unit!", o.item
            from ledger_obligations o
            join ledger_entries e on e.id = o.entry_id
            where e.status in ('confirmed', 'pending') and o.item <> ''
-           group by o.debtor_id, o.creditor_id, lower(o.item)"#,
+           order by lower(o.item), e.status <> 'confirmed', o.id"#,
     )
     .fetch_all(&ctx.db)
-    .await?;
+    .await?
+    .into_iter()
+    .map(|r| (r.unit, r.item))
+    .collect();
     let waiting = sqlx::query!(
         r#"select id, item, amount, (details->>'from')::bigint as "payer!",
                   (details->>'to')::bigint as "receiver!"
@@ -89,27 +85,37 @@ pub async fn balances(ctx: &Context) -> AppResult<Balances> {
     )
     .fetch_all(&ctx.db)
     .await?;
+    let label = |unit: &str| labels.get(unit).cloned().unwrap_or_default();
 
-    // How each unit is spelled: as first recorded, in confirmed entries if there are any.
-    let mut confirmed_labels: HashMap<&str, (i64, &str)> = HashMap::new();
-    let mut planned_labels: HashMap<&str, (i64, &str)> = HashMap::new();
-    for row in &nets {
-        keep_first(
-            &mut planned_labels,
-            &row.unit,
-            row.planned_first,
-            &row.planned_label,
-        );
-        if let (Some(first), Some(label)) = (row.confirmed_first, &row.confirmed_label) {
-            keep_first(&mut confirmed_labels, &row.unit, first, label);
+    // Each person's net per unit: confirmed only, and with pending entries assumed through.
+    let mut nets: BTreeMap<(String, i64), Net> = BTreeMap::new();
+    let mut goods: BTreeMap<(i64, i64, String), i64> = BTreeMap::new();
+    for pair in &pairs {
+        for (user, signed) in [
+            (pair.creditor_id, pair.total),
+            (pair.debtor_id, -pair.total),
+        ] {
+            let net = nets.entry((pair.unit.clone(), user)).or_default();
+            net.planned += signed;
+            if pair.confirmed {
+                net.confirmed += signed;
+            }
+        }
+        if !pair.unit.is_empty() {
+            *goods
+                .entry((pair.debtor_id, pair.creditor_id, pair.unit.clone()))
+                .or_default() += pair.total;
         }
     }
-    let label = |unit: &str| -> String {
-        confirmed_labels
-            .get(unit)
-            .or_else(|| planned_labels.get(unit))
-            .map_or_else(String::new, |(_, label)| (*label).to_owned())
-    };
+    let nets: Vec<NetRow> = nets
+        .into_iter()
+        .map(|((unit, user_id), net)| NetRow {
+            user_id,
+            unit,
+            confirmed: net.confirmed,
+            planned: net.planned,
+        })
+        .collect();
 
     let money: BTreeMap<i64, i64> = nets
         .iter()
@@ -124,7 +130,7 @@ pub async fn balances(ctx: &Context) -> AppResult<Balances> {
         goods_pairs(
             goods
                 .into_iter()
-                .map(|g| (g.debtor_id, g.creditor_id, g.unit, g.total)),
+                .map(|((debtor, creditor, unit), total)| (debtor, creditor, unit, total)),
         )
         .into_iter()
         .map(|((debtor, creditor, unit), amount)| (debtor, creditor, label(&unit), amount)),
@@ -192,14 +198,16 @@ pub async fn balances(ctx: &Context) -> AppResult<Balances> {
     })
 }
 
-fn keep_first<'a>(
-    labels: &mut HashMap<&'a str, (i64, &'a str)>,
-    unit: &'a str,
-    id: i64,
-    label: &'a str,
-) {
-    let known = labels.entry(unit).or_insert((id, label));
-    if id < known.0 {
-        *known = (id, label);
-    }
+#[derive(Debug, Default, Clone, Copy)]
+struct Net {
+    confirmed: i64,
+    planned: i64,
+}
+
+/// One person's net in one unit.
+struct NetRow {
+    user_id: i64,
+    unit: String,
+    confirmed: i64,
+    planned: i64,
 }

@@ -152,7 +152,12 @@ fn someone(id: i64) -> Person {
 
 /// Pacts newest first.
 pub async fn list(ctx: &Context, actor: &Actor, filter: &ListFilter) -> AppResult<PactPage> {
-    let after = filter.cursor.as_deref().map(Cursor::decode).transpose()?;
+    let after = filter
+        .cursor
+        .as_deref()
+        .map(Cursor::decode)
+        .transpose()?
+        .unwrap_or_else(Cursor::start);
     let rows = sqlx::query!(
         r#"select k.id, k.kind, k.title, k.condition, k.due_at, k.status, k.creator_id,
                   k.created_at, k.resolved_at,
@@ -163,14 +168,14 @@ pub async fn list(ctx: &Context, actor: &Actor, filter: &ListFilter) -> AppResul
            left join pact_participants m on m.pact_id = k.id and m.user_id = $1
            where ($2::text is null or k.status = $2)
              and (not $3 or m.id is not null)
-             and ($4::timestamptz is null or (k.created_at, k.id) < ($4, $5))
+             and (k.created_at, k.id) < ($4, $5)
            order by k.created_at desc, k.id desc
            limit $6"#,
         actor.user_id,
         filter.status.map(Status::as_str),
         filter.mine,
-        after.map(|c| c.at),
-        after.map_or(0, |c| c.id),
+        after.at,
+        after.id,
         i64::try_from(PAGE_SIZE + 1).unwrap_or(i64::MAX),
     )
     .fetch_all(&ctx.db)

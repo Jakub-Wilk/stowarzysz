@@ -114,6 +114,9 @@ pub struct Images {
     /// libwebp lossless preset, 0 (fastest) to 9 (smallest). 2: measured on a 12 MP photo as fast
     /// as possible without growing the files (4 was as small and 1.7x slower).
     pub lossless_effort: u8,
+    /// Images processed at once. Each worst-case upload (50 MB, ~16 MP) needs roughly 300-400 MB
+    /// while it is processed, so this bounds the peak memory of uploads.
+    pub concurrency: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -392,6 +395,10 @@ impl Config {
         if lossless_effort > 9 {
             r.error("IMAGE_LOSSLESS_EFFORT", "must be between 0 and 9");
         }
+        let image_concurrency: usize = r.parsed("IMAGE_CONCURRENCY").unwrap_or(2);
+        if image_concurrency == 0 {
+            r.error("IMAGE_CONCURRENCY", "must be at least 1");
+        }
 
         let limits = Limits {
             json_body_bytes: r.parsed("JSON_BODY_LIMIT_BYTES").unwrap_or(1024 * 1024),
@@ -442,7 +449,10 @@ impl Config {
             gemini,
             vertex,
             ocr,
-            images: Images { lossless_effort },
+            images: Images {
+                lossless_effort,
+                concurrency: image_concurrency,
+            },
             limits,
             legacy,
         })

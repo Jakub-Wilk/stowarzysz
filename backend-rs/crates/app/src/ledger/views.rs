@@ -164,7 +164,12 @@ fn day_cursor(row: &EntryRow) -> Cursor {
 
 /// The feed, newest first (by the day it happened). Everyone reads every entry.
 pub async fn list(ctx: &Context, actor: &Actor, filter: &EntryFilter) -> AppResult<EntryPage> {
-    let after = filter.cursor.as_deref().map(Cursor::decode).transpose()?;
+    let after = filter
+        .cursor
+        .as_deref()
+        .map(Cursor::decode)
+        .transpose()?
+        .unwrap_or_else(Cursor::start);
     let paged = filter.pact_id.is_none();
     let limit = paged.then(|| i64::try_from(PAGE_SIZE + 1).unwrap_or(i64::MAX));
     let rows = sqlx::query_as!(
@@ -175,13 +180,13 @@ pub async fn list(ctx: &Context, actor: &Actor, filter: &EntryFilter) -> AppResu
          from ledger_entries
          where ($1::text is null or kind = $1)
            and ($2::bigint is null or pact_id = $2)
-           and ($3::date is null or (occurred_on, id) < ($3, $4))
+           and (occurred_on, id) < ($3, $4)
          order by occurred_on desc, id desc
          limit $5",
         filter.kind.map(EntryKind::as_str),
         filter.pact_id,
-        after.map(|c| c.at.date_naive()),
-        after.map_or(0, |c| c.id),
+        after.at.date_naive(),
+        after.id,
         limit,
     )
     .fetch_all(&ctx.db)

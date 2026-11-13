@@ -133,7 +133,7 @@ impl Media {
             signing_key: config.secrets.media_signing.expose().as_bytes().to_vec(),
             lossless_effort: config.images.lossless_effort,
             // Decoding a 50 MB upload can take hundreds of MB; at most two at a time.
-            permits: Arc::new(Semaphore::new(2)),
+            permits: Arc::new(Semaphore::new(config.images.concurrency.max(1))),
         }
     }
 

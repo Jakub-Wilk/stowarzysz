@@ -14,6 +14,16 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    /// Ahead of every row: where the first page starts. Queries always compare against a real
+    /// cursor (never `$1 is null or ...`), so the keyset seek stays an index range scan even when
+    /// Postgres plans the prepared statement generically.
+    pub fn start() -> Self {
+        Self {
+            at: DateTime::from_timestamp(253_402_300_799, 0).unwrap_or_default(), // 9999-12-31
+            id: i64::MAX,
+        }
+    }
+
     pub fn encode(self) -> String {
         URL_SAFE_NO_PAD.encode(format!("{}:{}", self.at.timestamp_micros(), self.id))
     }

@@ -73,6 +73,10 @@ pub struct Stats {
     pub series: Vec<StatsPoint>,
 }
 
+/// Bounds standing in for "no limit": far outside any date an entry can have.
+const EARLIEST: NaiveDate = NaiveDate::from_ymd_opt(1, 1, 1).expect("a valid date");
+const LATEST: NaiveDate = NaiveDate::from_ymd_opt(9999, 12, 31).expect("a valid date");
+
 pub async fn stats(ctx: &Context, query: StatsQuery) -> AppResult<Stats> {
     if let (Some(start), Some(end)) = (query.start, query.end)
         && start > end
@@ -83,27 +87,33 @@ pub async fn stats(ctx: &Context, query: StatsQuery) -> AppResult<Stats> {
                 .into(),
         );
     }
+    // Concrete bounds rather than `$1 is null or ...`: the statement is prepared once and
+    // Postgres soon plans it generically, and only a plain range keeps the date index usable.
+    let from = query.start.unwrap_or(EARLIEST);
+    let to = query.end.unwrap_or(LATEST);
     let rows = sqlx::query!(
-        r#"with picked as (
-               select e.kind, e.occurred_on,
-                      case when e.kind = 'debt' then 'debts'
-                           when e.category = '' then 'other' else e.category end as key,
-                      case when e.kind = 'debt'
+        // Each entry's total (its shares' paid amounts, or a debt's money obligations) is looked
+        // up once per entry through its index: a month costs a few hundred lookups.
+        r#"select e.kind as "kind!",
+                  case when e.kind = 'debt' then 'debts'
+                       when e.category = '' then 'other' else e.category end as "key!",
+                  e.occurred_on as "occurred_on!",
+                  coalesce(sum(t.total), 0)::bigint as "total!",
+                  count(*) filter (where e.kind <> 'debt' or t.total <> 0) as "counted!",
+                  count(*) as "entries!"
+           from ledger_entries e
+           cross join lateral (
+               select case when e.kind = 'debt'
                            then (select coalesce(sum(o.amount), 0) from ledger_obligations o
                                  where o.entry_id = e.id and o.item = '')
                            else (select coalesce(sum(s.paid_base), 0) from ledger_entry_shares s
                                  where s.entry_id = e.id) end as total
-               from ledger_entries e
-               where e.status = 'confirmed' and e.kind in ('expense', 'income', 'debt')
-                 and ($1::date is null or e.occurred_on >= $1)
-                 and ($2::date is null or e.occurred_on <= $2))
-           select kind as "kind!", key as "key!", occurred_on as "occurred_on!",
-                  sum(total)::bigint as "total!",
-                  count(*) filter (where kind <> 'debt' or total <> 0) as "counted!",
-                  count(*) as "entries!"
-           from picked group by kind, key, occurred_on"#,
-        query.start,
-        query.end,
+               offset 0) t
+           where e.status = 'confirmed' and e.kind in ('expense', 'income', 'debt')
+             and e.occurred_on between $1 and $2
+           group by 1, 2, 3"#,
+        from,
+        to,
     )
     .fetch_all(&ctx.db)
     .await?;
@@ -115,8 +125,7 @@ pub async fn stats(ctx: &Context, query: StatsQuery) -> AppResult<Stats> {
                       case when e.kind = 'income' then -s.paid_base else s.paid_base end as paid
                from ledger_entry_shares s join ledger_entries e on e.id = s.entry_id
                where e.status = 'confirmed' and e.kind in ('expense', 'income')
-                 and ($1::date is null or e.occurred_on >= $1)
-                 and ($2::date is null or e.occurred_on <= $2)
+                 and e.occurred_on between $1 and $2
                union all
                select side.user_id, side.share, side.paid
                from ledger_obligations o join ledger_entries e on e.id = o.entry_id
@@ -124,12 +133,11 @@ pub async fn stats(ctx: &Context, query: StatsQuery) -> AppResult<Stats> {
                                           (o.creditor_id, 0::bigint, o.amount))
                     as side(user_id, share, paid)
                where e.status = 'confirmed' and e.kind = 'debt' and o.item = ''
-                 and ($1::date is null or e.occurred_on >= $1)
-                 and ($2::date is null or e.occurred_on <= $2)
+                 and e.occurred_on between $1 and $2
            ) parts
            group by user_id"#,
-        query.start,
-        query.end,
+        from,
+        to,
     )
     .fetch_all(&ctx.db)
     .await?;

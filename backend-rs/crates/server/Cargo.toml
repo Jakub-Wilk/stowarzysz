@@ -43,6 +43,8 @@ utoipa-scalar.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+reqwest = { workspace = true, features = ["stream"] }
+bytes.workspace = true
 image.workspace = true
 app = { workspace = true, features = ["test-util"] }
 insta.workspace = true

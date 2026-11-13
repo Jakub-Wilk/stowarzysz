@@ -209,14 +209,14 @@ pub async fn list(ctx: &Context, actor: &Actor, filter: &ListFilter) -> AppResul
            left join poll_participants me on me.poll_id = p.id and me.user_id = $1
            where ($2::text is null or p.status = $2)
              and (not $3 or me.user_id is not null)
-             and ($4::timestamptz is null or (p.created_at, p.id) < ($4, $5))
+             and (p.created_at, p.id) < ($4, $5)
            order by p.created_at desc, p.id desc
            limit $6"#,
         actor.user_id,
         status,
         filter.participating,
-        cursor.map(|c| c.at),
-        cursor.map_or(0, |c| c.id),
+        cursor.unwrap_or_else(Cursor::start).at,
+        cursor.map_or(i64::MAX, |c| c.id),
         limit + 1,
     )
     .fetch_all(&ctx.db)

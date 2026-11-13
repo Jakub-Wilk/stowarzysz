@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select o.debtor_id, o.creditor_id, lower(o.item) as \"unit!\",\n                  sum(o.amount)::bigint as \"total!\"\n           from ledger_obligations o\n           join ledger_entries e on e.id = o.entry_id\n           where e.status in ('confirmed', 'pending') and o.item <> ''\n           group by o.debtor_id, o.creditor_id, lower(o.item)",
+  "query": "select o.debtor_id, o.creditor_id, lower(o.item) as \"unit!\",\n                  e.status = 'confirmed' as \"confirmed!\", sum(o.amount)::bigint as \"total!\"\n           from ledger_obligations o\n           join ledger_entries e on e.id = o.entry_id\n           where e.status in ('confirmed', 'pending')\n           group by 1, 2, 3, 4",
   "describe": {
     "columns": [
       {
@@ -20,6 +20,11 @@
       },
       {
         "ordinal": 3,
+        "name": "confirmed!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
         "name": "total!",
         "type_info": "Int8"
       }
@@ -31,8 +36,9 @@
       false,
       false,
       null,
+      null,
       null
     ]
   },
-  "hash": "d1dadc70c2326a4dcc1ec40d7a2e474fbe9bb474b14879f50ce244bb000addce"
+  "hash": "a9f757eea5b6fa6ffbef78cac8a6f4c94e44a91111d68c1e45caa2c040f2d77a"
 }

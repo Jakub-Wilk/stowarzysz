@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select distinct on (lower(o.item)) lower(o.item) as \"unit!\", o.item\n           from ledger_obligations o\n           join ledger_entries e on e.id = o.entry_id\n           where e.status in ('confirmed', 'pending') and o.item <> ''\n           order by lower(o.item), e.status <> 'confirmed', o.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "unit!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "item",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      false
+    ]
+  },
+  "hash": "27a89942782ac96d79982a8c4be397d98ef50eea506998144186a86aa3c6624c"
+}

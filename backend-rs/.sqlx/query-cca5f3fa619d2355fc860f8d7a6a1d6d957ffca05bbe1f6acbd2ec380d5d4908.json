@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select p.id, p.title, p.kind, p.status, p.created_at, p.deadline_at, p.closed_at, p.result,\n                  u.id as creator_id, u.username as creator_username, u.avatar_key as creator_avatar,\n                  (select count(*) from poll_participants x where x.poll_id = p.id) as \"participant_count!\",\n                  (select count(*) from poll_participants x where x.poll_id = p.id and x.voted_at is not null) as \"voted_count!\",\n                  me.user_id is not null as \"participating!\",\n                  coalesce(me.voted_at is not null, false) as \"has_voted!\",\n                  coalesce(me.vetoed, false) as \"vetoed!\",\n                  coalesce(me.abstained, false) as \"abstained!\"\n           from polls p\n           join users u on u.id = p.creator_id\n           left join poll_participants me on me.poll_id = p.id and me.user_id = $1\n           where ($2::text is null or p.status = $2)\n             and (not $3 or me.user_id is not null)\n             and ($4::timestamptz is null or (p.created_at, p.id) < ($4, $5))\n           order by p.created_at desc, p.id desc\n           limit $6",
+  "query": "select p.id, p.title, p.kind, p.status, p.created_at, p.deadline_at, p.closed_at, p.result,\n                  u.id as creator_id, u.username as creator_username, u.avatar_key as creator_avatar,\n                  (select count(*) from poll_participants x where x.poll_id = p.id) as \"participant_count!\",\n                  (select count(*) from poll_participants x where x.poll_id = p.id and x.voted_at is not null) as \"voted_count!\",\n                  me.user_id is not null as \"participating!\",\n                  coalesce(me.voted_at is not null, false) as \"has_voted!\",\n                  coalesce(me.vetoed, false) as \"vetoed!\",\n                  coalesce(me.abstained, false) as \"abstained!\"\n           from polls p\n           join users u on u.id = p.creator_id\n           left join poll_participants me on me.poll_id = p.id and me.user_id = $1\n           where ($2::text is null or p.status = $2)\n             and (not $3 or me.user_id is not null)\n             and (p.created_at, p.id) < ($4, $5)\n           order by p.created_at desc, p.id desc\n           limit $6",
   "describe": {
     "columns": [
       {
@@ -119,5 +119,5 @@
       null
     ]
   },
-  "hash": "ac40c8c92436a1a28d3f61a0ee4c7a25f076e8ba9cb1459c30630d4421a6f504"
+  "hash": "cca5f3fa619d2355fc860f8d7a6a1d6d957ffca05bbe1f6acbd2ec380d5d4908"
 }

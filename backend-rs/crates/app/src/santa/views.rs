@@ -200,14 +200,17 @@ pub async fn state(ctx: &Context, actor: &Actor) -> AppResult<SantaState> {
 
 /// Ended rounds, newest first, with their pairings (public once a round is over).
 pub async fn history(ctx: &Context, cursor: Option<&str>) -> AppResult<HistoryPage> {
-    let after = cursor.map(Cursor::decode).transpose()?;
+    let after = cursor
+        .map(Cursor::decode)
+        .transpose()?
+        .unwrap_or_else(Cursor::start);
     let events = sqlx::query!(
         r#"select id, mode, deadline, ended_at as "ended_at!", gift_tiers from santa_events
            where status = 'ended'
-             and ($1::timestamptz is null or (ended_at, id) < ($1, $2))
+             and (ended_at, id) < ($1, $2)
            order by ended_at desc, id desc limit $3"#,
-        after.map(|c| c.at),
-        after.map_or(0, |c| c.id),
+        after.at,
+        after.id,
         i64::try_from(HISTORY_PAGE + 1).unwrap_or(i64::MAX),
     )
     .fetch_all(&ctx.db)
