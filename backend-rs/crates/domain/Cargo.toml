@@ -9,9 +9,17 @@ publish.workspace = true
 [dependencies]
 chrono.workspace = true
 flate2.workspace = true
+num-bigint.workspace = true
+num-integer.workspace = true
+rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 unicode-normalization.workspace = true
+utoipa = { workspace = true, optional = true }
+
+[features]
+# OpenAPI schemas for the types the API sends and receives as they are.
+schema = ["dep:utoipa"]
 
 [dev-dependencies]
 

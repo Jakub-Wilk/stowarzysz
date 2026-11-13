@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into ledger_entry_shares (entry_id, user_id, paid, owed, paid_base, owed_base)\n             select $1, * from unnest($2::bigint[], $3::bigint[], $4::bigint[], $5::bigint[], $6::bigint[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int8Array",
+        "Int8Array",
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4981c818283de2485a33100abf300ed062f35dc044d35f01a238253038f7c51b"
+}

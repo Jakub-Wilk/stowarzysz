@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into ledger_obligations (entry_id, debtor_id, creditor_id, amount, item)\n         select $1, * from unnest($2::bigint[], $3::bigint[], $4::bigint[], $5::text[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int8Array",
+        "Int8Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3394512a8f6afd36eb909ad869adaa6384f84634fda1bd4a7d6457a6fe819697"
+}

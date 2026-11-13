@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with picked as (\n               select e.kind, e.occurred_on,\n                      case when e.kind = 'debt' then 'debts'\n                           when e.category = '' then 'other' else e.category end as key,\n                      case when e.kind = 'debt'\n                           then (select coalesce(sum(o.amount), 0) from ledger_obligations o\n                                 where o.entry_id = e.id and o.item = '')\n                           else (select coalesce(sum(s.paid_base), 0) from ledger_entry_shares s\n                                 where s.entry_id = e.id) end as total\n               from ledger_entries e\n               where e.status = 'confirmed' and e.kind in ('expense', 'income', 'debt')\n                 and ($1::date is null or e.occurred_on >= $1)\n                 and ($2::date is null or e.occurred_on <= $2))\n           select kind as \"kind!\", key as \"key!\", occurred_on as \"occurred_on!\",\n                  sum(total)::bigint as \"total!\",\n                  count(*) filter (where kind <> 'debt' or total <> 0) as \"counted!\",\n                  count(*) as \"entries!\"\n           from picked group by kind, key, occurred_on",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "key!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "occurred_on!",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 3,
+        "name": "total!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "counted!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "entries!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e1df485f7a5de2ee16f4f729dd63d566d6b21ac037b04c3e969659c815bb773c"
+}

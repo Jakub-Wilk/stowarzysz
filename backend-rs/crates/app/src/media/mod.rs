@@ -137,6 +137,16 @@ impl Media {
         }
     }
 
+    /// A turn at memory-heavy image work (at most two at a time).
+    pub async fn heavy_permit(&self) -> AppResult<tokio::sync::SemaphorePermit<'_>> {
+        Ok(self.permits.acquire().await.map_err(anyhow::Error::from)?)
+    }
+
+    /// libwebp's lossless preset level for masters.
+    pub fn lossless_effort(&self) -> u8 {
+        self.lossless_effort
+    }
+
     pub fn root(&self) -> &Path {
         &self.root
     }

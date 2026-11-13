@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select entry_id, user_id, paid, owed, paid_base, owed_base from ledger_entry_shares\n         where entry_id = any($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entry_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "paid",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "owed",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "paid_base",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "owed_base",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9f40588baa3805ec56719a6d916b6bb5067f2fb73d70cb367d5a580757c6db2e"
+}

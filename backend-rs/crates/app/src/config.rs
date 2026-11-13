@@ -32,6 +32,8 @@ pub struct Config {
     pub secrets: Secrets,
     /// Web Push; `None` disables notifications (the frontend hides the toggle).
     pub vapid: Option<Vapid>,
+    /// ECB reference rates (Frankfurter API), without a trailing slash.
+    pub rates_url: String,
     pub gemini: Gemini,
     /// Optional Vertex AI candidates for receipt OCR.
     pub vertex: Option<Vertex>,
@@ -75,6 +77,8 @@ pub struct Vapid {
 pub struct Gemini {
     /// Google AI Studio key; `None` disables the AI Studio candidates.
     pub api_key: Option<Secret>,
+    /// The AI Studio API origin (overridable for tests).
+    pub base_url: String,
     pub model: String,
     /// Tried after `model` on every enabled endpoint (each model has its own capacity pool).
     pub fallback_models: Vec<String>,
@@ -91,6 +95,8 @@ pub struct Vertex {
     pub credentials: PathBuf,
     /// Preference order, e.g. `global`, `europe-central2`, `europe-west4`.
     pub locations: Vec<String>,
+    /// Replaces `https://{location}-aiplatform.googleapis.com` for every location (tests).
+    pub base_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -323,8 +329,18 @@ impl Config {
             }
         };
 
+        let rates_url = r
+            .text("FRANKFURTER_URL")
+            .unwrap_or_else(|| "https://api.frankfurter.dev/v1".into())
+            .trim_end_matches('/')
+            .to_owned();
         let gemini = Gemini {
             api_key: r.secret("GEMINI_API_KEY"),
+            base_url: r
+                .text("GEMINI_BASE_URL")
+                .unwrap_or_else(|| "https://generativelanguage.googleapis.com".into())
+                .trim_end_matches('/')
+                .to_owned(),
             model: r
                 .text("GEMINI_MODEL")
                 .unwrap_or_else(|| "gemini-3.6-flash".into()),
@@ -343,6 +359,9 @@ impl Config {
                     project,
                     credentials: PathBuf::from(credentials),
                     locations,
+                    base_url: r
+                        .text("VERTEX_BASE_URL")
+                        .map(|url| url.trim_end_matches('/').to_owned()),
                 })
             }
             (None, None) => None,
@@ -419,6 +438,7 @@ impl Config {
                 santa_seal,
             },
             vapid,
+            rates_url,
             gemini,
             vertex,
             ocr,

@@ -61,21 +61,67 @@ impl TestApp {
 
     /// The development configuration plus `pairs` (as environment variables would be).
     pub fn with_env(pool: PgPool, pairs: &[(&str, &str)]) -> Self {
-        let pairs: Vec<(String, String)> = pairs
-            .iter()
-            .map(|(k, v)| ((*k).into(), (*v).into()))
-            .collect();
-        let config = Config::from_lookup(|key| {
-            if key == "APP_ENV" {
-                return Some("dev".into());
-            }
-            pairs.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone())
-        })
-        .unwrap();
-        Self::with_config(pool, config)
+        Self::with_config(pool, env_config(pairs))
     }
 
-    fn build(pool: PgPool, mut config: Config, push: bool) -> Self {
+    /// Send `body` as the raw request body of a `POST` by `who`.
+    pub async fn post_raw(
+        &self,
+        who: &Member,
+        uri: &str,
+        content_type: &str,
+        body: Vec<u8>,
+    ) -> TestResponse {
+        let request = Request::post(uri)
+            .header(header::AUTHORIZATION, format!("Bearer {}", who.token))
+            .header(header::CONTENT_TYPE, content_type)
+            .body(Body::from(body))
+            .unwrap();
+        self.send(request).await
+    }
+}
+
+/// The development configuration plus `pairs` (as environment variables would be).
+pub fn env_config(pairs: &[(&str, &str)]) -> Config {
+    let pairs: Vec<(String, String)> = pairs
+        .iter()
+        .map(|(k, v)| ((*k).into(), (*v).into()))
+        .collect();
+    Config::from_lookup(|key| {
+        if key == "APP_ENV" {
+            return Some("dev".into());
+        }
+        pairs.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone())
+    })
+    .unwrap()
+}
+
+impl TestApp {
+    /// With exchange rates from `rates` (see [`rates_stub`]).
+    pub fn with_rates(pool: PgPool, rates: &wiremock::MockServer) -> Self {
+        let mut config = Config::for_tests();
+        config.rates_url = rates.uri();
+        Self::build(pool, config, false)
+    }
+
+    /// With `ocr` in place of the one the configuration would make.
+    pub fn with_ocr(pool: PgPool, config: Config, ocr: app::ocr::Ocr) -> Self {
+        Self::build_with(pool, config, false, |ctx| ctx.ocr = ocr)
+    }
+
+    fn build(pool: PgPool, config: Config, push: bool) -> Self {
+        Self::build_with(pool, config, push, |_| {})
+    }
+
+    fn build_with(
+        pool: PgPool,
+        mut config: Config,
+        push: bool,
+        customize: impl FnOnce(&mut Context),
+    ) -> Self {
+        if config.rates_url.starts_with("https://api.frankfurter") {
+            config.rates_url = "http://127.0.0.1:9".into(); // tests never call the real API
+        }
         let media = tempfile::tempdir().unwrap();
         config.media_root = media.path().to_path_buf();
         for dir in ["avatars", "photos", app::media::TMP_DIR] {
@@ -86,6 +132,7 @@ impl TestApp {
         if push {
             ctx.push = Push::new(true);
         }
+        customize(&mut ctx);
         let ctx = Arc::new(ctx);
         let shutdown = CancellationToken::new();
         let state = server::AppState::with_shutdown(Arc::clone(&ctx), shutdown.clone());
@@ -360,4 +407,48 @@ pub async fn take_pushes(db: &PgPool) -> Vec<(i64, String, String)> {
         .await
         .unwrap();
     rows
+}
+
+/// A Frankfurter stand-in: `rate` PLN per unit of any currency, published on the day asked for.
+/// Keep it alive for the test (dropping it stops the server).
+pub async fn rates_stub(rate: &str) -> wiremock::MockServer {
+    let server = wiremock::MockServer::start().await;
+    let rate = rate.to_owned();
+    wiremock::Mock::given(wiremock::matchers::method("GET"))
+        .respond_with(move |request: &wiremock::Request| {
+            let day = request.url.path().trim_start_matches('/').to_owned();
+            wiremock::ResponseTemplate::new(200).set_body_raw(
+                format!(r#"{{"amount":1.0,"base":"X","date":"{day}","rates":{{"PLN":{rate}}}}}"#),
+                "application/json",
+            )
+        })
+        .mount(&server)
+        .await;
+    server
+}
+
+/// A pact for ledger entries to settle (pacts arrive in a later phase; this is just the row).
+pub async fn insert_pact(db: &PgPool, creator: i64) -> i64 {
+    sqlx::query_scalar(
+        "insert into pacts (creator_id, kind, title, condition) values ($1, 'bet', 'Zakład', 'x') returning id",
+    )
+    .bind(creator)
+    .fetch_one(db)
+    .await
+    .unwrap()
+}
+
+/// Record `debts` as pact `pact_id`'s settlement, the way pacts will; returns the entry id.
+pub async fn record_debts(
+    app: &TestApp,
+    pact_id: i64,
+    debts: Vec<domain::ledger::money::Debt>,
+) -> Option<i64> {
+    let mut uow = Uow::begin(app.db()).await.unwrap();
+    let today = app::clock::local_today(app.now());
+    let id = app::ledger::record_debts(&mut uow, &app.ctx, debts, "Zakład", pact_id, today)
+        .await
+        .unwrap();
+    uow.commit().await.unwrap();
+    id
 }

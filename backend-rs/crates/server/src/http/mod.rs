@@ -5,6 +5,8 @@ mod events;
 pub mod guard;
 mod health;
 pub mod json;
+#[allow(unused_qualifications)]
+mod ledger;
 // `utoipa`'s `IntoParams` expansion triggers `unused_qualifications` in modules with query
 // parameters.
 #[allow(unused_qualifications)]
@@ -65,6 +67,7 @@ const UPLOAD_TIMEOUT: Duration = Duration::from_mins(10);
         (name = "people", description = "Members and the signed-in user"),
         (name = "users", description = "Account management (administrators)"),
         (name = "polls", description = "Sejmik: votes"),
+        (name = "ledger", description = "Kasa Skarbowa: expenses, debts, payments and balances"),
         (name = "media", description = "Image uploads and stored images"),
         (name = "push", description = "Web Push subscriptions"),
         (name = "events", description = "Live updates (server-sent events)"),
@@ -123,19 +126,30 @@ pub fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(polls::close))
         .routes(routes!(polls::tie_break))
         .routes(routes!(polls::react))
+        .routes(routes!(ledger::list, ledger::create))
+        .routes(routes!(ledger::get, ledger::update))
+        .routes(routes!(ledger::confirm))
+        .routes(routes!(ledger::reject))
+        .routes(routes!(ledger::cancel))
+        .routes(routes!(ledger::add_attachment))
+        .routes(routes!(ledger::delete_attachment))
+        .routes(routes!(ledger::balances))
+        .routes(routes!(ledger::rates))
+        .routes(routes!(ledger::stats))
+        .routes(routes!(ledger::meta))
         .routes(routes!(push::public_key))
         .routes(routes!(push::subscribe, push::unsubscribe))
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
             REQUEST_TIMEOUT,
         ));
-    let uploads =
-        OpenApiRouter::new()
-            .routes(routes!(media::upload))
-            .layer(TimeoutLayer::with_status_code(
-                StatusCode::REQUEST_TIMEOUT,
-                UPLOAD_TIMEOUT,
-            ));
+    let uploads = OpenApiRouter::new()
+        .routes(routes!(media::upload))
+        .routes(routes!(ledger::receipt_ocr))
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            UPLOAD_TIMEOUT,
+        ));
     let streams = OpenApiRouter::new()
         .routes(routes!(events::events))
         .routes(routes!(media::serve));

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from ledger_obligations where entry_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7e32ea40ef5a5ef4cb5aa153475153e4dcd55c1d503ec1eb3a0d1ed01037bcd3"
+}

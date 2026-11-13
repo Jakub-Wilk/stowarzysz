@@ -6,6 +6,7 @@
 
 pub mod accounts;
 mod error;
+pub mod ledger;
 pub mod polls;
 
 pub use error::DomainError;

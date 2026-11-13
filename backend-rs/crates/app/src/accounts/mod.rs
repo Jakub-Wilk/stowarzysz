@@ -7,4 +7,5 @@ pub mod stats;
 pub mod users;
 mod views;
 
+pub use profile::persons;
 pub use views::{KindStats, LoginUser, ManagedUser, Me, PactStats, Person, VotingStats};

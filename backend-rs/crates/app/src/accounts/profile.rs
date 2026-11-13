@@ -1,5 +1,7 @@
 //! What members see about themselves and each other.
 
+use std::collections::HashMap;
+
 use domain::accounts::birthday;
 
 use super::views::{LoginUser, Me, Person};
@@ -39,6 +41,28 @@ pub async fn people(ctx: &Context) -> AppResult<Vec<Person>> {
             id: r.id,
             username: r.username,
             avatar: r.avatar_key.map(|k| ctx.media.image(&k, now)),
+        })
+        .collect())
+}
+
+/// Accounts by id (any state: history keeps naming people who have left).
+pub async fn persons(ctx: &Context, ids: &[i64]) -> AppResult<HashMap<i64, Person>> {
+    let rows = sqlx::query!(
+        "select id, username, avatar_key from users where id = any($1)",
+        ids
+    )
+    .fetch_all(&ctx.db)
+    .await?;
+    let now = ctx.clock.now();
+    Ok(rows
+        .into_iter()
+        .map(|r| {
+            let person = Person {
+                id: r.id,
+                username: r.username,
+                avatar: r.avatar_key.map(|k| ctx.media.image(&k, now)),
+            };
+            (r.id, person)
         })
         .collect())
 }

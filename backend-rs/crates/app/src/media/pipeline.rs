@@ -69,7 +69,7 @@ pub fn process(
     })
 }
 
-fn decode(path: &Path) -> Result<DynamicImage, ImageError> {
+pub(crate) fn decode(path: &Path) -> Result<DynamicImage, ImageError> {
     let file = std::fs::File::open(path).map_err(anyhow::Error::from)?;
     let mut reader = ImageReader::new(BufReader::new(file))
         .with_guessed_format()
@@ -127,7 +127,7 @@ fn square(image: &DynamicImage, side: u32) -> Result<DynamicImage, ImageError> {
 }
 
 /// Scaled so the longest side is at most `max_side` (never enlarged).
-fn fit(image: &DynamicImage, max_side: u32) -> Result<DynamicImage, ImageError> {
+pub(crate) fn fit(image: &DynamicImage, max_side: u32) -> Result<DynamicImage, ImageError> {
     let (width, height) = (image.width(), image.height());
     let longest = width.max(height);
     if longest <= max_side {
@@ -170,8 +170,20 @@ fn resize(
     Ok(resized.ok_or_else(|| anyhow::anyhow!("resized buffer has the wrong size"))?)
 }
 
-/// WebP: lossless at `effort` (a libwebp preset level), else lossy.
-fn encode(image: &DynamicImage, lossless_effort: Option<u8>) -> Result<Vec<u8>, ImageError> {
+/// WebP: lossless at `effort` (a libwebp preset level), else lossy at the variants' quality.
+pub(crate) fn encode(
+    image: &DynamicImage,
+    lossless_effort: Option<u8>,
+) -> Result<Vec<u8>, ImageError> {
+    encode_with(image, lossless_effort, LOSSY_QUALITY)
+}
+
+/// WebP: lossless at `effort` if given, else lossy at `quality` (0-100).
+pub(crate) fn encode_with(
+    image: &DynamicImage,
+    lossless_effort: Option<u8>,
+    quality: f32,
+) -> Result<Vec<u8>, ImageError> {
     let encoder = match image {
         DynamicImage::ImageRgba8(pixels) => {
             webp::Encoder::from_rgba(pixels.as_raw(), image.width(), image.height())
@@ -194,7 +206,7 @@ fn encode(image: &DynamicImage, lossless_effort: Option<u8>) -> Result<Vec<u8>, 
                 .map_err(|error| anyhow::anyhow!("webp encoding failed: {error:?}"))?
                 .to_vec()
         }
-        None => encoder.encode(LOSSY_QUALITY).to_vec(),
+        None => encoder.encode(quality).to_vec(),
     };
     Ok(bytes)
 }

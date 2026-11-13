@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from ledger_entry_shares where entry_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3527df2bc3a3cabf0907bbe06e7d65c6fbf3dd703dce1b66e2b623d004def657"
+}

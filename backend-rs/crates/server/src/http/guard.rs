@@ -133,6 +133,7 @@ pub struct Limiters {
     pub login_users: DefaultKeyedRateLimiter<String>,
     pub activation: DefaultKeyedRateLimiter<String>,
     pub uploads: DefaultKeyedRateLimiter<String>,
+    pub ocr: DefaultKeyedRateLimiter<String>,
 }
 
 impl Limiters {
@@ -144,6 +145,7 @@ impl Limiters {
             login_users: limiter(limits.login_users),
             activation: limiter(limits.activation),
             uploads: limiter(limits.uploads),
+            ocr: limiter(limits.ocr),
         }
     }
 }

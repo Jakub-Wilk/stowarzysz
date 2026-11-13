@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into exchange_rates (currency, requested_on, rate, rate_date)\n                 values ($1, $2, $3, $4) on conflict do nothing",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Date",
+        "Numeric",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "448dd0b9761bce1d29b3b7f551712775543c7487232f9acc808878029d8ee255"
+}

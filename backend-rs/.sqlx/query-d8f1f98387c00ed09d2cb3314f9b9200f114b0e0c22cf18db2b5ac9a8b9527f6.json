@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from ledger_attachments where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d8f1f98387c00ed09d2cb3314f9b9200f114b0e0c22cf18db2b5ac9a8b9527f6"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select uploaded_by, image_key from ledger_attachments where id = $1 and entry_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uploaded_by",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "image_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "5aaa39ab75de01bd341625d2a739ba8a48e6a07f1ecc46a30fb054bc722f3a90"
+}

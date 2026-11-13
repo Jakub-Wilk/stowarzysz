@@ -22,6 +22,9 @@ hmac = "0.12"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
 jsonwebtoken = "9"
 pbkdf2 = "0.12"
+num-bigint = "0.4"
+num-integer = "0.1"
+rust_decimal = { version = "1", default-features = false, features = ["std", "serde-str"] }
 rand = "0.9"
 rpassword = "7"
 sha2 = "0.10"
@@ -38,7 +41,7 @@ futures-util = { version = "0.3", default-features = false, features = ["std"] }
 humantime = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "chrono", "uuid", "json"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "chrono", "uuid", "json", "rust_decimal"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2", "json"] }
 web-push-native = "0.4"
 base64ct = { version = "1", features = ["alloc"] }
@@ -54,6 +57,7 @@ utoipa-axum = "0.2"
 utoipa-scalar = { version = "0.3", features = ["axum"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 insta = { version = "1", features = ["json", "redactions"] }
+wiremock = "0.6"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

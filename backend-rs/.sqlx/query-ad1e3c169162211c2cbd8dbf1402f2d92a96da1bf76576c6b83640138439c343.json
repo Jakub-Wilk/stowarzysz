@@ -1,0 +1,142 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, kind, status, title, note, category, occurred_on, amount, currency, item,\n                base_amount, rate, rate_date, details, source, pact_id, created_by, created_at,\n                updated_at, version, decided_at\n         from ledger_entries where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "category",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "occurred_on",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 7,
+        "name": "amount",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "item",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "base_amount",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "rate",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 12,
+        "name": "rate_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 13,
+        "name": "details",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 14,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "pact_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 16,
+        "name": "created_by",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 19,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 20,
+        "name": "decided_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ad1e3c169162211c2cbd8dbf1402f2d92a96da1bf76576c6b83640138439c343"
+}

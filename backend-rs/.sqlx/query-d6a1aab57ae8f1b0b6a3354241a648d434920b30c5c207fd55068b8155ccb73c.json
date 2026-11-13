@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select x.user_id as \"user_id!\", lower(o.item) as \"unit!\",\n                  coalesce(sum(x.signed) filter (where e.status = 'confirmed'), 0)::bigint as \"confirmed!\",\n                  sum(x.signed)::bigint as \"planned!\",\n                  min(o.id) filter (where e.status = 'confirmed') as confirmed_first,\n                  (array_agg(o.item order by o.id) filter (where e.status = 'confirmed'))[1] as confirmed_label,\n                  min(o.id) as \"planned_first!\",\n                  (array_agg(o.item order by o.id))[1] as \"planned_label!\"\n           from ledger_obligations o\n           join ledger_entries e on e.id = o.entry_id\n           cross join lateral (values (o.creditor_id, o.amount), (o.debtor_id, -o.amount))\n                as x(user_id, signed)\n           where e.status in ('confirmed', 'pending')\n           group by x.user_id, lower(o.item)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "unit!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "confirmed!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "planned!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "confirmed_first",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "confirmed_label",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "planned_first!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "planned_label!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "d6a1aab57ae8f1b0b6a3354241a648d434920b30c5c207fd55068b8155ccb73c"
+}

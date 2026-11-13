@@ -8,6 +8,7 @@ use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use futures_util::StreamExt as _;
 use serde::Deserialize;
+use tempfile::TempPath;
 use tokio::io::AsyncWriteExt as _;
 use utoipa::IntoParams;
 
@@ -43,6 +44,15 @@ pub async fn upload(
     request: Request,
 ) -> ApiResult<(StatusCode, ApiJson<UploadView>)> {
     throttle(&state.limiters.uploads, &actor.user_id.to_string())?;
+    let path = receive_image(&state, request).await?;
+    let view = media::store_upload(&state.ctx, actor.user_id, params.purpose, path).await?;
+    Ok((StatusCode::CREATED, ApiJson(view)))
+}
+
+/// Stream an image request body (at most `UPLOAD_LIMIT_BYTES`) to a scratch file under
+/// `MEDIA_ROOT/.tmp`, deleted when the returned path is dropped, whatever happens. A 50 MB
+/// upload never sits in memory.
+pub async fn receive_image(state: &AppState, request: Request) -> Result<TempPath, ApiError> {
     let limit = state.ctx.config.limits.upload_bytes;
     let too_large = || {
         ApiError(AppError::TooLarge {
@@ -69,8 +79,6 @@ pub async fn upload(
         return Err(too_large());
     }
 
-    // Stream the body to a scratch file (deleted when dropped, whatever happens) so a 50 MB
-    // upload never sits in memory.
     let scratch =
         tempfile::NamedTempFile::new_in(state.ctx.media.tmp_dir()).map_err(anyhow::Error::from)?;
     let (file, path) = scratch.into_parts();
@@ -96,10 +104,7 @@ pub async fn upload(
         ));
     }
     file.flush().await.map_err(anyhow::Error::from)?;
-    drop(file);
-
-    let view = media::store_upload(&state.ctx, actor.user_id, params.purpose, path).await?;
-    Ok((StatusCode::CREATED, ApiJson(view)))
+    Ok(path)
 }
 
 #[derive(Debug, Deserialize, IntoParams)]

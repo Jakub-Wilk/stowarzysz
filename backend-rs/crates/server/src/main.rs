@@ -39,6 +39,12 @@ enum Command {
     },
     /// Print fresh secrets for a new deployment (`.env` lines).
     GenerateKeys,
+    /// Read a receipt photo with the configured OCR candidates and print the result as JSON
+    /// (progress goes to standard error). Needs no database.
+    Ocr {
+        /// The image file.
+        file: std::path::PathBuf,
+    },
     /// Exit 0 if the local server answers `GET /api/health` (for container health checks).
     Healthcheck {
         /// `host:port` of the server; defaults to the port of `BIND_ADDR` on localhost.
@@ -63,6 +69,7 @@ async fn main() -> ExitCode {
             Ok(())
         }
         Command::Healthcheck { addr } => healthcheck(addr).await,
+        Command::Ocr { file } => ocr(file).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -225,6 +232,57 @@ async fn create_superuser(username: &str, password_stdin: bool) -> anyhow::Resul
 
 /// Random secrets for `.env.prod`. Keep them: changing `JWT_SECRET` signs everyone out,
 /// changing `SANTA_SEAL_KEY` makes an active Secret Santa draw unreadable.
+#[allow(clippy::print_stdout)] // the output is the point
+async fn ocr(file: std::path::PathBuf) -> anyhow::Result<()> {
+    let config = Config::from_env()?;
+    server::telemetry::init(config.log_format);
+    let ocr = app::ocr::Ocr::new(&config);
+    let candidates: Vec<&str> = ocr.router().candidates().collect();
+    if candidates.is_empty() {
+        bail!("no OCR candidates: set GEMINI_API_KEY (or VERTEX_PROJECT and VERTEX_CREDENTIALS)");
+    }
+    eprintln!("candidates: {}", candidates.join(", "));
+    let media = app::media::Media::new(&config);
+    let started = std::time::Instant::now();
+    let compressed = app::ocr::compress_file(
+        &media,
+        file,
+        config.ocr.max_side,
+        config.gemini.inline_budget_bytes,
+    )
+    .await
+    .map_err(|error| anyhow::anyhow!("{error}"))?;
+    eprintln!(
+        "compressed to {}x{} ({} bytes, {}) in {:.1?}",
+        compressed.width,
+        compressed.height,
+        compressed.webp.len(),
+        if compressed.lossless {
+            "lossless"
+        } else {
+            "lossy"
+        },
+        started.elapsed(),
+    );
+    let (progress, mut attempts) = tokio::sync::mpsc::unbounded_channel::<app::ocr::Attempt>();
+    let printer = tokio::spawn(async move {
+        while let Some(attempt) = attempts.recv().await {
+            eprintln!("request {} -> {}", attempt.number, attempt.candidate);
+        }
+    });
+    let served = ocr.router().read(&compressed.webp, &progress).await;
+    drop(progress);
+    let _ = printer.await;
+    let served = served?;
+    eprintln!(
+        "served by {} in {:.1?}",
+        served.candidate,
+        started.elapsed()
+    );
+    println!("{}", serde_json::to_string_pretty(&served.receipt)?);
+    Ok(())
+}
+
 #[allow(clippy::print_stdout)] // the output is the point
 fn generate_keys() {
     use base64::Engine as _;

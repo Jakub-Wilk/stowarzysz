@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, item, amount, (details->>'from')::bigint as \"payer!\",\n                  (details->>'to')::bigint as \"receiver!\"\n           from ledger_entries where kind = 'payment' and status = 'pending'\n           order by occurred_on desc, id desc",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "item",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "amount",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "payer!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "receiver!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "a9f9d238768555ef30c97b80661407c8d989217539bb7e4c5967f1d18da4c444"
+}

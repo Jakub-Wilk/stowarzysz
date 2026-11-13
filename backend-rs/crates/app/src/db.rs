@@ -102,3 +102,13 @@ impl Uow {
         Ok(())
     }
 }
+
+/// Announce `event` right away, outside any transaction (progress that is not a state change).
+pub async fn publish_now(db: &PgPool, audience: Audience, event: Event) -> AppResult<()> {
+    let payload =
+        serde_json::to_string(&Envelope { audience, event }).map_err(anyhow::Error::from)?;
+    sqlx::query!("select pg_notify($1, $2)", CHANNEL_EVENTS, payload)
+        .execute(db)
+        .await?;
+    Ok(())
+}

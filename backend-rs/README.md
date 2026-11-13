@@ -30,6 +30,7 @@ cargo run -- run-jobs                      # run every background job once (and 
 cargo run -- healthcheck                   # exit 0 if /api/health answers (container probe)
 cargo run -- create-superuser --username X # the first administrator (prompts for the password)
 cargo run -- generate-keys                 # fresh secrets for a new deployment (.env lines)
+cargo run -- ocr receipt.jpg              # read a receipt with the configured Gemini candidates
 cargo test --workspace                     # needs the dev database: one fresh DB per test
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 cargo sqlx prepare --workspace             # after changing a query or a migration; commit .sqlx/

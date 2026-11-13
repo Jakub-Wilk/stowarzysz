@@ -7,8 +7,10 @@ use crate::auth::tokens::Signer;
 use crate::clock::Clock;
 use crate::config::Config;
 use crate::events::Hub;
+use crate::ledger::Rates;
 use crate::listener::Signals;
 use crate::media::Media;
+use crate::ocr::Ocr;
 use crate::push::Push;
 
 /// The services every use case may need. Built once at startup and shared behind an `Arc`.
@@ -25,6 +27,10 @@ pub struct Context {
     pub signer: Signer,
     pub passwords: Passwords,
     pub media: Media,
+    /// Exchange rates (Frankfurter, cached in the database).
+    pub rates: Rates,
+    /// Receipt OCR (Gemini candidates and their health).
+    pub ocr: Ocr,
 }
 
 impl Context {
@@ -34,6 +40,8 @@ impl Context {
             signer: Signer::new(&config.secrets.jwt, config.legacy.secret_key.as_ref()),
             passwords: Passwords::default(),
             media: Media::new(&config),
+            rates: Rates::new(&config.rates_url),
+            ocr: Ocr::new(&config),
             config: Arc::new(config),
             db,
             clock,

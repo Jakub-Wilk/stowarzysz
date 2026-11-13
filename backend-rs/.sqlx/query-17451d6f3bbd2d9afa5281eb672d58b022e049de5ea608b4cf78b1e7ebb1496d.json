@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into ledger_entries (kind, status, title, note, category, occurred_on, amount,\n                                     currency, item, base_amount, rate, rate_date, details, source,\n                                     pact_id, created_by, updated_by)\n         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $16)\n         returning id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Date",
+        "Int8",
+        "Text",
+        "Text",
+        "Int8",
+        "Numeric",
+        "Date",
+        "Jsonb",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "17451d6f3bbd2d9afa5281eb672d58b022e049de5ea608b4cf78b1e7ebb1496d"
+}
