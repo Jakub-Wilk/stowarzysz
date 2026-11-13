@@ -57,6 +57,7 @@ utoipa-axum = "0.2"
 utoipa-scalar = { version = "0.3", features = ["axum"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 insta = { version = "1", features = ["json", "redactions"] }
+proptest = { version = "1", default-features = false, features = ["std"] }
 wiremock = "0.6"
 
 [workspace.lints.rust]

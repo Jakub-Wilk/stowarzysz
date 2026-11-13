@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select k.id from pacts k\n                 where k.status in ('proposed', 'active', 'awaiting_result')\n                   and (k.next_nudge_at <= $1\n                        or exists (select 1 from pact_participants p\n                                   where p.pact_id = k.id and p.state in ('invited', 'requested')\n                                     and p.expires_at <= $1))\n                 order by k.id limit $2 for update of k skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e2f75070c33764e976fb4d4c29de8024d8a17434f2103ad5b9ee4496eb3d1a5d"
+}

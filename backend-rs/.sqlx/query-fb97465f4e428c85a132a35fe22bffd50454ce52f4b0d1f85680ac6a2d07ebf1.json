@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select c.id, c.wager_id, c.proposed_by, c.result, c.state, c.created_at, c.decided_at,\n                  r.id as \"ruling_id?\", r.status as \"ruling_status?\"\n           from pact_claims c left join polls r on r.subject_claim_id = c.id\n           where c.pact_id = $1 order by c.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "wager_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "proposed_by",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "result",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "decided_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "ruling_id?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "ruling_status?",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "fb97465f4e428c85a132a35fe22bffd50454ce52f4b0d1f85680ac6a2d07ebf1"
+}

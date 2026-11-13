@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_participants set state = 'expired', expires_at = null where id = any($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ab61069df09cfade24aac7b5147b1abf60432148e8646216e712f98356dd495"
+}

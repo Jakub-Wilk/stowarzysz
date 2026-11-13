@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_participants set state = 'withdrawn', expires_at = null\n         where pact_id = $1 and state in ('invited', 'requested')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "64dca18bddddbcdf33d8e7b50da344fa5870aaab6d6390a2ea776ddca5496c6f"
+}

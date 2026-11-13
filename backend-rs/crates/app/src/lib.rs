@@ -16,6 +16,8 @@ pub mod ledger;
 pub mod listener;
 pub mod media;
 pub mod ocr;
+mod orchestration;
+pub mod pacts;
 pub mod pagination;
 pub mod polls;
 pub mod push;

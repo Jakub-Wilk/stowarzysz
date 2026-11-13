@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_join_consents set approved = $3 where participant_id = $1 and approver_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6da306abfa26adacb68bd47d88f37b1e86b97723554dfd1c343e3839ad2420ae"
+}

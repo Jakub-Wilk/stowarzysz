@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_claims set state = 'overruled', decided_at = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d72943010c9c5240be9b4ca07c9da7ea5e5d8c577f4bb07a3092762a50a1ed85"
+}

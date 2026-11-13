@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_claims set state = 'disputed', decided_at = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ef644da8e1d971b5343ba973846f45b0226d3c473630558f962f5899ab6c7258"
+}

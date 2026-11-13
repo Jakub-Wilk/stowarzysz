@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from pact_join_consents where participant_id = $1 and approved is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c13e6877f5e4ee94ad35c008df77093f98914950a13906e7426d24efd52687db"
+}

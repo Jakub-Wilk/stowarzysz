@@ -24,6 +24,8 @@ use sqlx::PgPool;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceExt as _;
 
+pub mod pacts;
+
 /// The password of every member made by [`TestApp::member`].
 pub const PASSWORD: &str = "s3cret-pass-123";
 
@@ -427,7 +429,7 @@ pub async fn rates_stub(rate: &str) -> wiremock::MockServer {
     server
 }
 
-/// A pact for ledger entries to settle (pacts arrive in a later phase; this is just the row).
+/// A bare pact row for ledger entries to settle.
 pub async fn insert_pact(db: &PgPool, creator: i64) -> i64 {
     sqlx::query_scalar(
         "insert into pacts (creator_id, kind, title, condition) values ($1, 'bet', 'Zakład', 'x') returning id",

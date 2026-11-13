@@ -4,7 +4,6 @@
 mod close;
 pub mod deadlines;
 mod services;
-mod subjects;
 mod views;
 
 use chrono::{DateTime, Utc};
@@ -14,6 +13,7 @@ use serde_json::Value;
 use crate::db::Uow;
 use crate::{AppError, AppResult};
 
+pub(crate) use services::{Draft, insert};
 pub use services::{NewPoll, abstain, cast_ballot, close_early, create, react, tie_break, veto};
 pub use views::{
     ListFilter, MyState, ParticipantView, PollActions, PollDetail, PollPage, PollSummary, Revealed,

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select uploaded_by, image_key from pact_attachments where id = $1 and pact_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uploaded_by",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "image_key",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "42694dc6d2bcf2e92ed22e0297539157d1c65aa2e22a95928963a63ec1b21fcc"
+}

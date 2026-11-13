@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pacts set judgment_poll_id = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "77861fb8fc54e017d3db3d2979b45ae3f4c34b904d352ad2ace5e6fc1aad7f77"
+}

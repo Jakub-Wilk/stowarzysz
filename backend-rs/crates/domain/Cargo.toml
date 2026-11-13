@@ -22,6 +22,7 @@ utoipa = { workspace = true, optional = true }
 schema = ["dep:utoipa"]
 
 [dev-dependencies]
+proptest.workspace = true
 
 [lints]
 workspace = true

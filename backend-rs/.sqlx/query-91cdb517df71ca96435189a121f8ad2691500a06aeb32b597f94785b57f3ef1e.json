@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select u.id from users u\n         where u.is_active and u.password_hash is not null\n           and not exists (select 1 from pact_participants p where p.pact_id = $1 and p.user_id = u.id)\n         order by u.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "91cdb517df71ca96435189a121f8ad2691500a06aeb32b597f94785b57f3ef1e"
+}

@@ -1,19 +1,23 @@
-//! What a closed vote decides, applied in the closing transaction: renaming a member, changing
-//! their picture, or (with pacts) settling a dispute or judging a resolution. A failure is
-//! recorded in the result (`applied: false`, `apply_error`), never raised: the vote is over
-//! either way.
+//! What a closed vote decides, handed to the context that owns it, in the closing transaction:
+//! renaming a member or changing their picture (accounts), settling a disputed pact claim or
+//! judging a resolution (pacts). The polls module only says that a poll closed; it never knows
+//! what its subject means.
+//!
+//! Each step runs in a savepoint. A failure is recorded in the result (`applied: false`,
+//! `apply_error`), never raised: the vote is over either way.
 
 use domain::accounts::username;
 use domain::polls::PollConfig;
 use serde_json::{Map, Value, json};
 
-use super::PollRow;
 use crate::db::Uow;
-use crate::{AppResult, Context};
+use crate::pacts::Applied;
+use crate::polls::PollRow;
+use crate::{AppError, AppResult, Context};
 
 const GONE: &str = "Ten poseł już nie istnieje.";
 
-/// Keys to add to the result, or `None` if the kind decides nothing.
+/// Keys to add to the result of `poll`, or `None` if the kind decides nothing.
 pub(crate) async fn on_close(
     uow: &mut Uow,
     ctx: &Context,
@@ -21,13 +25,11 @@ pub(crate) async fn on_close(
     config: &PollConfig,
     result: &Value,
 ) -> AppResult<Option<Map<String, Value>>> {
-    let approved = result.get("approved").and_then(Value::as_bool) == Some(true);
-    // `Ok(None)`: applied; `Ok(Some(reason))`: approved but not applicable; `Err`: a failure.
-    let error: Option<String> = match config {
+    let flag = |key: &str| result.get(key).and_then(Value::as_bool) == Some(true);
+    let approved = flag("approved");
+    let applied = match config {
         PollConfig::Score {} | PollConfig::Options(_) => return Ok(None),
-        PollConfig::Nickname { .. } | PollConfig::Avatar { .. } if !approved => {
-            return Ok(Some(keys(false, None)));
-        }
+        PollConfig::Nickname { .. } | PollConfig::Avatar { .. } if !approved => Applied::No,
         PollConfig::Nickname {
             target_user_id,
             new_username,
@@ -35,7 +37,7 @@ pub(crate) async fn on_close(
         } => {
             uow.savepoint().await?;
             let step = rename(uow, *target_user_id, new_username.clone()).await;
-            settle(uow, step).await?
+            settle(uow, step, "Nie udało się zastosować zmiany.").await?
         }
         PollConfig::Avatar {
             target_user_id,
@@ -49,43 +51,45 @@ pub(crate) async fn on_close(
             };
             uow.savepoint().await?;
             let step = swap_avatar(uow, poll.id, *target_user_id, proposed).await;
-            settle(uow, step).await?
+            settle(uow, step, "Nie udało się zastosować zmiany.").await?
         }
-        PollConfig::PactRuling { .. } | PollConfig::ResolutionJudgment { .. } => {
-            // Settled by the pacts module once it exists (phase 5): these polls are only
-            // created through pacts, so none can close before then.
-            tracing::error!(
-                poll = poll.id,
-                "a pact poll closed before pacts are implemented"
-            );
-            let _ = ctx;
-            Some("Rozstrzyganie umów nie jest jeszcze dostępne.".to_owned())
+        PollConfig::PactRuling { proposal_id, .. } => {
+            uow.savepoint().await?;
+            let step = crate::pacts::apply_ruling(uow, ctx, *proposal_id, approved).await;
+            settle(uow, step, "Nie udało się zastosować rozstrzygnięcia.").await?
+        }
+        PollConfig::ResolutionJudgment { pact_id, .. } => {
+            uow.savepoint().await?;
+            let step =
+                crate::pacts::apply_judgment(uow, ctx, *pact_id, approved, flag("decided")).await;
+            settle(uow, step, "Nie udało się zastosować oceny.").await?
         }
     };
-    Ok(Some(keys(error.is_none(), error)))
-}
-
-fn keys(applied: bool, error: Option<String>) -> Map<String, Value> {
     let mut keys = Map::new();
-    keys.insert("applied".into(), json!(applied));
-    if let Some(error) = error {
-        keys.insert("apply_error".into(), json!(error));
+    keys.insert("applied".into(), json!(applied == Applied::Yes));
+    if let Applied::Refused(reason) = applied {
+        keys.insert("apply_error".into(), json!(reason));
     }
-    keys
+    Ok(Some(keys))
 }
 
 /// End the savepoint around a step: kept if it ran, rolled back (and reported as a reason, so
-/// the poll still closes) if it failed unexpectedly.
-async fn settle(uow: &mut Uow, step: AppResult<Option<String>>) -> AppResult<Option<String>> {
+/// the poll still closes) if it failed. A refusal the step raised as a conflict keeps its
+/// message; anything else is logged and reported as `failure`.
+async fn settle(uow: &mut Uow, step: AppResult<Applied>, failure: &str) -> AppResult<Applied> {
     match step {
-        Ok(reason) => {
+        Ok(applied) => {
             uow.release_savepoint().await?;
-            Ok(reason)
+            Ok(applied)
+        }
+        Err(AppError::Conflict { message, .. }) => {
+            uow.rollback_to_savepoint().await?;
+            Ok(Applied::Refused(message.into_owned()))
         }
         Err(error) => {
             tracing::error!(%error, "applying a vote failed");
             uow.rollback_to_savepoint().await?;
-            Ok(Some("Nie udało się zastosować zmiany.".to_owned()))
+            Ok(Applied::Refused(failure.to_owned()))
         }
     }
 }
@@ -102,12 +106,12 @@ async fn member(uow: &mut Uow, user_id: i64) -> AppResult<Option<Option<String>>
 
 // Owned arguments: a borrowed `&str` bound into a query inside the scheduler's boxed future
 // trips rustc's higher-ranked `Send` check.
-async fn rename(uow: &mut Uow, user_id: i64, new_username: String) -> AppResult<Option<String>> {
+async fn rename(uow: &mut Uow, user_id: i64, new_username: String) -> AppResult<Applied> {
     if member(uow, user_id).await?.is_none() {
-        return Ok(Some(GONE.into()));
+        return Ok(Applied::Refused(GONE.into()));
     }
     if let Err(error) = username::validate(&new_username) {
-        return Ok(Some(error.message.into_owned()));
+        return Ok(Applied::Refused(error.message.into_owned()));
     }
     // Someone may have taken the name while the vote was running.
     // A runtime query with owned binds: the `query!` macro's type-check scaffolding keeps a
@@ -119,7 +123,7 @@ async fn rename(uow: &mut Uow, user_id: i64, new_username: String) -> AppResult<
             .fetch_one(uow.conn())
             .await?;
     if taken {
-        return Ok(Some(username::taken().message.into_owned()));
+        return Ok(Applied::Refused(username::taken().message.into_owned()));
     }
     sqlx::query!(
         "update users set username = $2 where id = $1",
@@ -128,7 +132,7 @@ async fn rename(uow: &mut Uow, user_id: i64, new_username: String) -> AppResult<
     )
     .execute(uow.conn())
     .await?;
-    Ok(None)
+    Ok(Applied::Yes)
 }
 
 /// The member's picture becomes the proposed one (or none); the poll keeps the picture it
@@ -138,9 +142,9 @@ async fn swap_avatar(
     poll_id: i64,
     user_id: i64,
     proposed: Option<String>,
-) -> AppResult<Option<String>> {
+) -> AppResult<Applied> {
     let Some(current) = member(uow, user_id).await? else {
-        return Ok(Some(GONE.into()));
+        return Ok(Applied::Refused(GONE.into()));
     };
     sqlx::query!(
         "update users set avatar_key = $2 where id = $1",
@@ -156,5 +160,5 @@ async fn swap_avatar(
     )
     .execute(uow.conn())
     .await?;
-    Ok(None)
+    Ok(Applied::Yes)
 }

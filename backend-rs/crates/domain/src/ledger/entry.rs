@@ -19,28 +19,6 @@ use serde_json::Value;
 
 use super::money::{self, BASE_CURRENCY, Breakdown, Debt, settle_up, split_items};
 
-macro_rules! text_enum {
-    ($(#[$meta:meta])* $name:ident { $($(#[$vmeta:meta])* $variant:ident = $text:literal),+ $(,)? }) => {
-        $(#[$meta])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-        #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
-        #[serde(rename_all = "snake_case")]
-        pub enum $name { $($(#[$vmeta])* $variant),+ }
-
-        impl $name {
-            pub const ALL: &[Self] = &[$(Self::$variant),+];
-
-            pub fn as_str(self) -> &'static str {
-                match self { $(Self::$variant => $text),+ }
-            }
-
-            pub fn parse(text: &str) -> Option<Self> {
-                match text { $($text => Some(Self::$variant),)+ _ => None }
-            }
-        }
-    };
-}
-
 text_enum!(
     /// What kind of thing happened.
     EntryKind {

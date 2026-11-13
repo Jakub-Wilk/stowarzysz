@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_participants (pact_id, user_id, role, state, side, stake_amount, stake_note, created_at)\n         values ($1, $2, 'host', 'active', $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Int8",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1800f6c2c53c1378476afdad4596203419039816c4be4919af4c5551c68cd01d"
+}

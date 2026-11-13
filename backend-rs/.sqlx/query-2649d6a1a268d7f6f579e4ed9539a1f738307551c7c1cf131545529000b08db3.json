@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pact_claims set state = 'superseded'\n         where pact_id = $1 and wager_id is not distinct from $2 and state in ('pending', 'disputed')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2649d6a1a268d7f6f579e4ed9539a1f738307551c7c1cf131545529000b08db3"
+}

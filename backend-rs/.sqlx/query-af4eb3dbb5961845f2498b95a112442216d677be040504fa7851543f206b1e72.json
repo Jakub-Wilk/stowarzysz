@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select least(\n                 (select min(next_nudge_at) from pacts\n                  where status in ('proposed', 'active', 'awaiting_result')),\n                 (select min(p.expires_at) from pact_participants p join pacts k on k.id = p.pact_id\n                  where p.state in ('invited', 'requested')\n                    and k.status in ('proposed', 'active', 'awaiting_result')))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "least",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "af4eb3dbb5961845f2498b95a112442216d677be040504fa7851543f206b1e72"
+}

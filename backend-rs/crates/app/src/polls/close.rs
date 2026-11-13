@@ -4,7 +4,7 @@ use domain::polls::result::{Entry, compute};
 use domain::polls::{Ballot, CloseReason, closing_summary};
 use serde_json::Value;
 
-use super::{PollRow, subjects};
+use super::PollRow;
 use crate::db::Uow;
 use crate::events::{Audience, Event};
 use crate::push::Notification;
@@ -61,7 +61,7 @@ pub(crate) async fn close(
     let mut result = compute(kind, &config, &entries, abstain_count);
     // What the vote decided (a profile change, a pact outcome) is applied in the same
     // transaction; its outcome is recorded in the result, never raised.
-    let applied = subjects::on_close(uow, ctx, poll, &config, &result).await?;
+    let applied = crate::orchestration::on_close(uow, ctx, poll, &config, &result).await?;
     if let (Some(object), Some(extra)) = (result.as_object_mut(), applied) {
         object.extend(extra);
     }

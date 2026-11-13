@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update pacts set status = $2, next_nudge_at = case when $3 then next_nudge_at end\n         where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eb53252e5dd4e545d1e82d66c07700bb6af86b7d1afe440ddd12420ba53a674f"
+}

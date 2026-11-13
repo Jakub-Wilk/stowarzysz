@@ -12,6 +12,8 @@ mod ledger;
 #[allow(unused_qualifications)]
 mod media;
 #[allow(unused_qualifications)]
+mod pacts;
+#[allow(unused_qualifications)]
 mod polls;
 pub mod problem;
 mod push;
@@ -67,6 +69,7 @@ const UPLOAD_TIMEOUT: Duration = Duration::from_mins(10);
         (name = "people", description = "Members and the signed-in user"),
         (name = "users", description = "Account management (administrators)"),
         (name = "polls", description = "Sejmik: votes"),
+        (name = "pacts", description = "Umowy: bets, group bets, resolutions and shared goals"),
         (name = "ledger", description = "Kasa Skarbowa: expenses, debts, payments and balances"),
         (name = "media", description = "Image uploads and stored images"),
         (name = "push", description = "Web Push subscriptions"),
@@ -126,6 +129,20 @@ pub fn api() -> OpenApiRouter<AppState> {
         .routes(routes!(polls::close))
         .routes(routes!(polls::tie_break))
         .routes(routes!(polls::react))
+        .routes(routes!(pacts::list, pacts::create))
+        .routes(routes!(pacts::get))
+        .routes(routes!(pacts::respond))
+        .routes(routes!(pacts::cancel))
+        .routes(routes!(pacts::join))
+        .routes(routes!(pacts::withdraw))
+        .routes(routes!(pacts::decide))
+        .routes(routes!(pacts::claim))
+        .routes(routes!(pacts::confirm))
+        .routes(routes!(pacts::dispute))
+        .routes(routes!(pacts::escalate))
+        .routes(routes!(pacts::judgment))
+        .routes(routes!(pacts::add_attachment))
+        .routes(routes!(pacts::delete_attachment))
         .routes(routes!(ledger::list, ledger::create))
         .routes(routes!(ledger::get, ledger::update))
         .routes(routes!(ledger::confirm))

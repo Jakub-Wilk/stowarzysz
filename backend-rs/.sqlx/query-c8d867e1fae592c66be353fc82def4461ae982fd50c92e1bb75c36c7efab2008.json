@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_participants (pact_id, user_id, state, stake_amount, stake_note, side, created_at, expires_at)\n         select $1, user_id, 'invited', stake_amount, stake_note, side, $6, $7\n         from unnest($2::bigint[], $3::bigint[], $4::text[], $5::text[])\n              as t(user_id, stake_amount, stake_note, side)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c8d867e1fae592c66be353fc82def4461ae982fd50c92e1bb75c36c7efab2008"
+}

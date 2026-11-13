@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select c.participant_id, c.approver_id, c.approved\n         from pact_join_consents c join pact_participants p on p.id = c.participant_id\n         where p.pact_id = $1 order by c.approver_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "participant_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "approver_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "approved",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "6d8d24d1f8d942657f98323e4cfac72e48f4ad4120b7ea2fb95162b3180275aa"
+}

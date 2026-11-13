@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into pact_claim_confirmations (claim_id, user_id, created_at) values ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91314707a9e2bb79f24c6b795dddd9ca55620f71563482e49c449579d364af3d"
+}
