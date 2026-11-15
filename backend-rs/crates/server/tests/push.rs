@@ -167,8 +167,8 @@ async fn transient_failures_are_retried_later(pool: PgPool) {
 
     let wait = next - chrono::Utc::now();
     assert!(
-        wait > chrono::TimeDelta::seconds(100),
-        "Retry-After is honoured: {wait}"
+        wait > chrono::TimeDelta::seconds(100) && wait <= chrono::TimeDelta::seconds(120),
+        "Retry-After is honoured (and replaces the delivery lease): {wait}"
     );
     assert_eq!(transport.delivered(), []);
     assert_eq!(
@@ -221,4 +221,34 @@ async fn rejected_and_expired_notifications_are_dropped(pool: PgPool) {
         .await,
         1
     );
+}
+
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn a_claimed_row_waits_for_its_lease_then_is_retried(pool: PgPool) {
+    let app = TestApp::with_push(pool);
+    let ala = insert_user(app.db(), "ala").await;
+    subscribe(app.db(), ala, "https://push.test/ala").await;
+    queue(&app, &[ala], "a").await;
+    // As a process that claimed it and died before recording the outcome leaves it.
+    sqlx::query("update push_outbox set next_attempt_at = now() + interval '5 minutes'")
+        .execute(app.db())
+        .await
+        .unwrap();
+
+    let transport = Arc::new(RecordingTransport::default());
+    let worker = PushWorker::new(app.db().clone(), transport.clone());
+    worker.drain().await.unwrap();
+    assert_eq!(transport.delivered(), [], "not twice while leased");
+    assert_eq!(
+        count(app.db(), "select attempts::bigint from push_outbox").await,
+        0,
+        "a lease is not an attempt"
+    );
+
+    sqlx::query("update push_outbox set next_attempt_at = now()")
+        .execute(app.db())
+        .await
+        .unwrap();
+    worker.drain().await.unwrap();
+    assert_eq!(transport.delivered().len(), 1);
 }

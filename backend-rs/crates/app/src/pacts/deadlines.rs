@@ -16,7 +16,7 @@ use crate::Context;
 use crate::db::Uow;
 use crate::events::{Audience, Event};
 use crate::push::Notification;
-use crate::scheduler::{Job, JobResult};
+use crate::scheduler::{Job, JobResult, next_after_failures};
 
 const BATCH: i64 = 50;
 
@@ -25,6 +25,9 @@ pub struct PactDeadlines;
 
 impl PactDeadlines {
     async fn process(ctx: &Context, now: DateTime<Utc>) -> JobResult {
+        // Pacts whose step failed: rolled back and left for the next run, so one broken pact
+        // never holds up the others.
+        let mut failed: Vec<i64> = Vec::new();
         loop {
             let mut uow = Uow::begin(&ctx.db).await?;
             // Claimed with SKIP LOCKED: a pact someone is changing right now waits for the
@@ -36,21 +39,35 @@ impl PactDeadlines {
                         or exists (select 1 from pact_participants p
                                    where p.pact_id = k.id and p.state in ('invited', 'requested')
                                      and p.expires_at <= $1))
+                   and k.id <> all($3)
                  order by k.id limit $2 for update of k skip locked",
                 now,
                 BATCH,
+                &failed,
             )
             .fetch_all(uow.conn())
             .await?;
             for id in &due {
-                Self::one(&mut uow, ctx, *id, now).await?;
+                uow.savepoint().await?;
+                match Self::one(&mut uow, ctx, *id, now).await {
+                    Ok(()) => uow.release_savepoint().await?,
+                    Err(error) => {
+                        tracing::error!(
+                            pact_id = id,
+                            error = format!("{error:#}"),
+                            "pact deadline failed; retrying later"
+                        );
+                        uow.rollback_to_savepoint().await?;
+                        failed.push(*id);
+                    }
+                }
             }
             uow.commit().await?;
             if due.len() < usize::try_from(BATCH)? {
                 break;
             }
         }
-        Ok(sqlx::query_scalar!(
+        let next = sqlx::query_scalar!(
             "select least(
                  (select min(next_nudge_at) from pacts
                   where status in ('proposed', 'active', 'awaiting_result')),
@@ -59,7 +76,8 @@ impl PactDeadlines {
                     and k.status in ('proposed', 'active', 'awaiting_result')))"
         )
         .fetch_one(&ctx.db)
-        .await?)
+        .await?;
+        Ok(next_after_failures(next, !failed.is_empty(), now))
     }
 
     /// Everything due for pact `id` (locked).

@@ -1,20 +1,25 @@
-//! The Bilans maths. Money is settled across the whole group (the fewest transfers, whoever
+//! The Bilans maths. Money is settled across the whole group (greedily, biggest debtor to
+//! biggest creditor: at most n-1 transfers, though not always the fewest possible; whoever
 //! originally lent it); goods are settled per pair and per item, since "kolacja" owed to Bob is
 //! owed to Bob, and never against money.
 
 use std::collections::BTreeMap;
 
-use super::money::{Debt, settle_up};
+use super::money::{Debt, Unbalanced, settle_up};
 
 /// Transfers that even out the money nets (`user -> net`, positive: is owed). Nets that do not
-/// sum to zero (impossible for obligations) give no transfers.
+/// sum to zero (impossible for obligations, so a bug upstream) give no transfers in release
+/// builds and fail debug builds and tests.
 pub fn money_transfers(nets: &BTreeMap<i64, i64>) -> Vec<Debt> {
     let nonzero: BTreeMap<i64, i64> = nets
         .iter()
         .filter(|(_, net)| **net != 0)
         .map(|(user, net)| (*user, *net))
         .collect();
-    settle_up(&nonzero, "").unwrap_or_default()
+    settle_up(&nonzero, "").unwrap_or_else(|Unbalanced| {
+        debug_assert!(false, "unbalanced money nets: {nonzero:?}");
+        Vec::new()
+    })
 }
 
 /// Goods owed, netted per pair and unit: `(debtor, creditor, unit, total)` rows in, one

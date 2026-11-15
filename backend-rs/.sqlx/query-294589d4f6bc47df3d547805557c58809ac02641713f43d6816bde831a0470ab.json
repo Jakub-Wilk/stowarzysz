@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, deadline_at from polls\n                 where status = 'open' and (deadline_at <= $1 or next_reminder_at <= $1)\n                   and id <> all($3)\n                 order by least(deadline_at, coalesce(next_reminder_at, deadline_at))\n                 limit $2 for update skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "deadline_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "294589d4f6bc47df3d547805557c58809ac02641713f43d6816bde831a0470ab"
+}

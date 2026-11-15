@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists(\n             select 1 from auth_sessions s join users u on u.id = s.user_id\n             where s.id = $1 and s.user_id = $2 and s.revoked_at is null and s.expires_at > $3\n               and u.is_active and u.password_hash is not null) as \"live!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "live!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "aaca9578d0f2dfda75a355d86dee37fd03d3a497b417ca6beabb017b081fda7c"
+}

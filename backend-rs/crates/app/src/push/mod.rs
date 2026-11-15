@@ -29,7 +29,9 @@ use crate::db::Uow;
 use crate::listener::Wake;
 
 mod subscriptions;
-pub use subscriptions::{Subscription, subscribe, unsubscribe};
+pub use subscriptions::{
+    MAX_PER_USER as MAX_SUBSCRIPTIONS_PER_USER, Subscription, subscribe, unsubscribe,
+};
 
 /// How long a push service keeps trying to deliver a notification (and how long we do).
 pub const TTL: Duration = Duration::from_hours(1);
@@ -40,6 +42,10 @@ const MAX_ATTEMPTS: i16 = 6;
 const MAX_FAILURES: i32 = 10;
 /// The worker looks at the outbox at least this often, even without a wake-up.
 const IDLE: Duration = Duration::from_secs(30);
+/// How long claimed rows are reserved while a batch is delivered (well beyond a batch's worst
+/// case: `BATCH / CONCURRENCY` rounds of the transport's timeout). If the process dies meanwhile
+/// they are retried once it lapses.
+const LEASE: TimeDelta = TimeDelta::minutes(5);
 
 /// What the service worker shows. Polish text; `url` is the in-app path to open.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -315,19 +321,26 @@ impl PushWorker {
     }
 
     async fn deliver_batch(&self) -> anyhow::Result<usize> {
-        let mut tx = self.pool.begin().await?;
+        // Claim the due rows by leasing them and commit at once, so no connection or row lock
+        // is held while push services answer. Retries are unaffected: the outcomes below set
+        // `attempts` and the real next attempt, overwriting the lease.
         let due = sqlx::query_as!(
             Due,
-            r#"select o.id, o.subscription_id, o.payload, o.attempts, o.expires_at,
-                      s.endpoint, s.p256dh, s.auth
-               from push_outbox o join push_subscriptions s on s.id = o.subscription_id
-               where o.next_attempt_at <= now()
-               order by o.id
-               limit $1
-               for update of o skip locked"#,
+            r#"with claimed as (
+                   select id from push_outbox
+                   where next_attempt_at <= now()
+                   order by id
+                   limit $1
+                   for update skip locked)
+               update push_outbox o set next_attempt_at = $2
+               from claimed, push_subscriptions s
+               where o.id = claimed.id and s.id = o.subscription_id
+               returning o.id, o.subscription_id, o.payload, o.attempts, o.expires_at,
+                         s.endpoint, s.p256dh, s.auth"#,
             BATCH,
+            Utc::now() + LEASE,
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(&self.pool)
         .await?;
         let claimed = due.len();
 
@@ -347,6 +360,7 @@ impl PushWorker {
             .collect()
             .await;
 
+        let mut tx = self.pool.begin().await?;
         for (row, outcome) in outcomes {
             match outcome {
                 Outcome::Delivered => {

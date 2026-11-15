@@ -1,12 +1,14 @@
 //! The live event stream.
 
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::http::{HeaderName, HeaderValue};
 use axum::response::{IntoResponse, Response};
 
 use super::guard::AuthUser;
 use crate::AppState;
-use crate::sse::{self, Subscriber};
+use crate::sse::{self, SessionCheck, Subscriber};
 
 /// Server-sent events for the signed-in user (`Authorization: Bearer`, so use a fetch-based
 /// SSE client). Starts with `ready`, then carries `poll.*`, `pact.*`, `ledger.*`, `santa.*` and
@@ -22,9 +24,24 @@ pub async fn events(State(state): State<AppState>, AuthUser(actor): AuthUser) ->
         user_id: actor.user_id,
         session_id: actor.session_id,
     };
+    let ctx = Arc::clone(&state.ctx);
+    let check = SessionCheck::new(move || {
+        let ctx = Arc::clone(&ctx);
+        async move {
+            match app::auth::session_live(&ctx, subscriber.user_id, subscriber.session_id).await {
+                Ok(live) => live,
+                Err(error) => {
+                    // Keep the stream: a database hiccup should not sign anyone out.
+                    tracing::warn!(error = %error, "cannot recheck an event stream's session");
+                    true
+                }
+            }
+        }
+    });
     let mut response = sse::response(
         state.ctx.hub.subscribe(),
         subscriber,
+        check,
         state.shutdown.clone(),
     )
     .into_response();

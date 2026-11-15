@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select o.id, o.subscription_id, o.payload, o.attempts, o.expires_at,\n                      s.endpoint, s.p256dh, s.auth\n               from push_outbox o join push_subscriptions s on s.id = o.subscription_id\n               where o.next_attempt_at <= now()\n               order by o.id\n               limit $1\n               for update of o skip locked",
+  "query": "with claimed as (\n                   select id from push_outbox\n                   where next_attempt_at <= now()\n                   order by id\n                   limit $1\n                   for update skip locked)\n               update push_outbox o set next_attempt_at = $2\n               from claimed, push_subscriptions s\n               where o.id = claimed.id and s.id = o.subscription_id\n               returning o.id, o.subscription_id, o.payload, o.attempts, o.expires_at,\n                         s.endpoint, s.p256dh, s.auth",
   "describe": {
     "columns": [
       {
@@ -46,7 +46,8 @@
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Int8",
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -60,5 +61,5 @@
       false
     ]
   },
-  "hash": "a49bbfa3e42eefdd4da4e920285434938f95b44893829917f1c91f520853e55b"
+  "hash": "0b36ee8e0372553f5ac247a8e34366c3f4e1206f08916a5c8b59c7b77ae9db94"
 }

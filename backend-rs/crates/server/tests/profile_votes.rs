@@ -500,6 +500,60 @@ async fn expiry_applies_an_approved_change_and_an_empty_vote_is_not_approved(poo
 }
 
 #[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn a_poll_that_cannot_close_does_not_hold_up_the_others(pool: PgPool) {
+    let app = TestApp::new(pool);
+    let (ala, ola, ewa) = trio(&app).await;
+    let broken = score_poll(&app, &ala, &[&ola, &ewa]).await;
+    let fine = score_poll(&app, &ala, &[&ola, &ewa]).await;
+    for id in [broken, fine] {
+        app.put_as(
+            &ola,
+            &format!("/api/polls/{id}/ballot"),
+            json!({"value": 2}),
+        )
+        .await
+        .expect(StatusCode::OK);
+    }
+    sqlx::query("update poll_participants set ballot = '\"garbage\"' where poll_id = $1 and ballot is not null")
+        .bind(broken)
+        .execute(app.db())
+        .await
+        .unwrap();
+    let status = |id: i64| {
+        let app = &app;
+        let ala = &ala;
+        async move { app.get_as(ala, &format!("/api/polls/{id}")).await.json()["status"].clone() }
+    };
+    let at = app.now() + TimeDelta::hours(72);
+
+    let next = PollDeadlines.run(&app.ctx, at).await.unwrap();
+    assert_eq!(
+        status(fine).await,
+        "closed",
+        "the healthy poll still closes"
+    );
+    assert_eq!(
+        status(broken).await,
+        "open",
+        "the broken one is rolled back"
+    );
+    assert!(
+        next.is_some_and(|next| next >= at + TimeDelta::seconds(30)),
+        "the broken poll is retried later, not at once: {next:?}"
+    );
+
+    // Once it is repaired, the next run closes it.
+    sqlx::query("update poll_participants set ballot = '{\"value\": 2}' where poll_id = $1 and ballot is not null")
+        .bind(broken)
+        .execute(app.db())
+        .await
+        .unwrap();
+    let next = PollDeadlines.run(&app.ctx, at).await.unwrap();
+    assert_eq!(status(broken).await, "closed");
+    assert_eq!(next, None);
+}
+
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
 async fn the_scheduler_runs_the_deadline_job(pool: PgPool) {
     let app = TestApp::new(pool);
     let names = app::scheduler::Scheduler::standard().job_names();

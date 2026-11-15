@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from push_subscriptions where id in (\n             select id from push_subscriptions\n             where user_id = $1 and endpoint <> $2\n             order by coalesce(last_success_at, created_at) desc, id desc\n             offset $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "48ee76be44b9e7be6cf3344342423c03c538b4392a80ebe3d55eef72d0286f39"
+}

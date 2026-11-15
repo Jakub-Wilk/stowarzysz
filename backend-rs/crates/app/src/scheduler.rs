@@ -24,6 +24,21 @@ const RETRY_AFTER: TimeDelta = TimeDelta::seconds(30);
 
 pub type JobResult = anyhow::Result<Option<DateTime<Utc>>>;
 
+/// When a job runs next after a pass in which `failed` items were skipped. They are still due,
+/// so returning their (past) due time would rerun them at once, in a loop; they are retried
+/// after [`RETRY_AFTER`] instead.
+pub fn next_after_failures(
+    next: Option<DateTime<Utc>>,
+    failed: bool,
+    now: DateTime<Utc>,
+) -> Option<DateTime<Utc>> {
+    if !failed {
+        return next;
+    }
+    let retry = now + RETRY_AFTER;
+    Some(next.map_or(retry, |next| next.max(retry)))
+}
+
 pub trait Job: Send + Sync + fmt::Debug {
     fn name(&self) -> &'static str;
 

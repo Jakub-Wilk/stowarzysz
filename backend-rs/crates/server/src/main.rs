@@ -9,10 +9,10 @@ use app::push::{PushWorker, WebPushTransport};
 use app::scheduler::Scheduler;
 use app::{Context, db, listener};
 use clap::{Parser, Subcommand};
+use server::shutdown::Supervisor;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
-use tokio_util::task::TaskTracker;
 
 #[derive(Debug, Parser)]
 #[command(name = "stowarzysz", version, about = "The stowarzysz backend")]
@@ -145,20 +145,28 @@ async fn serve() -> anyhow::Result<()> {
     );
 
     let shutdown = CancellationToken::new();
-    let tasks = TaskTracker::new();
-    tasks.spawn(listener::run(
-        ctx.db.clone(),
-        ctx.hub.clone(),
-        ctx.signals.clone(),
-        shutdown.clone(),
-    ));
+    let tasks = Supervisor::new(shutdown.clone());
+    tasks.spawn(
+        "listener",
+        listener::run(
+            ctx.db.clone(),
+            ctx.hub.clone(),
+            ctx.signals.clone(),
+            shutdown.clone(),
+        ),
+    );
     if let Some(vapid) = &config.vapid {
         let transport = WebPushTransport::new(vapid).context("invalid VAPID keys")?;
         let worker = PushWorker::new(ctx.db.clone(), Arc::new(transport));
-        tasks.spawn(worker.run(Arc::clone(&ctx.signals.push), shutdown.clone()));
+        tasks.spawn(
+            "push",
+            worker.run(Arc::clone(&ctx.signals.push), shutdown.clone()),
+        );
     }
-    tasks.spawn(Scheduler::standard().run(Arc::clone(&ctx), shutdown.clone()));
-    tasks.close();
+    tasks.spawn(
+        "scheduler",
+        Scheduler::standard().run(Arc::clone(&ctx), shutdown.clone()),
+    );
 
     let listener = TcpListener::bind(config.bind_addr)
         .await
@@ -171,18 +179,21 @@ async fn serve() -> anyhow::Result<()> {
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
     .with_graceful_shutdown(async move {
-        server::shutdown::signal().await;
+        tokio::select! {
+            () = server::shutdown::signal() => {}
+            () = stop.cancelled() => {} // a background task died
+        }
         stop.cancel(); // ends SSE streams and background loops so the server can drain
     })
     .await
     .context("server error")?;
 
     shutdown.cancel();
-    if tokio::time::timeout(Duration::from_secs(10), tasks.wait())
-        .await
-        .is_err()
-    {
+    if !tasks.wait(Duration::from_secs(10)).await {
         tracing::warn!("background tasks did not stop within 10 s");
+    }
+    if tasks.failed() {
+        bail!("a background task stopped unexpectedly");
     }
     tracing::info!("stopped");
     Ok(())

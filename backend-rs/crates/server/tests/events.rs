@@ -11,7 +11,7 @@ use app::events::{Audience, Envelope, Event, Hub, HubMessage};
 use axum::response::IntoResponse as _;
 use common::TestApp;
 use futures_util::StreamExt as _;
-use server::sse::{self, Subscriber};
+use server::sse::{self, SessionCheck, Subscriber};
 use sqlx::PgPool;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -107,7 +107,13 @@ const ME: Subscriber = Subscriber {
 #[tokio::test]
 async fn a_stream_starts_ready_and_carries_only_its_users_events() {
     let hub = Hub::new(16);
-    let response = sse::response(hub.subscribe(), ME, CancellationToken::new()).into_response();
+    let response = sse::response(
+        hub.subscribe(),
+        ME,
+        SessionCheck::always_live(),
+        CancellationToken::new(),
+    )
+    .into_response();
     hub.deliver(Envelope {
         audience: Audience::User(2),
         event: Event::SantaHelp { event_id: 1 },
@@ -141,7 +147,13 @@ async fn a_stream_starts_ready_and_carries_only_its_users_events() {
 #[tokio::test]
 async fn a_lagging_stream_is_told_to_resync() {
     let hub = Hub::new(2);
-    let response = sse::response(hub.subscribe(), ME, CancellationToken::new()).into_response();
+    let response = sse::response(
+        hub.subscribe(),
+        ME,
+        SessionCheck::always_live(),
+        CancellationToken::new(),
+    )
+    .into_response();
     for poll_id in 0..10 {
         hub.deliver(Envelope {
             audience: Audience::All,
@@ -155,7 +167,13 @@ async fn a_lagging_stream_is_told_to_resync() {
 #[tokio::test]
 async fn revoking_the_session_ends_its_stream() {
     let hub = Hub::new(16);
-    let response = sse::response(hub.subscribe(), ME, CancellationToken::new()).into_response();
+    let response = sse::response(
+        hub.subscribe(),
+        ME,
+        SessionCheck::always_live(),
+        CancellationToken::new(),
+    )
+    .into_response();
     // Another session of the same user is revoked: this stream continues.
     let other = Uuid::from_u128(2);
     hub.deliver(Envelope {
@@ -191,7 +209,13 @@ async fn revoking_the_session_ends_its_stream() {
 async fn shutdown_ends_every_stream() {
     let hub = Hub::new(16);
     let shutdown = CancellationToken::new();
-    let response = sse::response(hub.subscribe(), ME, shutdown.clone()).into_response();
+    let response = sse::response(
+        hub.subscribe(),
+        ME,
+        SessionCheck::always_live(),
+        shutdown.clone(),
+    )
+    .into_response();
     shutdown.cancel();
     let mut body = response.into_body().into_data_stream();
     let ended = tokio::time::timeout(Duration::from_secs(2), async {
@@ -199,4 +223,88 @@ async fn shutdown_ends_every_stream() {
     })
     .await;
     assert!(ended.is_ok());
+}
+
+#[tokio::test]
+async fn a_resync_ends_the_stream_if_its_session_is_gone_meanwhile() {
+    // The `session.revoked` notification was missed (say the listener was reconnecting); the
+    // resync that follows looks the session up instead.
+    let hub = Hub::new(16);
+    let dead = SessionCheck::new(|| async { false });
+    let response =
+        sse::response(hub.subscribe(), ME, dead, CancellationToken::new()).into_response();
+    hub.resync();
+
+    let mut body = response.into_body().into_data_stream();
+    let mut text = String::new();
+    let ended = tokio::time::timeout(Duration::from_secs(2), async {
+        while let Some(chunk) = body.next().await {
+            text.push_str(&String::from_utf8_lossy(&chunk.unwrap()));
+        }
+    })
+    .await;
+    assert!(ended.is_ok(), "the stream did not end: {text}");
+    assert!(text.contains("event: session.revoked"), "{text}");
+    assert!(!text.contains("event: resync"), "{text}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_open_stream_rechecks_its_session_periodically() {
+    let hub = Hub::new(16);
+    let live = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let flag = std::sync::Arc::clone(&live);
+    let check = SessionCheck::new(move || {
+        let live = flag.load(std::sync::atomic::Ordering::SeqCst);
+        async move { live }
+    });
+    let mut events = Box::pin(sse::stream(
+        hub.subscribe(),
+        ME,
+        check,
+        CancellationToken::new(),
+    ));
+    let _ready = events.next().await.unwrap().unwrap();
+
+    // Still live at the first recheck: nothing is sent.
+    let quiet = tokio::time::timeout(sse::RECHECK + Duration::from_secs(1), events.next()).await;
+    assert!(quiet.is_err(), "nothing to say while the session lives");
+
+    // Revoked without a notification: the next recheck ends the stream.
+    live.store(false, std::sync::atomic::Ordering::SeqCst);
+    let last = tokio::time::timeout(sse::RECHECK * 2, events.next())
+        .await
+        .unwrap();
+    assert!(last.is_some(), "session.revoked is sent");
+    assert!(events.next().await.is_none(), "and the stream ends");
+}
+
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn session_live_follows_revocation(pool: PgPool) {
+    let app = TestApp::new(pool);
+    let ala = app.member("ala").await;
+    let session: Uuid = sqlx::query_scalar("select id from auth_sessions where user_id = $1")
+        .bind(ala.id)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+    assert!(
+        app::auth::session_live(&app.ctx, ala.id, session)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !app::auth::session_live(&app.ctx, ala.id + 1, session)
+            .await
+            .unwrap()
+    );
+    sqlx::query("update auth_sessions set revoked_at = now() where id = $1")
+        .bind(session)
+        .execute(app.db())
+        .await
+        .unwrap();
+    assert!(
+        !app::auth::session_live(&app.ctx, ala.id, session)
+            .await
+            .unwrap()
+    );
 }

@@ -240,6 +240,22 @@ pub async fn authenticate(ctx: &Context, access_token: &str) -> AppResult<Actor>
     })
 }
 
+/// Whether `session_id` of `user_id` is still live: not revoked or expired, and the account
+/// still active (what [`authenticate`] requires besides a valid token).
+pub async fn session_live(ctx: &Context, user_id: i64, session_id: Uuid) -> AppResult<bool> {
+    Ok(sqlx::query_scalar!(
+        r#"select exists(
+             select 1 from auth_sessions s join users u on u.id = s.user_id
+             where s.id = $1 and s.user_id = $2 and s.revoked_at is null and s.expires_at > $3
+               and u.is_active and u.password_hash is not null) as "live!""#,
+        session_id,
+        user_id,
+        ctx.clock.now(),
+    )
+    .fetch_one(&ctx.db)
+    .await?)
+}
+
 /// End the caller's session.
 pub async fn logout(ctx: &Context, actor: &Actor) -> AppResult<()> {
     let mut uow = Uow::begin(&ctx.db).await?;

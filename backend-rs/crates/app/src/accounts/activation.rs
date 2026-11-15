@@ -92,11 +92,20 @@ pub async fn validate(ctx: &Context, token: &str) -> AppResult<String> {
 
 /// Set the account's password and use the token up. The person signs in afterwards.
 pub async fn complete(ctx: &Context, token: &str, new_password: &str) -> AppResult<()> {
+    // Checked and hashed before the transaction, so it is not held open while argon2 runs
+    // (or waits for its turn).
+    let username = validate(ctx, token).await?;
+    let problems = password::validate(new_password, &username);
+    if !problems.is_empty() {
+        return Err(problems.into());
+    }
+    let hash = ctx.passwords.hash(new_password).await?;
+
     let now = ctx.clock.now();
     let mut uow = Uow::begin(&ctx.db).await?;
-    // Locked, so two concurrent submissions cannot both succeed.
+    // Locked and checked again, so two concurrent submissions cannot both succeed.
     let target = sqlx::query!(
-        "select t.id, t.user_id, u.username from activation_tokens t join users u on u.id = t.user_id
+        "select t.id, t.user_id from activation_tokens t join users u on u.id = t.user_id
          where t.token_hash = $1 and t.used_at is null and t.expires_at > $2 and u.is_active
          for update of t",
         tokens::hash_token(token),
@@ -105,11 +114,6 @@ pub async fn complete(ctx: &Context, token: &str, new_password: &str) -> AppResu
     .fetch_optional(uow.conn())
     .await?
     .ok_or_else(invalid)?;
-    let problems = password::validate(new_password, &target.username);
-    if !problems.is_empty() {
-        return Err(problems.into());
-    }
-    let hash = ctx.passwords.hash(new_password).await?;
     sqlx::query!(
         "update users set password_hash = $2 where id = $1",
         target.user_id,

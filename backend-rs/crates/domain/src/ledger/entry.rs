@@ -303,13 +303,17 @@ impl Entry {
                     return Vec::new();
                 };
                 let sign = self.sign();
-                let nets = breakdown
+                let nets: BTreeMap<i64, i64> = breakdown
                     .nets()
                     .into_iter()
                     .map(|(user, net)| (user, sign * net))
                     .collect();
-                // Both sides of a breakdown add up to the same total, so the nets balance.
-                settle_up(&nets, "").unwrap_or_default()
+                // Both sides of a breakdown add up to the same total, so the nets balance;
+                // anything else is a bug upstream, loud in debug builds and tests.
+                settle_up(&nets, "").unwrap_or_else(|money::Unbalanced| {
+                    debug_assert!(false, "unbalanced expense nets: {nets:?}");
+                    Vec::new()
+                })
             }
             Details::Debt(details) => match self.rate {
                 None => details.debts.clone(),

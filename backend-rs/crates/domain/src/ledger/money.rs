@@ -87,8 +87,13 @@ impl Debt {
 }
 
 /// Split `total` in proportion to `weights` in whole units, summing exactly to `total` (largest
-/// remainder; ties go to the earlier entry, so callers order their inputs).
+/// remainder; ties go to the earlier entry, so callers order their inputs). `total` and the
+/// weights must not be negative: the remainder step assumes rounding down.
 pub fn allocate(total: i64, weights: &[i64]) -> Vec<i64> {
+    debug_assert!(
+        total >= 0 && weights.iter().all(|w| *w >= 0),
+        "allocate takes no negative inputs: {total}, {weights:?}"
+    );
     let weight_sum: i128 = weights.iter().map(|w| i128::from(*w)).sum();
     if total == 0 || weight_sum == 0 {
         return vec![0; weights.len()];
@@ -312,13 +317,16 @@ pub fn format_amount(amount: i64, currency: &str, item: &str) -> String {
         };
     }
     let exponent = exponent(currency).unwrap_or(2);
-    let unit = 10_i64.pow(exponent);
-    let (major, minor) = (amount.div_euclid(unit), amount.rem_euclid(unit));
+    let unit = 10_u64.pow(exponent);
+    // Sign apart: -150 is "-1,50", not "-2,50" (as Euclidean division would give).
+    let sign = if amount < 0 { "-" } else { "" };
+    let magnitude = amount.unsigned_abs();
+    let (major, minor) = (magnitude / unit, magnitude % unit);
     let width = usize::try_from(exponent).unwrap_or(2);
     let text = if minor == 0 {
-        major.to_string()
+        format!("{sign}{major}")
     } else {
-        format!("{major},{minor:0width$}")
+        format!("{sign}{major},{minor:0width$}")
     };
     if currency == BASE_CURRENCY || currency.is_empty() {
         format!("{text} zł")
@@ -416,6 +424,9 @@ mod tests {
         assert_eq!(format_amount(750, "PLN", ""), "7,50 zł");
         assert_eq!(format_amount(5, "EUR", ""), "0,05 EUR");
         assert_eq!(format_amount(1200, "JPY", ""), "1200 JPY");
+        assert_eq!(format_amount(-150, "PLN", ""), "-1,50 zł");
+        assert_eq!(format_amount(-5, "EUR", ""), "-0,05 EUR");
+        assert_eq!(format_amount(-1000, "PLN", ""), "-10 zł");
         assert_eq!(format_amount(1, "", "piwo"), "piwo");
         assert_eq!(format_amount(3, "", "piwo"), "3 x piwo");
     }

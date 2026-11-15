@@ -168,3 +168,36 @@ async fn unsubscribing_removes_only_your_own(pool: PgPool) {
     .expect(StatusCode::NO_CONTENT);
     assert_eq!(owners(&app).await, Vec::<(String, i64)>::new());
 }
+
+#[sqlx::test(migrator = "app::db::MIGRATOR")]
+async fn subscriptions_per_person_are_capped_keeping_the_newest(pool: PgPool) {
+    let app = TestApp::new(pool);
+    let ala = app.member("ala").await;
+    let cap = app::push::MAX_SUBSCRIPTIONS_PER_USER;
+    for n in 0..=cap {
+        app.put_as(
+            &ala,
+            "/api/push/subscription",
+            subscription(&format!("https://push.test/{n:02}")),
+        )
+        .await
+        .expect(StatusCode::NO_CONTENT);
+    }
+    let kept: Vec<String> = owners(&app).await.into_iter().map(|(e, _)| e).collect();
+    assert_eq!(kept.len(), usize::try_from(cap).unwrap());
+    assert!(
+        !kept.contains(&"https://push.test/00".to_owned()),
+        "the oldest is forgotten: {kept:?}"
+    );
+    assert!(kept.contains(&format!("https://push.test/{cap:02}")));
+
+    // Re-registering a kept browser does not push anything else out.
+    app.put_as(
+        &ala,
+        "/api/push/subscription",
+        subscription("https://push.test/05"),
+    )
+    .await
+    .expect(StatusCode::NO_CONTENT);
+    assert_eq!(owners(&app).await.len(), usize::try_from(cap).unwrap());
+}
