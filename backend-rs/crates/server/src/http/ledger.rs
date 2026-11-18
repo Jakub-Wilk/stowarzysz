@@ -142,6 +142,7 @@ pub async fn cancel(
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = LedgerAttachmentRequest)]
 pub struct AttachmentRequest {
     /// An upload of purpose `photo`.
     pub upload_id: Uuid,

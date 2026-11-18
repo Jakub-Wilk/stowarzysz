@@ -75,6 +75,7 @@ const IN_FLIGHT: Denial = conflict(
 /// What the caller can do right now.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "schema", schema(as = PactActions))]
 #[allow(clippy::struct_excessive_bools)] // one flag per action
 pub struct Actions {
     /// Answer your invite.

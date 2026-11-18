@@ -1,0 +1,118 @@
+/* Paper things: labels, stamps, foil, avatars (components/module.rs, stamp.rs, foil.rs, avatar.rs). */
+
+/* A paper label: title, italic subtitle, then stamps or sums. `--tilt` from the component. */
+.paper-label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--paper, var(--paper-cream));
+  color: var(--ink);
+  transform: rotate(var(--tilt, 0deg));
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.paper-label[data-paper='manila'] {
+  --paper: var(--paper-manila);
+  border: 1px solid var(--paper-manila-edge);
+}
+
+.paper-label[data-paper='ledger'] {
+  --paper: var(--paper-ledger);
+}
+
+.paper-label[data-paper='legal'] {
+  --paper: var(--paper-legal);
+}
+
+.paper-label[data-paper='note'] {
+  --paper: var(--paper-note);
+}
+
+.paper-label-title {
+  font-family: var(--display-font);
+  font-size: var(--title-size, 22px);
+  font-weight: 700;
+  line-height: 1.02;
+}
+
+.paper-label-subtitle {
+  font-size: var(--subtitle-size, 13px);
+  font-style: italic;
+  line-height: 1.2;
+  color: var(--subtitle-color, var(--ink-soft));
+}
+
+/* A rubber stamp. */
+.stamp {
+  align-self: flex-start;
+  display: inline-block;
+  border: 2px double var(--stamp-color, var(--stamp));
+  color: var(--stamp-color, var(--stamp));
+  font-family: var(--mono-font);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px 7px;
+  white-space: nowrap;
+  transform: rotate(var(--tilt, 0deg));
+}
+
+.stamp[data-tone='calm'] {
+  --stamp-color: var(--stamp-calm);
+}
+
+.stamp-small {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+/* Gold foil (the gradient's stops are the theme's; #foil-deboss is in FoilDefs). */
+.foil-text {
+  background: linear-gradient(
+    180deg,
+    var(--foil-1) 0%,
+    var(--foil-2) 30%,
+    var(--foil-3) 52%,
+    var(--foil-4) 53%,
+    var(--foil-5) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: url(#foil-deboss);
+}
+
+/* A member's picture, or a blue disc with their initial. `--size` from the component. */
+.avatar {
+  position: relative;
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, var(--avatar-1), var(--avatar-2));
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.55);
+}
+
+.avatar-round {
+  border-radius: 50%;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  font-family: var(--display-font);
+  font-weight: 700;
+  font-size: calc(var(--size) * 0.55);
+  line-height: 1;
+  color: #e6c7ae;
+  text-shadow: -1px -1px 0 rgba(255, 225, 205, 0.25), 1px 1px 0 rgba(0, 0, 0, 0.65);
+}

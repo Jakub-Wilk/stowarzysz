@@ -14,7 +14,7 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
-        files: ^scripts/
+        files: ^(scripts|frontend-rs/scripts)/
 
   - repo: local
     hooks:
@@ -60,6 +60,20 @@ repos:
         entry: bash -c 'cd backend-rs && cargo sqlx prepare --workspace --check'
         language: system
         files: ^backend-rs/(.*\.rs|migrations/.*\.sql|\.sqlx/.*)$
+        pass_filenames: false
+
+      # Frontend v2 (Dioxus). Replaces the pnpm hooks below at cutover.
+      - id: cargo-fmt-frontend
+        name: cargo fmt (frontend-rs)
+        entry: cargo fmt --manifest-path frontend-rs/Cargo.toml --all -- --check
+        language: system
+        files: ^frontend-rs/.*\.rs$
+        pass_filenames: false
+      - id: cargo-clippy-frontend
+        name: cargo clippy (frontend-rs, host + web)
+        entry: bash -c 'cargo clippy --manifest-path frontend-rs/Cargo.toml --workspace --all-targets -- -D warnings && cargo clippy --manifest-path frontend-rs/Cargo.toml -p stowarzysz --features web --target wasm32-unknown-unknown -- -D warnings'
+        language: system
+        files: ^frontend-rs/(.*\.rs|.*Cargo\.(toml|lock)|crates/api/openapi\.json)$
         pass_filenames: false
 
       # Frontend (pnpm)

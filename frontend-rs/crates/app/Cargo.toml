@@ -1,0 +1,37 @@
+[package]
+name = "stowarzysz"
+description = "The stowarzysz app: PWA and Android"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+api.workspace = true
+chrono = { workspace = true, features = ["wasmbind"] }
+chrono-tz = { version = "0.10", default-features = false }
+dioxus = { version = "=0.7.10", features = ["router"] }
+futures-util.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = ["Storage", "Window"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", features = ["time", "fs", "io-util"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+ndk-context = "0.1"
+
+[features]
+default = []
+web = ["dioxus/web"]
+mobile = ["dioxus/mobile"]

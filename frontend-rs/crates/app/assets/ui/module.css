@@ -1,0 +1,65 @@
+/* A module's binder (components/module.rs): coloured cloth, dashed stitching, a hard shadow.
+   The home cards and (later) the module screens' sections use it. */
+
+.module-surface {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 0 var(--surface-shadow), 0 12px 18px rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* The stitching, inset from the edge. */
+.module-surface::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed var(--module-stitch);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.module-surface[data-module='sejmik'] {
+  --surface: var(--module-sejmik);
+  --surface-shadow: var(--module-sejmik-shadow);
+}
+
+.module-surface[data-module='kasa'] {
+  --surface: var(--module-kasa);
+  --surface-shadow: var(--module-kasa-shadow);
+}
+
+.module-surface[data-module='umowy'] {
+  --surface: var(--module-umowy);
+  --surface-shadow: var(--module-umowy-shadow);
+}
+
+/* Mikołajki is a cardboard box, not cloth: grain instead of stitching. */
+.module-surface[data-module='mikolajki'] {
+  --surface: var(--module-mikolajki);
+  --surface-shadow: var(--module-mikolajki-shadow);
+  border-radius: 6px;
+  background-color: var(--surface);
+  background-image:
+    repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(178deg, rgba(60, 35, 10, 0.07) 0 1px, transparent 1px 7px),
+    linear-gradient(90deg, transparent 49.6%, rgba(60, 35, 10, 0.16) 50%, transparent 50.4%);
+  box-shadow: 0 6px 0 var(--surface-shadow), 0 12px 18px rgba(0, 0, 0, 0.35);
+}
+
+.module-surface[data-module='mikolajki']::before {
+  content: none;
+}
+
+a.module-surface {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+a.module-surface:active {
+  transform: translateY(2px);
+}
+

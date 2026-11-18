@@ -32,7 +32,7 @@ text_enum!(
 text_enum!(
     /// Only `confirmed` entries count. Cancelling (deleting an expense, taking a payment back)
     /// is the only way one stops counting; nothing is ever deleted.
-    Status {
+    Status as LedgerStatus {
         /// A payment waiting for the receiver.
         Pending = "pending",
         Confirmed = "confirmed",

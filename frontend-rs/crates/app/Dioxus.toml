@@ -1,0 +1,34 @@
+[application]
+name = "stowarzysz"
+# Android: our MainActivity (WryActivity plus the update installer and FCM glue).
+android_main_activity = "android/MainActivity.kt"
+android_min_sdk_version = 26
+
+[web.app]
+title = "stowarzysz"
+
+# `dx serve`: the API runs on backend-rs (`cargo run` in backend-rs/). 127.0.0.1, not localhost:
+# Windows tries ::1 first and takes ~2 s to give up on it (the backend listens on IPv4).
+[[web.proxy]]
+backend = "http://127.0.0.1:8000/api/"
+
+[web.wasm_opt]
+level = "z"
+
+[bundle]
+identifier = "com.wilkjakub.stowarzysz"
+publisher = "stowarzysz"
+icon = ["assets/logo.png"]
+
+[android]
+identifier = "com.wilkjakub.stowarzysz"
+min_sdk = 26
+target_sdk = 35
+
+[android.permissions]
+"android.permission.REQUEST_INSTALL_PACKAGES" = { description = "Instalowanie aktualizacji aplikacji" }
+"android.permission.POST_NOTIFICATIONS" = { description = "Powiadomienia" }
+
+[android.raw]
+# Results of the self-update install session (android/MainActivity.kt).
+application = '<receiver android:name="dev.dioxus.main.InstallReceiver" android:exported="false" />'

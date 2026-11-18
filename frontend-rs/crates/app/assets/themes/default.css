@@ -1,0 +1,122 @@
+/*
+ * Theme: default ("kancelaria"): an office desk with paper, folders, stamps and wax seals
+ * (the "Stowarzysz – nowe głosowanie" design canvas, page "Final design").
+ *
+ * A theme is one CSS file scoped to [data-theme='<id>'] that defines every token below,
+ * registered in src/theme/mod.rs and imported in tailwind.css. Components (assets/ui/*.css)
+ * read only these tokens, so another theme restyles the app by redefining them. The first
+ * theme also styles :root, so the page is themed before the attribute is set.
+ */
+:root,
+[data-theme='default'] {
+  color-scheme: dark;
+
+  /* Type. */
+  --body-font: 'Old Standard TT', Georgia, serif;
+  --display-font: 'Old Standard TT', Georgia, serif;
+  --mono-font: 'Special Elite', 'Courier New', monospace; /* typewriter: stamps, labels */
+  --hand-font: 'Caveat', cursive; /* handwriting: notes, sums */
+  --signature-font: 'Great Vibes', cursive; /* a signature: formal copperplate */
+  --radius: 0.5rem;
+
+  /* The desk under everything: dark wood, grain and a warm light from above. */
+  --desk: hsl(20 48% 9%);
+  --desk-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .09' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .28 0 0 0 0 .12 0 0 0 1.2 -.4'/%3E%3C/filter%3E%3Crect width='600' height='400' filter='url(%23w)' opacity='.2'/%3E%3C/svg%3E");
+  --desk-light: hsl(24 60% 20% / 70%);
+  --desk-text: #f4ecd8; /* text written straight on the desk */
+  --desk-text-soft: #d8c6a0;
+  --groove: rgba(0, 0, 0, 0.5);
+  --groove-light: rgba(255, 215, 180, 0.22);
+
+  /* Paper. */
+  --paper-manila: #d9c28a; /* folders */
+  --paper-manila-edge: #a8915a;
+  --paper-manila-tab: #c6af74;
+  --paper-cream: #e9ddbf; /* plain sheets */
+  --paper-cream-dark: #dccfab;
+  --paper-legal: #f1e4c3; /* contracts, the membership card */
+  --paper-ledger: #dee6ee; /* the ledger's blue-grey pages */
+  --paper-kraft: #b8946a; /* cardboard */
+  --paper-kraft-shadow: #7a5f3c;
+  --paper-note: #f1e8d0; /* notes pinned on cardboard */
+  --banner-paper: #e6d9b8;
+  --rule: #9aa5d6; /* ruled lines on paper */
+  --rule-brown: #b89a6a;
+
+  /* Ink. */
+  --ink: #1f2a5a; /* fountain-pen blue */
+  --ink-soft: #3d4880;
+  --ink-brown: #2a1a14;
+  --ink-brown-soft: #5a3a2e;
+  --stamp: #b3261e; /* rubber-stamp red */
+  --stamp-dark: #7a1f2b;
+  --stamp-calm: #2a4d8f; /* blue ink: a stamp with nothing to do ("0 DO GŁOSU") */
+  --stamp-green: #2f5d50;
+  --seal: #a3221f; /* sealing wax */
+  --seal-rim: #7e1815;
+  --seal-light: #c94a44;
+  --brass: #b8892b;
+
+  /* The profile bookmark: a burgundy ribbon with stitching and gold foil. It and the profile
+     panel slide together, on the same timing. */
+  --panel-slide: 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  --bookmark-top: #7a0d20;
+  --bookmark-bottom: #5a0613;
+  --stitch: #c65a3e;
+  --foil-1: #ffeba0;
+  --foil-2: #fad052;
+  --foil-3: #f0ae2c;
+  --foil-4: #e8a020;
+  --foil-5: #f3b93a;
+  --foil-lip: #ffc4b0;
+  --foil-shade: #3a1400;
+  --avatar-1: #5e8fd8; /* the photo placeholder */
+  --avatar-2: #2a5499;
+
+  /* The modules: each is a coloured binder with a darker edge. */
+  --module-sejmik: #2f5d50;
+  --module-sejmik-shadow: #1f4036;
+  --module-kasa: #2a4d8f;
+  --module-kasa-shadow: #1b3466;
+  --module-kasa-binding: #17294f;
+  --module-umowy: #6b1d2a;
+  --module-umowy-shadow: #4a1019;
+  --module-mikolajki: var(--paper-kraft);
+  --module-mikolajki-shadow: var(--paper-kraft-shadow);
+  --module-mikolajki-ink: #16502a;
+  --module-stitch: rgba(244, 236, 216, 0.5);
+  --ribbon-1: #b3261e;
+  --ribbon-2: #6fa3e6;
+  --ribbon-3: #e8c86e;
+
+  /* Generic tokens (forms, Diagnostyka, anything not drawn as paper yet). */
+  --background: var(--desk);
+  --foreground: var(--desk-text);
+  --card: var(--paper-cream);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-legal);
+  --popover-foreground: var(--ink-brown);
+  --primary: var(--stamp);
+  --primary-foreground: #fbe9e5;
+  --secondary: var(--paper-manila);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-cream-dark);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--paper-manila);
+  --accent-foreground: var(--ink);
+  --destructive: var(--stamp);
+  --border: var(--paper-manila-edge);
+  --input: var(--paper-manila-edge);
+  --ring: var(--foil-3);
+
+  /* Vote outcomes. */
+  --positive: var(--stamp-green);
+  --negative: var(--stamp);
+  --neutral: var(--ink-soft);
+
+  --chart-1: var(--module-sejmik);
+  --chart-2: var(--module-kasa);
+  --chart-3: var(--module-umowy);
+  --chart-4: var(--paper-kraft);
+  --chart-5: var(--brass);
+}

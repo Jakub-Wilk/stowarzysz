@@ -61,6 +61,7 @@ pub struct ApprovalView {
 
 /// One person in a pact. In a bet every opponent is a separate wager against the host.
 #[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[schema(as = PactParticipantView)]
 pub struct ParticipantView {
     pub id: i64,
     pub user: Person,
@@ -99,6 +100,7 @@ pub struct ClaimView {
 
 /// A picture on a pact.
 #[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[schema(as = PactAttachmentView)]
 pub struct AttachmentView {
     pub id: i64,
     pub image: Image,

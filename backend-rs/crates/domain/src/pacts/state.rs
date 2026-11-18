@@ -12,7 +12,7 @@ use super::terms::{PactConfig, Terms};
 
 text_enum!(
     /// Where a pact is in its life.
-    Status {
+    Status as PactStatus {
         /// Waiting for the first invitee (or joiner) to come in.
         Proposed = "proposed",
         Active = "active",

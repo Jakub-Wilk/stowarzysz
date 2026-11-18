@@ -1,0 +1,4 @@
+target/
+dist/
+**/google-services.json
+*.jks

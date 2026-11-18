@@ -35,12 +35,65 @@
       "request": "launch",
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/frontend/src"
+    },
+    {
+      "name": "Backend v2: Rust (cargo run)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose up -d db; cargo run -- serve",
+      "cwd": "${workspaceFolder}/backend-rs"
+    },
+    {
+      "name": "Backend v2: Rust (debug)",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--manifest-path=backend-rs/Cargo.toml", "--package=server", "--bin=stowarzysz"],
+        "filter": { "name": "stowarzysz", "kind": "bin" },
+        "env": { "SQLX_OFFLINE": "true" }
+      },
+      "args": ["serve"],
+      "cwd": "${workspaceFolder}/backend-rs"
+    },
+    {
+      "name": "Frontend v2: Dioxus web (dx serve)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "dx serve --platform web --port 8080 --open false",
+      "cwd": "${workspaceFolder}/frontend-rs/crates/app"
+    },
+    {
+      "name": "Frontend v2: Dioxus Android (dx serve)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "dx serve --platform android",
+      "cwd": "${workspaceFolder}/frontend-rs/crates/app"
+    },
+    {
+      "name": "Frontend v2: Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8080/diagnostyka"
     }
   ],
   "compounds": [
     {
       "name": "Full stack",
       "configurations": ["Backend: Django (ASGI)", "Frontend: Vite dev server", "Frontend: Chrome"],
+      "stopAll": true
+    },
+    {
+      "name": "Full stack v2 (web)",
+      "configurations": [
+        "Backend v2: Rust (cargo run)",
+        "Frontend v2: Dioxus web (dx serve)",
+        "Frontend v2: Chrome"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full stack v2 (Android)",
+      "configurations": ["Backend v2: Rust (cargo run)", "Frontend v2: Dioxus Android (dx serve)"],
       "stopAll": true
     }
   ]

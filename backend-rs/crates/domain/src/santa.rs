@@ -29,7 +29,7 @@ text_enum!(
 );
 
 text_enum!(
-    Status {
+    Status as SantaStatus {
         Active = "active",
         /// Revealed: pairings are public history.
         Ended = "ended",

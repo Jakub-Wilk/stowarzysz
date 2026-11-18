@@ -41,6 +41,7 @@ const NOT_ANY_MORE: Denial = Denial::Conflict {
 /// What the caller can do right now.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "schema", schema(as = LedgerActions))]
 #[allow(clippy::struct_excessive_bools)] // one flag per action
 pub struct Actions {
     pub confirm: bool,

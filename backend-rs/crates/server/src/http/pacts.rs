@@ -280,6 +280,7 @@ pub async fn judgment(
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = PactAttachmentRequest)]
 pub struct AttachmentRequest {
     /// An upload of purpose `photo`.
     pub upload_id: Uuid,

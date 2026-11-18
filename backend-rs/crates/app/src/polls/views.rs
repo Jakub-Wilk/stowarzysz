@@ -85,6 +85,7 @@ pub struct Revealed {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[schema(as = PollParticipantView)]
 pub struct ParticipantView {
     pub user: Person,
     pub has_voted: bool,

@@ -1,0 +1,464 @@
+/* The home screen (home/*.rs): the birthday banner and the module cards. */
+
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* --- Birthday banner: bunting, confetti, a gift and a handwritten line. --- */
+
+.birthday-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 2px dashed var(--stamp);
+  background: radial-gradient(120% 140% at 12% 100%, rgba(255, 236, 170, 0.65), transparent 60%),
+    var(--banner-paper);
+  padding: 24px 14px 12px;
+  transform: rotate(-0.5deg);
+}
+
+.birthday-bunting {
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 100%;
+  height: 26px;
+  pointer-events: none;
+}
+
+.birthday-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.birthday-gift {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.birthday-line {
+  position: relative;
+  font-family: var(--hand-font);
+  font-size: 29px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--stamp-dark);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* --- Sejmik: a manila folder with tabs, a stack of ballots beside it. --- */
+
+.card-sejmik {
+  padding: 16px;
+  min-height: 148px;
+}
+
+.card-sejmik-row {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.card-sejmik-folder {
+  --title-size: 30px;
+  --subtitle-size: 14px;
+  flex: 1;
+  gap: 6px;
+  padding: 11px 13px;
+  margin-top: 8px;
+}
+
+.card-sejmik-folder .paper-label-title {
+  line-height: 1;
+}
+
+.folder-tab {
+  position: absolute;
+  top: -9px;
+  width: 34px;
+  height: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--paper-manila-edge);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.folder-tab-1 {
+  left: -1px;
+  background: var(--paper-manila);
+}
+
+.folder-tab-2 {
+  left: 32px;
+  height: 11px;
+  background: var(--paper-manila-tab);
+}
+
+/* A sheet sticking out of the folder. */
+.folder-sheet {
+  position: absolute;
+  top: -13px;
+  left: 36%;
+  right: 14%;
+  height: 13px;
+  box-sizing: border-box;
+  background: var(--paper-cream);
+  border-radius: 4px 5px 0 0;
+  clip-path: polygon(0 4px, 100% 0, 100% 100%, 0 100%);
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.folder-sheet-rule {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 8px;
+  height: 2px;
+  background: var(--rule);
+}
+
+.card-sejmik-stack {
+  position: relative;
+  flex: none;
+  width: 84px;
+}
+
+.sheet {
+  position: absolute;
+  width: 64px;
+  height: 84px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.sheet-back {
+  left: 8px;
+  top: 6px;
+  background: var(--paper-cream-dark);
+  transform: rotate(8deg);
+}
+
+.sheet-front {
+  left: 0;
+  top: 14px;
+  background: var(--paper-cream);
+  transform: rotate(-6deg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+}
+
+.sheet-rule {
+  height: 2px;
+  background: var(--rule);
+}
+
+.sheet-box {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
+  margin-top: 4px;
+}
+
+/* --- Kasa Skarbowa: a ledger page, ribbon bookmarks, the binding across the foot. --- */
+
+.card-kasa {
+  padding: 14px 14px 46px;
+  min-height: 218px;
+}
+
+.card-kasa-ribbons {
+  position: absolute;
+  right: 16px;
+  top: -4px;
+  display: flex;
+  gap: 4px;
+}
+
+.ribbon {
+  width: 12px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+}
+
+.ribbon-1 {
+  height: 30px;
+  background: var(--ribbon-1);
+}
+
+.ribbon-2 {
+  height: 27px;
+  background: var(--ribbon-2);
+}
+
+.ribbon-3 {
+  height: 24px;
+  background: var(--ribbon-3);
+}
+
+.card-kasa-binding {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  height: 26px;
+  background: var(--module-kasa-binding);
+  box-shadow: 0 3px 0 #0e1c3a, 0 6px 8px rgba(0, 0, 0, 0.35), inset 0 2px 0 #102347,
+    inset 0 -2px 0 #102347, inset 5px 0 5px -3px rgba(0, 0, 0, 0.45),
+    inset -5px 0 5px -3px rgba(0, 0, 0, 0.45);
+}
+
+.card-kasa-binding::before,
+.card-kasa-binding::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1.5px dashed rgba(232, 200, 110, 0.75);
+}
+
+.card-kasa-binding::before {
+  top: 3px;
+}
+
+.card-kasa-binding::after {
+  bottom: 3px;
+}
+
+.card-kasa-page {
+  --title-size: 21px;
+  padding: 12px 12px 30px;
+  margin-top: 10px;
+  margin-bottom: -26px;
+}
+
+.card-kasa-page .stamp {
+  margin-top: 4px;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+}
+
+.card-kasa-balance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 3px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(90, 100, 144, 0.35);
+}
+
+.card-kasa-balance-label {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.1;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.card-kasa-balance-amount {
+  font-family: var(--hand-font);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink);
+  border-bottom: 3px double currentColor;
+}
+
+.card-kasa-balance-amount[data-sign='negative'] {
+  color: var(--stamp);
+}
+
+/* --- Umowy: contract paper with an ornamented heading, a wax seal in the corner. --- */
+
+.card-umowy {
+  padding: 14px;
+  min-height: 196px;
+}
+
+.card-umowy-page {
+  --subtitle-color: var(--ink-brown-soft);
+  min-height: 172px;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+
+.card-umowy-page .paper-label-title {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card-umowy-page .stamp {
+  margin-top: 6px;
+}
+
+.card-umowy-title {
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  margin-right: -0.1em;
+  color: var(--module-umowy);
+}
+
+.ornament {
+  flex: none;
+  margin: 3px 0 2px;
+}
+
+.ornament-line {
+  stroke: var(--brass);
+  stroke-width: 3;
+}
+
+.ornament-diamond {
+  fill: var(--stamp-dark);
+}
+
+/* The corner of the binder folded over the paper, sealed. */
+.card-umowy-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 80px;
+  height: 80px;
+  border-top-left-radius: 80px;
+  border-bottom-right-radius: 8px;
+  background-color: var(--module-umowy-shadow);
+  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.09) 0 1px, transparent 1px 3px);
+  box-shadow: -2px -2px 0 #2c0a10, -5px -5px 10px rgba(0, 0, 0, 0.4), inset 3px 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.card-umowy-corner::before {
+  content: '';
+  position: absolute;
+  inset: 5px 4px 4px 5px;
+  border: 2px dashed rgba(232, 200, 110, 0.8);
+  border-top-left-radius: 71px;
+  border-bottom-right-radius: 4px;
+}
+
+.card-umowy-corner .wax-seal {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.45));
+}
+
+.wax-seal-body {
+  fill: var(--seal);
+}
+
+.wax-seal-rim {
+  fill: none;
+  stroke: var(--seal-rim);
+  stroke-width: 5;
+  stroke-dasharray: 9 5;
+}
+
+.wax-seal-ring {
+  fill: none;
+  stroke: var(--seal-light);
+  stroke-width: 2.5;
+}
+
+.wax-seal-letter {
+  font-family: var(--display-font);
+  font-weight: 700;
+  font-size: 42px;
+  fill: var(--seal-light);
+}
+
+/* --- Mikołajki: a note on a cardboard box, a garland round it, a Santa hat. --- */
+
+.card-mikolajki {
+  padding: 14px 16px;
+}
+
+.card-mikolajki-row {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.card-mikolajki-note {
+  --subtitle-size: 14px;
+  flex: none;
+  gap: 3px;
+  padding: 12px 14px;
+}
+
+.card-mikolajki-note .paper-label-subtitle {
+  line-height: 1.25;
+}
+
+.card-mikolajki-note .stamp {
+  margin-top: 4px;
+}
+
+.card-mikolajki-hat {
+  position: absolute;
+  right: 2px; /* anchored to the right: the card's width varies */
+  top: 50%;
+  width: 152px;
+  height: 90px;
+  margin-top: -34px;
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+.card-mikolajki-envelope {
+  position: absolute;
+  right: 70px;
+  top: calc(50% - 46px);
+  width: 66px;
+  height: 43px;
+  transform: rotate(22deg);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45));
+}
+
+/* The garland (home/garland.rs) is drawn for the card's measured size, reaching 18px out. */
+.garland-measure {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.garland {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45));
+}

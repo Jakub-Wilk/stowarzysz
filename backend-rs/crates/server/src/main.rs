@@ -58,6 +58,9 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Print the OpenAPI document (the API contract) as JSON. Needs no database or configuration;
+    /// `frontend-rs` keeps a snapshot of it (`scripts/update-openapi.sh`).
+    Openapi,
     /// Exit 0 if the local server answers `GET /api/health` (for container health checks).
     Healthcheck {
         /// `host:port` of the server; defaults to the port of `BIND_ADDR` on localhost.
@@ -81,6 +84,7 @@ async fn main() -> ExitCode {
             generate_keys();
             Ok(())
         }
+        Command::Openapi => openapi(),
         Command::Healthcheck { addr } => healthcheck(addr).await,
         Command::Ocr { file } => ocr(file).await,
         Command::ImportDjango {
@@ -96,6 +100,18 @@ async fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn openapi() -> anyhow::Result<()> {
+    let json = server::http::api()
+        .split_for_parts()
+        .1
+        .to_pretty_json()
+        .context("cannot serialise the OpenAPI document")?;
+    let mut out = std::io::stdout().lock();
+    std::io::Write::write_all(&mut out, json.as_bytes())?;
+    std::io::Write::write_all(&mut out, b"\n")?;
+    Ok(())
 }
 
 /// Configuration, logging and a context over a migrated database.

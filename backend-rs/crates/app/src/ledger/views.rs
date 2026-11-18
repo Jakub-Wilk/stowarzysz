@@ -43,6 +43,7 @@ pub struct ShareRow {
 
 /// A picture on an entry.
 #[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+#[schema(as = LedgerAttachmentView)]
 pub struct AttachmentView {
     pub id: i64,
     pub image: Image,

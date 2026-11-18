@@ -1,0 +1,30 @@
+[package]
+name = "api"
+description = "The backend-rs API for the stowarzysz frontend: generated types, session, SSE"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono.workspace = true
+futures-util.workspace = true
+regress = "0.10"
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
+[build-dependencies]
+prettyplease = "0.2"
+schemars = "0.8"
+serde_json = "1"
+syn = "2"
+typify = "0.4"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
+wiremock = "0.6"

@@ -1,0 +1,80 @@
+/* The desk every screen lies on (components/desk.rs). */
+
+.desk {
+  min-height: 100svh;
+  background-color: var(--desk);
+  background-image: var(--desk-grain), radial-gradient(110% 60% at 50% 0%, var(--desk-light), transparent 75%);
+  background-size: 600px 400px, 100% 100%;
+  background-repeat: repeat, no-repeat;
+  color: var(--ink);
+  font-family: var(--body-font);
+}
+
+/* A phone-wide column: header, scrolling content, and the profile panel sliding in from its
+   right edge (hence the clipping and the container for its width). `clip`, not `hidden`: a
+   hidden overflow can still be scrolled, and focusing the incoming panel would scroll it. */
+.desk-column {
+  --panel-width: min(366px, calc(100cqw - 24px));
+  position: relative;
+  container-type: inline-size;
+  isolation: isolate;
+  margin: 0 auto;
+  max-width: 30rem;
+  height: 100svh;
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Scrolls vertically only. Setting overflow-y alone makes overflow-x `auto` too, and the
+   decorations reaching past the cards (the garland) would let the page be dragged sideways. */
+.desk-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  scrollbar-width: none;
+}
+
+.desk-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Not-yet-built screens: a plain sheet on the desk. */
+.placeholder-note {
+  align-self: center;
+  margin-top: 24px;
+  background: var(--paper-cream);
+  color: var(--ink);
+  padding: 20px 24px;
+  transform: rotate(-0.6deg);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25), 0 8px 14px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.placeholder-note h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.placeholder-note p {
+  margin: 0;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.placeholder-note a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

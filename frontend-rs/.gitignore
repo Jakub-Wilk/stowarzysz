@@ -1,0 +1,6 @@
+/target/
+/dist/
+# Secrets for Android releases: keep them with the deployment's backups, never in git.
+*.jks
+*.keystore
+google-services.json

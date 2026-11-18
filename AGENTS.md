@@ -81,6 +81,18 @@ All checks at once: `uv run --project backend pre-commit run --all-files`.
 - **Motion:** use the shared system in `src/components/motion/` (read its `README.md`): tokens and `animate-*` utilities in `src/index.css`, `Stagger` / `Reveal` / `PageTransition` / `Skeleton` / `useCountUp` / `useFlashOnChange`. Animate transform/opacity only, take colors from theme tokens, and don't add a second animation approach. Reduced motion is handled globally in `index.css`.
 - Format with oxfmt and lint with oxlint (config in `frontend/.oxfmtrc.json` and `.oxlintrc.json`). Don't add ESLint or Prettier.
 
+## Frontend v2 (`frontend-rs/`, Dioxus)
+
+Replaces `frontend/` at the v2 cutover, against `backend-rs/`; one codebase for the PWA and the Android APK (`com.wilkjakub.stowarzysz`, self-updating). Read [frontend-rs/README.md](frontend-rs/README.md) first.
+
+- **Platform code only in `crates/app/src/platform/`** (web, android, host); nowhere else uses `cfg(target_*)`. JNI and `unsafe` stay in `platform/android.rs`; Kotlin lives in `crates/app/android/MainActivity.kt`.
+- **API types are generated** from `crates/api/openapi.json`; after a backend-rs contract change run `frontend-rs/scripts/update-openapi.sh` and commit the snapshot (a backend-rs test fails otherwise). Don't hand-write response types.
+- **No caching**, as in `frontend/`: `use_query(topics, fetch)`; SSE events bump topics in `realtime.rs`.
+- **Look:** the design canvas "Stowarzysz – nowe głosowanie", page "Final design". Colours and fonts are tokens in `assets/themes/default.css`; component styles in `assets/ui/*.css` read only tokens (no hex in RSX or component CSS, except fixed-colour decorations in `assets/decor/`). Build module screens from the shared parts (`components::{Desk, AppHeader, ModuleSurface, PaperLabel, Stamp, Avatar}`, `Module`) instead of new look-alikes. Plain screens use `components::Button` and `components::Svg` icons.
+- **Selection is off app-wide** (`user-select: none` on `html`, text fields excepted); opt in where it helps with Tailwind's `select-text`. **Swipes** go through `components::use_swipes` (native listeners; only the finished swipe reaches Rust; the element sets `touch-action: pan-y`).
+- `public/sw.js` is push-only: no caching, no fetch handler.
+- **APK releases:** `scripts/build-apk.sh` then `scripts/release-apk.sh`. Bump `crates/app/Cargo.toml`'s version every release; never lose or replace the release keystore (updates would stop working).
+
 ## Deploying
 
 `scripts/deploy.sh` (see [README.md](README.md#deploying)) is the only supported way to deploy: `master` is production, no tags. It keeps at most 3 DB snapshots in `backups/`, rolls back code (never the DB) on a failed launch and installs the `process_deadlines` cron job. Keep it shellcheck-clean and idempotent, and don't add a second deploy path.
